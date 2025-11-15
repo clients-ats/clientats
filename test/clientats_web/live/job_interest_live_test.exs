@@ -120,6 +120,79 @@ defmodule ClientatsWeb.JobInterestLiveTest do
       assert html =~ "Remote"
     end
 
+    test "redirects if not authenticated", %{conn: conn} do
+      user = user_fixture()
+      interest = job_interest_fixture(user_id: user.id)
+
+      {:error, redirect} = live(conn, ~p"/dashboard/job-interests/#{interest}")
+
+      assert {:redirect, %{to: path}} = redirect
+      assert path == ~p"/login"
+    end
+
+    test "displays work model", %{conn: conn} do
+      user = user_fixture()
+      interest = job_interest_fixture(user_id: user.id, work_model: "hybrid")
+      conn = log_in_user(conn, user)
+
+      {:ok, _lv, html} = live(conn, ~p"/dashboard/job-interests/#{interest}")
+
+      assert html =~ "Hybrid"
+    end
+
+    test "displays salary range", %{conn: conn} do
+      user = user_fixture()
+      interest = job_interest_fixture(user_id: user.id, salary_min: 100000, salary_max: 150000)
+      conn = log_in_user(conn, user)
+
+      {:ok, _lv, html} = live(conn, ~p"/dashboard/job-interests/#{interest}")
+
+      assert html =~ "100,000"
+      assert html =~ "150,000"
+    end
+
+    test "displays job URL link", %{conn: conn} do
+      user = user_fixture()
+      interest = job_interest_fixture(user_id: user.id, job_url: "https://careers.example.com/job")
+      conn = log_in_user(conn, user)
+
+      {:ok, _lv, html} = live(conn, ~p"/dashboard/job-interests/#{interest}")
+
+      assert html =~ "View Posting"
+      assert html =~ "https://careers.example.com/job"
+    end
+
+    test "displays status and priority", %{conn: conn} do
+      user = user_fixture()
+      interest = job_interest_fixture(user_id: user.id, status: "ready_to_apply", priority: "high")
+      conn = log_in_user(conn, user)
+
+      {:ok, _lv, html} = live(conn, ~p"/dashboard/job-interests/#{interest}")
+
+      assert html =~ "Ready To Apply"
+      assert html =~ "High"
+    end
+
+    test "displays job description", %{conn: conn} do
+      user = user_fixture()
+      interest = job_interest_fixture(user_id: user.id, job_description: "Exciting opportunity")
+      conn = log_in_user(conn, user)
+
+      {:ok, _lv, html} = live(conn, ~p"/dashboard/job-interests/#{interest}")
+
+      assert html =~ "Exciting opportunity"
+    end
+
+    test "displays notes", %{conn: conn} do
+      user = user_fixture()
+      interest = job_interest_fixture(user_id: user.id, notes: "Must follow up by Friday")
+      conn = log_in_user(conn, user)
+
+      {:ok, _lv, html} = live(conn, ~p"/dashboard/job-interests/#{interest}")
+
+      assert html =~ "Must follow up by Friday"
+    end
+
     test "shows apply for job button", %{conn: conn} do
       user = user_fixture()
       interest = job_interest_fixture(user_id: user.id)
@@ -128,6 +201,26 @@ defmodule ClientatsWeb.JobInterestLiveTest do
       {:ok, _lv, html} = live(conn, ~p"/dashboard/job-interests/#{interest}")
 
       assert html =~ "Apply for Job"
+    end
+
+    test "shows edit link", %{conn: conn} do
+      user = user_fixture()
+      interest = job_interest_fixture(user_id: user.id)
+      conn = log_in_user(conn, user)
+
+      {:ok, _lv, html} = live(conn, ~p"/dashboard/job-interests/#{interest}")
+
+      assert html =~ "Edit"
+    end
+
+    test "shows back to dashboard link", %{conn: conn} do
+      user = user_fixture()
+      interest = job_interest_fixture(user_id: user.id)
+      conn = log_in_user(conn, user)
+
+      {:ok, _lv, html} = live(conn, ~p"/dashboard/job-interests/#{interest}")
+
+      assert html =~ "Back to Dashboard"
     end
 
     test "deletes job interest", %{conn: conn} do
