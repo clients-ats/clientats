@@ -64,6 +64,63 @@ defmodule ClientatsWeb.ResumeLiveTest do
     end
   end
 
+  describe "new resume" do
+    test "renders upload form", %{conn: conn} do
+      user = user_fixture()
+      conn = log_in_user(conn, user)
+
+      {:ok, _lv, html} = live(conn, ~p"/dashboard/resumes/new")
+
+      assert html =~ "Upload Resume"
+      assert html =~ "Resume Name"
+    end
+
+    test "redirects if not authenticated", %{conn: conn} do
+      {:error, redirect} = live(conn, ~p"/dashboard/resumes/new")
+
+      assert {:redirect, %{to: path}} = redirect
+      assert path == ~p"/login"
+    end
+
+    test "validates resume name is required", %{conn: conn} do
+      user = user_fixture()
+      conn = log_in_user(conn, user)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/resumes/new")
+
+      result =
+        lv
+        |> form("#resume-form", resume: %{name: ""})
+        |> render_change()
+
+      assert result =~ "can&#39;t be blank"
+    end
+
+    test "shows file upload area", %{conn: conn} do
+      user = user_fixture()
+      conn = log_in_user(conn, user)
+
+      {:ok, _lv, html} = live(conn, ~p"/dashboard/resumes/new")
+
+      assert html =~ "Drag and drop your resume here"
+      assert html =~ "PDF, DOC, or DOCX up to 5MB"
+    end
+
+    test "validates form on change", %{conn: conn} do
+      user = user_fixture()
+      conn = log_in_user(conn, user)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/resumes/new")
+
+      result =
+        lv
+        |> form("#resume-form", resume: %{name: "My Resume"})
+        |> render_change()
+
+      refute result =~ "can&#39;t be blank"
+    end
+  end
+
   describe "edit resume" do
     test "renders edit form", %{conn: conn} do
       user = user_fixture()

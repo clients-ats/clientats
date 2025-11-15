@@ -200,6 +200,82 @@ defmodule Clientats.JobsTest do
       assert {:ok, _} = Jobs.delete_job_application(app)
       assert_raise Ecto.NoResultsError, fn -> Jobs.get_job_application!(app.id) end
     end
+
+    test "create_job_application/1 validates status inclusion" do
+      user = user_fixture()
+
+      invalid_attrs = %{
+        user_id: user.id,
+        company_name: "Tech Corp",
+        position_title: "Engineer",
+        application_date: ~D[2024-01-15],
+        status: "invalid_status"
+      }
+
+      assert {:error, changeset} = Jobs.create_job_application(invalid_attrs)
+      assert %{status: ["is invalid"]} = errors_on(changeset)
+    end
+
+    test "create_job_application/1 validates work_model inclusion" do
+      user = user_fixture()
+
+      invalid_attrs = %{
+        user_id: user.id,
+        company_name: "Tech Corp",
+        position_title: "Engineer",
+        application_date: ~D[2024-01-15],
+        work_model: "invalid_model"
+      }
+
+      assert {:error, changeset} = Jobs.create_job_application(invalid_attrs)
+      assert %{work_model: ["is invalid"]} = errors_on(changeset)
+    end
+
+    test "create_job_application/1 validates salary_min is non-negative" do
+      user = user_fixture()
+
+      invalid_attrs = %{
+        user_id: user.id,
+        company_name: "Tech Corp",
+        position_title: "Engineer",
+        application_date: ~D[2024-01-15],
+        salary_min: -1000
+      }
+
+      assert {:error, changeset} = Jobs.create_job_application(invalid_attrs)
+      assert %{salary_min: ["must be greater than or equal to 0"]} = errors_on(changeset)
+    end
+
+    test "create_job_application/1 validates salary_max is non-negative" do
+      user = user_fixture()
+
+      invalid_attrs = %{
+        user_id: user.id,
+        company_name: "Tech Corp",
+        position_title: "Engineer",
+        application_date: ~D[2024-01-15],
+        salary_max: -5000
+      }
+
+      assert {:error, changeset} = Jobs.create_job_application(invalid_attrs)
+      assert %{salary_max: ["must be greater than or equal to 0"]} = errors_on(changeset)
+    end
+
+    test "create_job_application/1 validates salary range" do
+      user = user_fixture()
+
+      invalid_attrs = %{
+        user_id: user.id,
+        company_name: "Tech Corp",
+        position_title: "Engineer",
+        application_date: ~D[2024-01-15],
+        salary_min: 120000,
+        salary_max: 80000
+      }
+
+      assert {:error, changeset} = Jobs.create_job_application(invalid_attrs)
+      assert %{salary_max: ["must be greater than or equal to minimum salary"]} = errors_on(changeset)
+    end
   end
 
   describe "application_events" do
@@ -257,6 +333,61 @@ defmodule Clientats.JobsTest do
 
       assert {:ok, _} = Jobs.delete_application_event(event)
       assert_raise Ecto.NoResultsError, fn -> Jobs.get_application_event!(event.id) end
+    end
+
+    test "create_application_event/1 requires event_type" do
+      user = user_fixture()
+      app = job_application_fixture(user_id: user.id)
+
+      invalid_attrs = %{
+        job_application_id: app.id,
+        event_date: ~D[2024-01-20]
+      }
+
+      assert {:error, changeset} = Jobs.create_application_event(invalid_attrs)
+      assert %{event_type: ["can't be blank"]} = errors_on(changeset)
+    end
+
+    test "create_application_event/1 requires event_date" do
+      user = user_fixture()
+      app = job_application_fixture(user_id: user.id)
+
+      invalid_attrs = %{
+        job_application_id: app.id,
+        event_type: "phone_screen"
+      }
+
+      assert {:error, changeset} = Jobs.create_application_event(invalid_attrs)
+      assert %{event_date: ["can't be blank"]} = errors_on(changeset)
+    end
+
+    test "create_application_event/1 validates event_type inclusion" do
+      user = user_fixture()
+      app = job_application_fixture(user_id: user.id)
+
+      invalid_attrs = %{
+        job_application_id: app.id,
+        event_type: "invalid_type",
+        event_date: ~D[2024-01-20]
+      }
+
+      assert {:error, changeset} = Jobs.create_application_event(invalid_attrs)
+      assert %{event_type: ["is invalid"]} = errors_on(changeset)
+    end
+
+    test "create_application_event/1 allows valid email" do
+      user = user_fixture()
+      app = job_application_fixture(user_id: user.id)
+
+      valid_attrs = %{
+        job_application_id: app.id,
+        event_type: "contact",
+        event_date: ~D[2024-01-20],
+        contact_email: "valid@example.com"
+      }
+
+      assert {:ok, event} = Jobs.create_application_event(valid_attrs)
+      assert event.contact_email == "valid@example.com"
     end
   end
 
