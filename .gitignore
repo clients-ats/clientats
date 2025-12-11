@@ -45,7 +45,7 @@ npm-debug.log
 /priv/static/uploads/
 
 # Ignore compiled static assets
-/priv/static/*.gz
+/priv/static/**/*.gz
 /priv/static/*.ico
 /priv/static/images/*-[0-9a-f]*.svg
 /priv/static/*-[0-9a-f]*.txt
