@@ -68,6 +68,7 @@ defmodule Clientats.MixProject do
       {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"},
       {:bcrypt_elixir, "~> 3.0"},
+      {:req_llm, "~> 1.0"},
       {:wallaby, "~> 0.30", runtime: false, only: :test}
     ]
   end

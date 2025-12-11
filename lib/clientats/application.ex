@@ -12,6 +12,8 @@ defmodule Clientats.Application do
       Clientats.Repo,
       {DNSCluster, query: Application.get_env(:clientats, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Clientats.PubSub},
+      # LLM Cache for job scraping
+      Clientats.LLM.Cache,
       # Start a worker by calling: Clientats.Worker.start_link(arg)
       # {Clientats.Worker, arg},
       # Start to serve requests, typically the last entry
