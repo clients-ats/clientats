@@ -38,6 +38,15 @@ defmodule ClientatsWeb.Router do
     delete "/logout", UserSessionController, :delete
   end
 
+  # API Routes
+  scope "/api", ClientatsWeb do
+    pipe_through :api
+    
+    post "/scrape_job", JobScraperController, :scrape
+    get "/llm/providers", JobScraperController, :providers
+    get "/llm/config", JobScraperController, :config
+  end
+
   # Other scopes may use custom stacks.
   # scope "/api", ClientatsWeb do
   #   pipe_through :api
