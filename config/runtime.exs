@@ -55,6 +55,35 @@ if config_env() == :prod do
 
   config :clientats, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
+  # LLM Configuration for job scraping feature
+  config :req_llm,
+    primary_provider: :openai,
+    providers: %{
+      openai: %{
+        api_key: System.get_env("OPENAI_API_KEY"),
+        organization: System.get_env("OPENAI_ORG"),
+        default_model: System.get_env("OPENAI_MODEL") || "gpt-4o",
+        timeout: 30_000,
+        max_retries: 3
+      },
+      anthropic: %{
+        api_key: System.get_env("ANTHROPIC_API_KEY"),
+        default_model: System.get_env("ANTHROPIC_MODEL") || "claude-3-opus-20240229",
+        timeout: 30_000,
+        max_retries: 3
+      },
+      mistral: %{
+        api_key: System.get_env("MISTRAL_API_KEY"),
+        default_model: System.get_env("MISTRAL_MODEL") || "mistral-large-latest",
+        timeout: 30_000,
+        max_retries: 3
+      }
+    },
+    fallback_providers: [:anthropic, :mistral],
+    max_content_length: 10_000,
+    enable_logging: System.get_env("LLM_ENABLE_LOGGING") != "false",
+    cache_ttl: 86400 # 24 hours cache for successful extractions
+
   config :clientats, ClientatsWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
     http: [
