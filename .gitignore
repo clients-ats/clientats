@@ -47,4 +47,6 @@ npm-debug.log
 # Ignore compiled static assets
 /priv/static/*.gz
 /priv/static/*.ico
+/priv/static/images/*-[0-9a-f]*.svg
+/priv/static/*-[0-9a-f]*.txt
 
