@@ -7,10 +7,14 @@ defmodule ClientatsWeb.JobApplicationLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
+    all_applications = Jobs.list_job_applications(socket.assigns.current_user.id)
+
     {:ok,
      socket
      |> assign(:page_title, "My Applications")
-     |> assign(:applications, Jobs.list_job_applications(socket.assigns.current_user.id))}
+     |> assign(:show_closed, false)
+     |> assign(:all_applications, all_applications)
+     |> assign(:applications, filter_applications(all_applications, false))}
   end
 
   @impl true
@@ -18,10 +22,23 @@ defmodule ClientatsWeb.JobApplicationLive.Index do
     application = Jobs.get_job_application!(id)
     {:ok, _} = Jobs.delete_job_application(application)
 
+    all_applications = Jobs.list_job_applications(socket.assigns.current_user.id)
+
     {:noreply,
      socket
      |> put_flash(:info, "Application deleted successfully")
-     |> assign(:applications, Jobs.list_job_applications(socket.assigns.current_user.id))}
+     |> assign(:all_applications, all_applications)
+     |> assign(:applications, filter_applications(all_applications, socket.assigns.show_closed))}
+  end
+
+  @impl true
+  def handle_event("toggle_closed", _params, socket) do
+    show_closed = !socket.assigns.show_closed
+
+    {:noreply,
+     socket
+     |> assign(:show_closed, show_closed)
+     |> assign(:applications, filter_applications(socket.assigns.all_applications, show_closed))}
   end
 
   @impl true
@@ -41,8 +58,21 @@ defmodule ClientatsWeb.JobApplicationLive.Index do
 
       <div class="container mx-auto px-4 py-8 max-w-6xl">
         <div class="mb-6">
-          <h1 class="text-3xl font-bold text-gray-900">My Job Applications</h1>
-          <p class="text-sm text-gray-600 mt-1">Track all your job applications</p>
+          <div class="flex justify-between items-start">
+            <div>
+              <h1 class="text-3xl font-bold text-gray-900">My Job Applications</h1>
+              <p class="text-sm text-gray-600 mt-1">Track all your job applications</p>
+            </div>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                class="toggle toggle-sm"
+                phx-click="toggle_closed"
+                checked={@show_closed}
+              />
+              <span class="text-sm text-gray-600">Show Closed</span>
+            </label>
+          </div>
         </div>
 
         <%= if @applications == [] do %>
@@ -109,5 +139,13 @@ defmodule ClientatsWeb.JobApplicationLive.Index do
     |> String.split()
     |> Enum.map(&String.capitalize/1)
     |> Enum.join(" ")
+  end
+
+  defp filter_applications(applications, show_closed) do
+    if show_closed do
+      applications
+    else
+      Enum.reject(applications, &(&1.status in ["rejected", "withdrawn", "offer_accepted"]))
+    end
   end
 end

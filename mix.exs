@@ -11,7 +11,9 @@ defmodule Clientats.MixProject do
       aliases: aliases(),
       deps: deps(),
       compilers: [:phoenix_live_view] ++ Mix.compilers(),
-      listeners: [Phoenix.CodeReloader]
+      listeners: [Phoenix.CodeReloader],
+      test_coverage: [summary: [threshold: 70]],
+      releases: releases()
     ]
   end
 
@@ -90,6 +92,12 @@ defmodule Clientats.MixProject do
         "phx.digest"
       ],
       precommit: ["compile --warning-as-errors", "deps.unlock --unused", "format", "test"]
+    ]
+  end
+
+  defp releases do
+    [
+      clientats: []
     ]
   end
 end

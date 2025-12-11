@@ -79,9 +79,20 @@ defmodule ClientatsWeb.DashboardLive do
           <div class="bg-white rounded-lg shadow p-6">
             <div class="flex justify-between items-center mb-4">
               <h2 class="text-xl font-semibold text-gray-900">Applications</h2>
-              <.link navigate={~p"/dashboard/applications/new"} class="btn btn-primary btn-sm">
-                <.icon name="hero-plus" class="w-5 h-5" /> Add Application
-              </.link>
+              <div class="flex items-center gap-3">
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    class="toggle toggle-sm"
+                    phx-click="toggle_closed"
+                    checked={@show_closed}
+                  />
+                  <span class="text-xs text-gray-600">Show Closed</span>
+                </label>
+                <.link navigate={~p"/dashboard/applications/new"} class="btn btn-primary btn-sm">
+                  <.icon name="hero-plus" class="w-5 h-5" /> Add Application
+                </.link>
+              </div>
             </div>
 
             <%= if @job_applications == [] do %>
@@ -120,18 +131,32 @@ defmodule ClientatsWeb.DashboardLive do
 
   def mount(_params, _session, socket) do
     job_interests = Jobs.list_job_interests(socket.assigns.current_user.id)
-    job_applications = Jobs.list_job_applications(socket.assigns.current_user.id)
+    all_applications = Jobs.list_job_applications(socket.assigns.current_user.id)
+    filtered_applications = filter_applications(all_applications, false)
 
     {:ok,
      socket
      |> assign(:job_interests, job_interests)
-     |> assign(:job_applications, job_applications)
+     |> assign(:show_closed, false)
+     |> assign(:all_applications, all_applications)
+     |> assign(:job_applications, filtered_applications)
      |> stream(:job_interests, job_interests)
-     |> stream(:job_applications, job_applications)}
+     |> stream(:job_applications, filtered_applications)}
   end
 
   def handle_event("select_interest", %{"id" => id}, socket) do
     {:noreply, push_navigate(socket, to: ~p"/dashboard/job-interests/#{id}")}
+  end
+
+  def handle_event("toggle_closed", _params, socket) do
+    show_closed = !socket.assigns.show_closed
+    filtered_applications = filter_applications(socket.assigns.all_applications, show_closed)
+
+    {:noreply,
+     socket
+     |> assign(:show_closed, show_closed)
+     |> assign(:job_applications, filtered_applications)
+     |> stream(:job_applications, filtered_applications, reset: true)}
   end
 
   defp status_color("interested"), do: "badge-info"
@@ -163,4 +188,12 @@ defmodule ClientatsWeb.DashboardLive do
   defp app_status_color("rejected"), do: "badge-error"
   defp app_status_color("withdrawn"), do: "badge-ghost"
   defp app_status_color(_), do: "badge-ghost"
+
+  defp filter_applications(applications, show_closed) do
+    if show_closed do
+      applications
+    else
+      Enum.reject(applications, &(&1.status in ["rejected", "withdrawn", "offer_accepted"]))
+    end
+  end
 end
