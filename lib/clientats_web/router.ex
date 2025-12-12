@@ -22,6 +22,7 @@ defmodule ClientatsWeb.Router do
     live "/login", UserLoginLive
     live "/dashboard", DashboardLive
     live "/dashboard/job-interests/new", JobInterestLive.New
+    live "/dashboard/job-interests/scrape", JobInterestLive.Scrape
     live "/dashboard/job-interests/:id", JobInterestLive.Show, :show
     live "/dashboard/job-interests/:id/edit", JobInterestLive.Edit
     live "/dashboard/resumes", ResumeLive.Index
