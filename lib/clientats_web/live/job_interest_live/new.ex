@@ -57,8 +57,22 @@ defmodule ClientatsWeb.JobInterestLive.New do
       <div class="container mx-auto px-4 py-8 max-w-2xl">
         <div class="bg-white rounded-lg shadow p-6">
           <div class="mb-6">
-            <h2 class="text-2xl font-bold text-gray-900">New Job Interest</h2>
-            <p class="text-sm text-gray-600 mt-1">Track jobs you're interested in applying to</p>
+            <div class="flex justify-between items-start">
+              <div>
+                <h2 class="text-2xl font-bold text-gray-900">New Job Interest</h2>
+                <p class="text-sm text-gray-600 mt-1">Track jobs you're interested in applying to</p>
+              </div>
+              <div class="text-right">
+                <.link
+                  navigate={~p"/dashboard/job-interests/scrape"}
+                  class="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                >
+                  <.icon name="hero-magic-wand" class="w-4 h-4" />
+                  Import from URL
+                </.link>
+                <p class="text-xs text-gray-500 mt-1">Use AI to extract job details</p>
+              </div>
+            </div>
           </div>
 
           <.form
