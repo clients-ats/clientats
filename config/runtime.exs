@@ -77,9 +77,15 @@ if config_env() == :prod do
         default_model: System.get_env("MISTRAL_MODEL") || "mistral-large-latest",
         timeout: 30_000,
         max_retries: 3
+      },
+      ollama: %{
+        base_url: System.get_env("OLLAMA_BASE_URL") || "http://localhost:11434",
+        default_model: System.get_env("OLLAMA_MODEL") || "unsloth/magistral-small-2509:UD-Q4_K_XL",
+        timeout: 60_000,
+        max_retries: 2
       }
     },
-    fallback_providers: [:anthropic, :mistral],
+    fallback_providers: [:anthropic, :mistral, :ollama],
     max_content_length: 10_000,
     enable_logging: System.get_env("LLM_ENABLE_LOGGING") != "false",
     cache_ttl: 86400 # 24 hours cache for successful extractions
