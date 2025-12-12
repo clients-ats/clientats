@@ -134,23 +134,31 @@ defmodule Clientats.LLM.Service do
         # Call LLM with provider
         try do
           result = 
-            ReqLLM.chat(
-              provider: provider,
-              model: get_model_for_provider(provider),
-              messages: [
-                %{
-                  role: "system",
-                  content: PromptTemplates.system_prompt()
-                },
-                %{
-                  role: "user",
-                  content: prompt
-                }
-              ],
-              response_format: %{type: "json_object"},
-              temperature: options[:temperature] || 0.1,
-              max_tokens: options[:max_tokens] || 4096
-            )
+            case provider do
+              :ollama ->
+                # Use direct Ollama client
+                call_ollama(prompt, options)
+              
+              _ ->
+                # Use req_llm for other providers
+                ReqLLM.chat(
+                  provider: provider,
+                  model: get_model_for_provider(provider),
+                  messages: [
+                    %{
+                      role: "system",
+                      content: PromptTemplates.system_prompt()
+                    },
+                    %{
+                      role: "user",
+                      content: prompt
+                    }
+                  ],
+                  response_format: %{type: "json_object"},
+                  temperature: options[:temperature] || 0.1,
+                  max_tokens: options[:max_tokens] || 4096
+                )
+            end
           
           # Parse and validate response
           case parse_llm_response(result) do
@@ -185,6 +193,25 @@ defmodule Clientats.LLM.Service do
   end
   defp try_fallbacks([], _content, _url, _mode, _options, _tried), do: :error
   
+  defp call_ollama(prompt, options) do
+    # Get Ollama configuration
+    providers = Application.get_env(:req_llm, :providers, %{})
+    ollama_config = providers[:ollama] || %{}
+    
+    model = ollama_config[:default_model] || "unsloth/magistral-small-2509:UD-Q4_K_XL"
+    base_url = ollama_config[:base_url] || "http://localhost:11434"
+    
+    # Build Ollama options
+    ollama_options = [
+      temperature: options[:temperature] || 0.1,
+      top_p: options[:top_p] || 0.9,
+      num_predict: options[:max_tokens] || 4096
+    ]
+    
+    # Call Ollama provider
+    Clientats.LLM.Providers.Ollama.generate(model, prompt, ollama_options, base_url)
+  end
+  
   defp get_model_for_provider(provider) do
     providers = Application.get_env(:req_llm, :providers, %{})
     case providers[provider] do
@@ -193,6 +220,7 @@ defmodule Clientats.LLM.Service do
         :openai -> "gpt-4o"
         :anthropic -> "claude-3-opus-20240229"
         :mistral -> "mistral-large-latest"
+        :ollama -> "unsloth/magistral-small-2509:UD-Q4_K_XL"
         _ -> "gpt-4o"
       end
     end
