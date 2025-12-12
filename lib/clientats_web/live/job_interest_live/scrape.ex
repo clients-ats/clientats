@@ -3,7 +3,6 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
 
   alias Clientats.LLM.Service
   alias Clientats.Jobs
-  alias Clientats.Jobs.JobInterest
 
   on_mount {ClientatsWeb.UserAuth, :ensure_authenticated}
 
@@ -38,8 +37,9 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
     {:noreply, socket}
   end
 
+  @impl true
   def handle_event("update_url", %{"url" => url}, socket) do
-    {:noreply, assign(socket, :url, url, :error, nil)}
+    {:noreply, socket |> assign(:url, url) |> assign(:error, nil)}
   end
 
   def handle_event("update_provider", %{"provider" => provider}, socket) do
@@ -82,7 +82,7 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
          |> put_flash(:info, "Job interest created successfully!")
          |> push_navigate(to: ~p"/dashboard/job-interests/#{job_interest.id}")}
       
-      {:error, changeset} ->
+      {:error, _changeset} ->
         {:noreply, 
          socket
          |> assign(:error, "Failed to create job interest. Please check the form.")}
@@ -90,18 +90,24 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
   end
 
   def handle_event("back_to_url", _params, socket) do
-    {:noreply, assign(socket, :step, 1, :error, nil)}
+    {:noreply, socket |> assign(:step, 1) |> assign(:error, nil)}
   end
 
+  @impl true
   def handle_info(:ollama_available, socket) do
     start_scraping(socket.assigns.url, "ollama", socket)
   end
 
   def handle_info(:ollama_unavailable, socket) do
-    {:noreply, 
-     socket
-     |> assign(:llm_status, "unavailable")
-     |> assign(:error, "Ollama server is not available. Please start Ollama or select another provider.")}
+    # Check if we're still in checking state (not already processed)
+    if socket.assigns.llm_status == "checking" do
+      {:noreply, 
+       socket
+       |> assign(:llm_status, "unavailable")
+       |> assign(:error, "Ollama server is not available. Please start Ollama or select another provider.")}
+    else
+      {:noreply, socket}  # Already handled, do nothing
+    end
   end
 
   def handle_info(:scrape_result, %{result: result}, socket) do
@@ -162,13 +168,16 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
   end
 
   defp check_ollama_status(socket) do
-    # Check if Ollama is available
+    # Check if Ollama is available with timeout
     spawn(fn ->
       case Clientats.LLM.Providers.Ollama.ping() do
         {:ok, :available} -> send(self(), :ollama_available)
         {:error, :unavailable} -> send(self(), :ollama_unavailable)
       end
     end)
+    
+    # Set a timeout to prevent hanging
+    Process.send_after(self(), :ollama_unavailable, 5000)
     
     {:noreply, assign(socket, :llm_status, "checking")}
   end
@@ -298,13 +307,15 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
                         if(@llm_status == "success", do: "bg-green-50 border border-green-200 text-green-800", else: "")}>
                   <.icon name={"hero-exclamation-triangle" <> if(@llm_status == "success", do: "hero-check-circle", else: "")} class="w-5 h-5" />
                   <span class="text-sm">
-                    <%= case @llm_status do %>
-                      "checking" -> "Checking Ollama server..."
-                      "success" -> "Ollama is ready!"
-                      "error" -> "Ollama encountered an error"
-                      "unavailable" -> "Ollama server is not available"
-                      _ -> "Status: " <> @llm_status
-                    <% end %>
+                    <%= 
+                      case @llm_status do
+                        "checking" -> "Checking Ollama server..."
+                        "success" -> "Ollama is ready!"
+                        "error" -> "Ollama encountered an error"
+                        "unavailable" -> "Ollama server is not available"
+                        _ -> "Status: " <> @llm_status
+                      end
+                    %>
                   </span>
                 </div>
               <% end %>
