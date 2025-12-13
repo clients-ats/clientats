@@ -43,7 +43,7 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
     {:noreply, socket |> assign(:url, url) |> assign(:error, nil)}
   end
 
-  def handle_event("update_url", params, socket) do
+  def handle_event("update_url", _params, socket) do
     {:noreply, socket}
   end
 
@@ -124,18 +124,18 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
     end
   end
 
-  def handle_info(:scrape_result, %{result: result}, socket) do
+  def handle_info({:scrape_result, %{result: result}}, socket) do
     case result do
       {:ok, data} ->
-        {:noreply, 
+        {:noreply,
          socket
          |> assign(:scraping, false)
          |> assign(:scraped_data, data)
          |> assign(:step, 2)
          |> assign(:llm_status, "success")}
-      
+
       {:error, reason} ->
-        {:noreply, 
+        {:noreply,
          socket
          |> assign(:scraping, false)
          |> assign(:error, "Scraping failed: #{reason}")
