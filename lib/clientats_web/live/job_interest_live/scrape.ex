@@ -39,7 +39,24 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
 
   @impl true
   def handle_event("update_url", %{"url" => url}, socket) do
-    {:noreply, socket |> assign(:url, url) |> assign(:error, nil)}
+    IO.puts("[DEBUG] update_url event with url: #{url}")
+    IO.puts("[DEBUG] Current socket URL before update: #{socket.assigns.url}")
+    new_socket = socket |> assign(:url, url) |> assign(:error, nil)
+    IO.puts("[DEBUG] Socket URL after update: #{new_socket.assigns.url}")
+    {:noreply, new_socket}
+  end
+  
+  def handle_event("update_url", %{"value" => url}, socket) do
+    IO.puts("[DEBUG] update_url event with value: #{url}")
+    IO.puts("[DEBUG] Current socket URL before update: #{socket.assigns.url}")
+    new_socket = socket |> assign(:url, url) |> assign(:error, nil)
+    IO.puts("[DEBUG] Socket URL after update: #{new_socket.assigns.url}")
+    {:noreply, new_socket}
+  end
+  
+  def handle_event("update_url", params, socket) do
+    IO.puts("[DEBUG] update_url event with unknown params: #{inspect(params)}")
+    {:noreply, socket |> assign(:error, nil)}
   end
 
   def handle_event("update_provider", %{"provider" => provider}, socket) do
@@ -54,11 +71,20 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
     url = String.trim(socket.assigns.url)
     provider = socket.assigns.llm_provider
     
-    # Check if Ollama is selected and available
-    if provider == "ollama" do
-      check_ollama_status(socket)
-    else
-      start_scraping(url, provider, socket)
+    # Validate URL first
+    case validate_url(url) do
+      {:error, :invalid_url} ->
+        {:noreply, 
+         socket
+         |> assign(:error, "Please enter a valid URL starting with http:// or https://")}
+      
+      {:ok, _valid_url} ->
+        # Check if Ollama is selected and available
+        if provider == "ollama" do
+          check_ollama_status(socket)
+        else
+          start_scraping(url, provider, socket)
+        end
     end
   end
 
@@ -130,6 +156,16 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
   end
 
   # Private functions
+
+  defp validate_url(url) when is_binary(url) do
+    uri = URI.parse(url)
+    if uri.scheme in ["http", "https"] do
+      {:ok, url}
+    else
+      {:error, :invalid_url}
+    end
+  end
+  defp validate_url(_), do: {:error, :invalid_url}
 
   defp get_llm_providers do
     [
@@ -291,7 +327,7 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
                       <div class="flex items-center gap-2">
                         <.icon name={provider.icon} class="w-5 h-5 text-gray-600" />
                         <span class="font-medium text-gray-900"><%= provider.name %></span>
-                        <%= if provider.local do %>
+                        <%= if Map.get(provider, :local) do %>
                           <span class="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full">Local</span>
                         <% end %>
                       </div>
@@ -352,22 +388,21 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
                 <label class="block text-sm font-medium text-gray-700 mb-2">
                   Job Posting URL
                 </label>
-                <form phx-submit="scrape_url">
-                  <div class="relative">
-                    <input
-                      type="url"
-                      phx-change="update_url"
-                      placeholder="https://www.linkedin.com/jobs/view/123456789"
-                      class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 pr-12"
-                      value={@url}
-                      disabled={@scraping}
-                    />
-                    <button
-                    type="submit"
+                <div class="relative">
+                  <input
+                    type="url"
+                    phx-change="update_url"
+                    placeholder="https://www.linkedin.com/jobs/view/123456789"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 pr-12"
+                    value={@url}
+                    disabled={@scraping}
+                  />
+                  <button
+                    type="button"
                     phx-click="scrape_url"
-                    disabled={@scraping || @url == "" || (@llm_provider == "ollama" && @llm_status == "checking")}
+                    disabled={@scraping || @url == ""}
                     class={"absolute right-2 top-1/2 -translate-y-1/2 btn btn-primary btn-sm " <> 
-                          if(@scraping || @url == "" || (@llm_provider == "ollama" && @llm_status == "checking"), do: "btn-disabled", else: "")}
+                          if(@scraping || @url == "", do: "btn-disabled", else: "")}
                   >
                     <%= if @scraping do %>
                       <.icon name="hero-arrow-path" class="w-4 h-4 animate-spin" />
@@ -377,7 +412,6 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
                     <%= if @scraping, do: "Processing...", else: "Import" %>
                   </button>
                 </div>
-                </form>
                 <%= if @error do %>
                   <p class="mt-2 text-sm text-red-600"><%= @error %></p>
                 <% end %>

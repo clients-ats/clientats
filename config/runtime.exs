@@ -80,7 +80,7 @@ if config_env() == :prod do
       },
       ollama: %{
         base_url: System.get_env("OLLAMA_BASE_URL") || "http://localhost:11434",
-        default_model: System.get_env("OLLAMA_MODEL") || "unsloth/magistral-small-2509:UD-Q4_K_XL",
+        default_model: System.get_env("OLLAMA_MODEL") || "hf.co/unsloth/Magistral-Small-2509-GGUF:UD-Q4_K_XL",
         timeout: 60_000,
         max_retries: 2
       }

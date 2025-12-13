@@ -173,7 +173,8 @@ defmodule Clientats.LLM.PromptTemplates do
   defp job_board_name(_), do: "unknown job board"
   
   defp truncate_content(content) when byte_size(content) > 8000 do
-    content |> String.slice(0, 8000) <> "... [truncated]"
+    truncated = String.slice(content, 0, 8000)
+    truncated <> "... [truncated]"
   end
   defp truncate_content(content), do: content
 end

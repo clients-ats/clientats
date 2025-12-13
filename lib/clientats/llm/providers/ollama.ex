@@ -16,7 +16,7 @@ defmodule Clientats.LLM.Providers.Ollama do
   Generate text completion using Ollama.
   
   ## Parameters
-    - model: Model name (e.g., "unsloth/magistral-small-2509:UD-Q4_K_XL")
+    - model: Model name (e.g., "hf.co/unsloth/Magistral-Small-2509-GGUF:UD-Q4_K_XL")
     - prompt: Input prompt
     - options: Additional options (temperature, top_p, etc.)
     - base_url: Ollama server URL (default: http://localhost:11434)
@@ -25,7 +25,7 @@ defmodule Clientats.LLM.Providers.Ollama do
     - {:ok, response} on success
     - {:error, reason} on failure
   """
-  def generate(model, prompt, options \ [], base_url \ nil) do
+  def generate(model, prompt, options \\ [], base_url \\ nil) do
     base_url = base_url || @default_base_url
     
     # Build request body
@@ -39,13 +39,17 @@ defmodule Clientats.LLM.Providers.Ollama do
     # Make HTTP request
     try do
       case Req.post("#{base_url}/api/generate", json: body, timeout: @default_timeout) do
-        %{status: 200, body: body} ->
-          {:ok, Jason.decode!(body)}
-        
-        %{status: status, body: body} ->
-          error_body = try_do(Jason.decode(body), %{})
-          {:error, {:http_error, status, error_body}}
-        
+        %{status: 200, body: response_body} ->
+          # Handle both string and map responses
+          decoded = case response_body do
+            %{} -> response_body
+            _ -> Jason.decode!(response_body)
+          end
+          {:ok, decoded}
+
+        %{status: status, body: _body} ->
+          {:error, {:http_error, status}}
+
         error ->
           {:error, {:request_error, inspect(error)}}
       end
@@ -67,7 +71,7 @@ defmodule Clientats.LLM.Providers.Ollama do
     - {:ok, response} on success
     - {:error, reason} on failure
   """
-  def chat(model, messages, options \ [], base_url \ nil) do
+  def chat(model, messages, options \\ [], base_url \\ nil) do
     base_url = base_url || @default_base_url
     
     # Convert messages to prompt
@@ -80,7 +84,7 @@ defmodule Clientats.LLM.Providers.Ollama do
   @doc """
   List available models from Ollama server.
   """
-  def list_models(base_url \ nil) do
+  def list_models(base_url \\ nil) do
     base_url = base_url || @default_base_url
     
     try do
@@ -88,7 +92,7 @@ defmodule Clientats.LLM.Providers.Ollama do
         %{status: 200, body: body} ->
           {:ok, Jason.decode!(body)}
         
-        %{status: status, body: body} ->
+        %{status: status, body: _body} ->
           {:error, {:http_error, status}}
         
         error ->
@@ -102,7 +106,7 @@ defmodule Clientats.LLM.Providers.Ollama do
   @doc """
   Check if Ollama server is available.
   """
-  def ping(base_url \ nil) do
+  def ping(base_url \\ nil) do
     base_url = base_url || @default_base_url
     
     try do
@@ -120,8 +124,7 @@ defmodule Clientats.LLM.Providers.Ollama do
   defp build_options(options) when is_list(options) do
     # Convert keyword list to map
     options
-    |> Keyword.new()
-    |> Map.from_struct()
+    |> Enum.into(%{})
   end
   defp build_options(options) when is_map(options), do: options
   defp build_options(_), do: %{}
@@ -129,16 +132,12 @@ defmodule Clientats.LLM.Providers.Ollama do
   defp build_prompt_from_messages(messages) do
     messages
     |> Enum.map(fn msg ->
-      "#{msg.role || "user"}: #{msg.content}"
+      role = msg[:role] || msg["role"] || "user"
+      content = msg[:content] || msg["content"] || ""
+      "#{role}: #{content}"
     end)
     |> Enum.join("\n")
   end
   
-  defp try_do(fun, default) do
-    try do
-      fun.()
-    rescue
-      _ -> default
-    end
-  end
+
 end

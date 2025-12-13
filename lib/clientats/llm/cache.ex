@@ -5,6 +5,8 @@ defmodule Clientats.LLM.Cache do
   In production, this should be replaced with a distributed cache like Redis.
   """
   
+  @agent __MODULE__
+  
   @type cache_key :: String.t()
   @type cache_value :: map()
   @type cache_entry :: {%{inserted_at: DateTime.t(), ttl: integer(), data: cache_value}}
@@ -51,19 +53,19 @@ defmodule Clientats.LLM.Cache do
   
   # In-memory cache implementation (replace with Redis in production)
   defp get_cache_entry(url) do
-    Agent.get(@agent, &Map.get(&1, url))
+    Agent.get(@agent, fn map -> Map.get(map, url) end)
   end
   
   defp put_cache_entry(url, entry) do
-    Agent.update(@agent, &Map.put(&1, url, entry))
+    Agent.update(@agent, fn map -> Map.put(map, url, entry) end)
   end
   
   defp delete_cache_entry(url) do
-    Agent.update(@agent, &Map.delete(&1, url))
+    Agent.update(@agent, fn map -> Map.delete(map, url) end)
   end
   
   defp clear_cache() do
-    Agent.update(@agent, &Map.new())
+    Agent.update(@agent, fn _ -> Map.new() end)
   end
   
   # Start the cache agent

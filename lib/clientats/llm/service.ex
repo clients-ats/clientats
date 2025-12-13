@@ -6,8 +6,6 @@ defmodule Clientats.LLM.Service do
   with built-in error handling, fallback mechanisms, and token management.
   """
   
-  use ReqLLM
-  
   alias Clientats.LLM.{PromptTemplates, Cache}
   
   @type provider :: :openai | :anthropic | :mistral | atom()
@@ -41,7 +39,7 @@ defmodule Clientats.LLM.Service do
     - {:ok, extracted_data} on success
     - {:error, reason} on failure
   """
-  def extract_job_data(content, url, mode \ :generic, provider \ nil, options \ []) do
+  def extract_job_data(content, url, mode \\ :generic, provider \\ nil, options \\ []) do
     # Validate input
     with {:ok, content} <- validate_content(content),
          {:ok, url} <- validate_url(url),
@@ -68,7 +66,7 @@ defmodule Clientats.LLM.Service do
     - mode: :specific or :generic extraction mode
     - options: Additional options for content fetching and LLM processing
   """
-  def extract_job_data_from_url(url, mode \ :generic, options \ []) do
+  def extract_job_data_from_url(url, mode \\ :generic, options \\ []) do
     with {:ok, content} <- fetch_url_content(url),
          {:ok, extracted} <- extract_job_data(content, url, mode, nil, options) do
       {:ok, Map.put(extracted, :source_url, url)}
@@ -107,9 +105,11 @@ defmodule Clientats.LLM.Service do
   defp validate_content(_), do: {:error, :invalid_content}
   
   defp validate_url(url) when is_binary(url) do
-    case URI.parse(url) do
-      {:ok, %URI{scheme: "http" or "https"}} -> {:ok, url}
-      _ -> {:error, :invalid_url}
+    uri = URI.parse(url)
+    if uri.scheme in ["http", "https"] do
+      {:ok, url}
+    else
+      {:error, :invalid_url}
     end
   end
   defp validate_url(_), do: {:error, :invalid_url}
@@ -131,34 +131,27 @@ defmodule Clientats.LLM.Service do
         # Build prompt based on mode
         prompt = PromptTemplates.build_job_extraction_prompt(content, url, mode)
         
+        IO.puts("[DEBUG] Attempting extraction with provider: #{inspect(provider)}")
+        IO.puts("[DEBUG] Using model: #{get_model_for_provider(provider)}")
+        
         # Call LLM with provider
         try do
-          result = 
+          result =
             case provider do
               :ollama ->
                 # Use direct Ollama client
+                IO.puts("[DEBUG] Calling Ollama with prompt length: #{byte_size(prompt)}")
                 call_ollama(prompt, options)
-              
+
               _ ->
                 # Use req_llm for other providers
-                ReqLLM.chat(
-                  provider: provider,
-                  model: get_model_for_provider(provider),
-                  messages: [
-                    %{
-                      role: "system",
-                      content: PromptTemplates.system_prompt()
-                    },
-                    %{
-                      role: "user",
-                      content: prompt
-                    }
-                  ],
-                  response_format: %{type: "json_object"},
-                  temperature: options[:temperature] || 0.1,
-                  max_tokens: options[:max_tokens] || 4096
-                )
+                IO.puts("[DEBUG] Calling #{provider} via ReqLLM")
+                # TODO: Implement proper ReqLLM integration
+                # For now, return an error for non-Ollama providers until ReqLLM is properly integrated
+                {:error, {:llm_error, "ReqLLM provider #{provider} not yet fully integrated"}}
             end
+          
+          IO.puts("[DEBUG] Received LLM result: #{inspect(result)}")
           
           # Parse and validate response
           case parse_llm_response(result) do
@@ -166,10 +159,14 @@ defmodule Clientats.LLM.Service do
               # Cache successful result
               Cache.put(url, parsed)
               {:ok, parsed}
-            {:error, reason} -> {:error, reason}
+            {:error, reason} ->
+              IO.puts("[ERROR] Failed to parse LLM response: #{inspect(reason)}")
+              {:error, reason}
           end
         rescue
           e ->
+            IO.puts("[ERROR] Exception in LLM extraction: #{Exception.message(e)}")
+            IO.puts("[ERROR] Stacktrace: #{inspect(__STACKTRACE__)}")
             {:error, {:llm_error, Exception.message(e)}}
         end
     end
@@ -197,8 +194,8 @@ defmodule Clientats.LLM.Service do
     # Get Ollama configuration
     providers = Application.get_env(:req_llm, :providers, %{})
     ollama_config = providers[:ollama] || %{}
-    
-    model = ollama_config[:default_model] || "unsloth/magistral-small-2509:UD-Q4_K_XL"
+
+    model = ollama_config[:default_model] || "hf.co/unsloth/Magistral-Small-2509-GGUF:UD-Q4_K_XL"
     base_url = ollama_config[:base_url] || "http://localhost:11434"
     
     # Build Ollama options
@@ -216,24 +213,27 @@ defmodule Clientats.LLM.Service do
     providers = Application.get_env(:req_llm, :providers, %{})
     case providers[provider] do
       %{default_model: model} -> model
-      _ -> case provider do
-        :openai -> "gpt-4o"
-        :anthropic -> "claude-3-opus-20240229"
-        :mistral -> "mistral-large-latest"
-        :ollama -> "unsloth/magistral-small-2509:UD-Q4_K_XL"
-        _ -> "gpt-4o"
-      end
+      _ ->
+        case provider do
+          :openai -> "gpt-4o"
+          :anthropic -> "claude-3-opus-20240229"
+          :mistral -> "mistral-large-latest"
+          :ollama -> "hf.co/unsloth/Magistral-Small-2509-GGUF:UD-Q4_K_XL"
+          _ -> "gpt-4o"
+        end
     end
   end
   
-  defp parse_llm_response(%{choices: [%{message: %{content: content}}]}) do
+  # Handle Ollama response format
+  defp parse_llm_response(%{"response" => response}) when is_binary(response) do
     try do
-      # Parse JSON response
-      parsed = Jason.decode!(content)
-      
+      # Extract JSON from response (Ollama might include extra text)
+      json_string = extract_json_from_text(response)
+      parsed = Jason.decode!(json_string)
+
       # Validate required fields
       required_fields = ["company_name", "position_title", "job_description"]
-      
+
       if Enum.all?(required_fields, &Map.has_key?(parsed, &1)) do
         # Transform to our standard format
         result = %{
@@ -259,6 +259,43 @@ defmodule Clientats.LLM.Service do
       e -> {:error, {:parse_error, Exception.message(e)}}
     end
   end
+
+  # Handle OpenAI-style response format
+  defp parse_llm_response(%{choices: [%{message: %{content: content}}]}) do
+    try do
+      # Parse JSON response
+      parsed = Jason.decode!(content)
+
+      # Validate required fields
+      required_fields = ["company_name", "position_title", "job_description"]
+
+      if Enum.all?(required_fields, &Map.has_key?(parsed, &1)) do
+        # Transform to our standard format
+        result = %{
+          company_name: parsed["company_name"],
+          position_title: parsed["position_title"],
+          job_description: parsed["job_description"],
+          location: parsed["location"] || "",
+          work_model: parsed["work_model"] || "remote",
+          salary: parse_salary(parsed),
+          skills: parse_skills(parsed),
+          metadata: %{
+            posting_date: parsed["posting_date"] || nil,
+            application_deadline: parsed["application_deadline"] || nil,
+            employment_type: parsed["employment_type"] || "full_time",
+            seniority_level: parsed["seniority_level"] || nil
+          }
+        }
+        {:ok, result}
+      else
+        {:error, :missing_required_fields}
+      end
+    rescue
+      e -> {:error, {:parse_error, Exception.message(e)}}
+    end
+  end
+
+  defp parse_llm_response(_), do: {:error, :invalid_response_format}
   
   defp parse_salary(parsed) do
     cond do
@@ -295,15 +332,30 @@ defmodule Clientats.LLM.Service do
   end
   
   defp fetch_url_content(url) do
-    # In production, this would use HTTPoison, Req, or Finch
-    # For now, we'll implement a basic version
+    # Enhanced URL fetching with proper headers and longer timeout
     try do
-      case Req.get(url, timeout: 10_000) do
+      case Req.get(url,
+           headers: [
+             {"User-Agent", "Mozilla/5.0 (compatible; Clientats/1.0; +https://clientats.com)"},
+             {"Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"},
+             {"Accept-Language", "en-US,en;q=0.5"}
+           ],
+           timeout: 30_000,  # Increased timeout for slower job sites
+           follow_redirects: true
+          ) do
         %{status: 200, body: body} -> {:ok, body}
         %{status: status} -> {:error, {:http_error, status}}
       end
     rescue
       e -> {:error, {:fetch_error, Exception.message(e)}}
+    end
+  end
+
+  defp extract_json_from_text(text) do
+    # Try to extract JSON from text that might contain extra content
+    case Regex.scan(~r/\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/, text) do
+      [[json | _] | _] -> json
+      _ -> text  # If no JSON found, try to parse the whole text
     end
   end
 end
