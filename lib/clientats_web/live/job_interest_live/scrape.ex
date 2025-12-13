@@ -135,10 +135,18 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
          |> assign(:llm_status, "success")}
 
       {:error, reason} ->
+        # Format error message - reason can be a tuple or string
+        error_msg = case reason do
+          {error_type, details} when is_atom(error_type) -> "#{error_type}: #{inspect(details)}"
+          {error_type, code} when is_atom(error_type) and is_integer(code) -> "#{error_type}: #{code}"
+          msg when is_binary(msg) -> msg
+          other -> inspect(other)
+        end
+
         {:noreply,
          socket
          |> assign(:scraping, false)
-         |> assign(:error, "Scraping failed: #{reason}")
+         |> assign(:error, "Scraping failed: #{error_msg}")
          |> assign(:llm_status, "error")}
     end
   end
