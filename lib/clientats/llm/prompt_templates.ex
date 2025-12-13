@@ -10,10 +10,27 @@ defmodule Clientats.LLM.PromptTemplates do
   """
   def build_job_extraction_prompt(content, url, mode) do
     source = detect_source(url)
-    
+
     case mode do
       :specific -> specific_mode_prompt(content, source)
       :generic -> generic_mode_prompt(content, source)
+    end
+  end
+
+  @doc """
+  Build a job extraction prompt for image-based extraction (multimodal).
+
+  ## Parameters
+    - _image_path: Path to the screenshot image (the image is passed to LLM, path is for context)
+    - url: Original URL for context
+    - mode: :specific or :generic extraction mode
+  """
+  def build_image_extraction_prompt(_image_path, url, mode) do
+    source = detect_source(url)
+
+    case mode do
+      :specific -> image_specific_mode_prompt(source)
+      :generic -> image_generic_mode_prompt(source)
     end
   end
   
@@ -150,8 +167,69 @@ defmodule Clientats.LLM.PromptTemplates do
     """
   end
   
+  @doc """
+  Image-specific mode prompt for known job boards.
+  """
+  def image_specific_mode_prompt(source) do
+    job_board = job_board_name(source)
+
+    """
+    Extract job posting information from this #{job_board} screenshot.
+
+    Please analyze the visible job posting on the screen and extract:
+    - company_name (required) - The hiring company name
+    - position_title (required) - The job title displayed
+    - job_description (required) - The full job description visible
+    - location - Job location (city, state/country)
+    - work_model - remote, hybrid, or on_site based on what's shown
+    - salary_min - Minimum salary if visible
+    - salary_max - Maximum salary if visible
+    - currency - Currency symbol or code if salary is shown
+    - salary_period - hourly, yearly, etc. if salary period is shown
+    - skills - Array of required skills/technologies listed
+    - posting_date - When the job was posted if visible
+    - application_deadline - Application deadline if visible
+    - employment_type - full_time, part_time, contract, or internship
+    - seniority_level - entry, mid, senior, or executive if mentioned
+
+    Return ONLY valid JSON with the extracted data. Use null for missing fields.
+    """
+  end
+
+  @doc """
+  Image generic mode prompt for any job posting screenshot.
+  """
+  def image_generic_mode_prompt(_source) do
+    """
+    Analyze this screenshot of a job posting and extract structured information.
+
+    Based on what you see in the image, extract these fields:
+    - company_name (required) - The hiring company name
+    - position_title (required) - The job title
+    - job_description (required) - Full job description text
+    - location - Where the job is located
+    - work_model - remote, hybrid, or on_site
+    - salary_min - Minimum salary if mentioned
+    - salary_max - Maximum salary if mentioned
+    - currency - Currency (USD, EUR, etc.)
+    - salary_period - hourly, yearly, etc.
+    - skills - Array of required skills
+    - posting_date - When job was posted (YYYY-MM-DD format if possible)
+    - application_deadline - Application deadline (YYYY-MM-DD format if possible)
+    - employment_type - full_time, part_time, contract, or internship
+    - seniority_level - entry, mid, senior, or executive if mentioned
+
+    Important:
+    1. Extract only what is visible in the image
+    2. Return only valid JSON
+    3. Use null for fields that are not visible
+    4. Extract salary ranges exactly as shown
+    5. Preserve original job description text
+    """
+  end
+
   # Private helper functions
-  
+
   defp detect_source(url) do
     cond do
       String.contains?(url, "linkedin.com") -> :linkedin

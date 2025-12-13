@@ -100,14 +100,110 @@ defmodule Clientats.LLM.Providers.Ollama do
   """
   def chat(model, messages, options \\ [], base_url \\ nil) do
     base_url = base_url || @default_base_url
-    
+
     # Convert messages to prompt
     prompt = build_prompt_from_messages(messages)
-    
+
     # Use generate endpoint
     generate(model, prompt, options, base_url)
   end
-  
+
+  @doc """
+  Generate text completion using Ollama with an image (multimodal).
+
+  ## Parameters
+    - model: Vision-capable model name (e.g., "llava", "llama2-vision")
+    - prompt: Input prompt with instructions for image analysis
+    - image_path: Path to the image file to analyze
+    - options: Additional options (temperature, top_p, etc.)
+    - base_url: Ollama server URL (default: http://localhost:11434)
+
+  ## Returns
+    - {:ok, response} on success
+    - {:error, reason} on failure
+
+  ## Notes
+    The image is referenced by file path. Ollama will process the image
+    along with the prompt to provide multimodal analysis.
+  """
+  def generate_with_image(model, prompt, image_path, options \\ [], base_url \\ nil) do
+    base_url = base_url || @default_base_url
+
+    # Verify image file exists
+    if !File.exists?(image_path) do
+      IO.puts("[Ollama] Image file not found: #{image_path}")
+      {:error, :image_not_found}
+    else
+      # Read image file and encode as base64
+      case File.read(image_path) do
+      {:ok, image_data} ->
+        image_base64 = Base.encode64(image_data)
+
+        # Build request body with image
+        body = %{
+          "model" => model,
+          "prompt" => prompt,
+          "stream" => false,
+          "images" => [image_base64],
+          "options" => build_options(options)
+        }
+
+        # Log request details
+        IO.puts("[Ollama] Sending multimodal request to #{base_url}/api/generate")
+        IO.puts("[Ollama] Model: #{model}")
+        IO.puts("[Ollama] Image: #{image_path} (#{byte_size(image_data)} bytes)")
+        IO.puts("[Ollama] Prompt size: #{byte_size(prompt)} bytes")
+        IO.puts("[Ollama] Options: #{inspect(body["options"])}")
+
+        # Make HTTP request
+        try do
+          response = Req.post!("#{base_url}/api/generate",
+            json: body,
+            receive_timeout: @default_timeout
+          )
+
+          case response do
+            %{status: 200, body: response_body} ->
+              # Handle both string and map responses
+              decoded = case response_body do
+                %{} -> response_body
+                _ -> Jason.decode!(response_body)
+              end
+
+              # Log response details
+              IO.puts("[Ollama] Response received (status 200)")
+              IO.puts("[Ollama] Response keys: #{inspect(Map.keys(decoded))}")
+              if is_map(decoded) && Map.has_key?(decoded, "response") do
+                IO.puts("[Ollama] Response text size: #{byte_size(decoded["response"])} bytes")
+              end
+
+              {:ok, decoded}
+
+            %{status: status} ->
+              IO.puts("[Ollama] HTTP Error: #{status}")
+              {:error, {:http_error, status}}
+          end
+        rescue
+          e ->
+            case e do
+              %Req.TransportError{reason: :timeout} ->
+                IO.puts("[Ollama] Request timeout after #{@default_timeout}ms")
+                {:error, {:timeout, "Ollama request timeout"}}
+
+              _ ->
+                error_msg = Exception.message(e)
+                IO.puts("[Ollama] Exception: #{error_msg}")
+                {:error, {:exception, error_msg}}
+            end
+        end
+
+      {:error, reason} ->
+        IO.puts("[Ollama] Failed to read image file: #{inspect(reason)}")
+        {:error, {:image_read_error, reason}}
+      end
+    end
+  end
+
   @doc """
   List available models from Ollama server.
   """
