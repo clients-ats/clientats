@@ -9,8 +9,8 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
   @impl true
   def mount(_params, _session, socket) do
     providers = get_llm_providers()
-    
-    {:ok, 
+
+    {:ok,
      socket
      |> assign(:page_title, "Import Job from URL")
      |> assign(:step, 1)
@@ -18,17 +18,18 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
      |> assign(:scraping, false)
      |> assign(:scraped_data, %{})
      |> assign(:error, nil)
-     |> assign(:llm_provider, "auto")
+     |> assign(:llm_provider, "ollama")
      |> assign(:llm_providers, providers)
      |> assign(:llm_status, nil)
-     |> assign(:show_provider_settings, false)
+     |> assign(:show_provider_settings, true)
      |> assign(:supported_sites, [
        "linkedin.com",
-       "indeed.com", 
+       "indeed.com",
        "glassdoor.com",
        "angel.co",
        "lever.co",
-       "greenhouse.io"
+       "greenhouse.io",
+       "workday.com"
      ])}
   end
 
@@ -390,7 +391,7 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
                 </label>
                 <div class="relative">
                   <input
-                    type="url"
+                    type="text"
                     phx-change="update_url"
                     placeholder="https://www.linkedin.com/jobs/view/123456789"
                     class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 pr-12"
