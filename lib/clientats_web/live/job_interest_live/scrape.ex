@@ -21,7 +21,7 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
      |> assign(:llm_provider, "ollama")
      |> assign(:llm_providers, providers)
      |> assign(:llm_status, nil)
-     |> assign(:show_provider_settings, true)
+     |> assign(:show_provider_settings, false)
      |> assign(:supported_sites, [
        "linkedin.com",
        "indeed.com",
