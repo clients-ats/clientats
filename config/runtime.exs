@@ -86,7 +86,7 @@ if config_env() == :prod do
       }
     },
     fallback_providers: [:anthropic, :mistral, :ollama],
-    max_content_length: 10_000,
+    max_content_length: 2_000_000,
     enable_logging: System.get_env("LLM_ENABLE_LOGGING") != "false",
     cache_ttl: 86400 # 24 hours cache for successful extractions
 

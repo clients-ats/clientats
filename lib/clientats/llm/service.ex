@@ -349,17 +349,31 @@ defmodule Clientats.LLM.Service do
   defp fetch_url_content(url) do
     # Enhanced URL fetching with proper headers and longer timeout
     try do
-      case Req.get(url,
+      response = Req.get!(url,
            headers: [
              {"User-Agent", "Mozilla/5.0 (compatible; Clientats/1.0; +https://clientats.com)"},
              {"Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"},
              {"Accept-Language", "en-US,en;q=0.5"}
            ],
            receive_timeout: 30_000,  # Increased timeout for slower job sites
-           follow_redirects: true
-          ) do
-        %{status: 200, body: body} -> {:ok, body}
-        %{status: status} -> {:error, {:http_error, status}}
+           redirect: true
+          )
+
+      case response.status do
+        200 ->
+          # Extract and truncate content to stay within LLM limits
+          content = response.body
+          max_length = Application.get_env(:req_llm, :max_content_length, 500_000)
+
+          if byte_size(content) > max_length do
+            # If content is too large, try to extract main text and truncate
+            truncated = String.slice(content, 0, max_length)
+            {:ok, truncated}
+          else
+            {:ok, content}
+          end
+
+        status -> {:error, {:http_error, status}}
       end
     rescue
       e -> {:error, {:fetch_error, Exception.message(e)}}
