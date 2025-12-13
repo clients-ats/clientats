@@ -40,24 +40,11 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
 
   @impl true
   def handle_event("update_url", %{"url" => url}, socket) do
-    IO.puts("[DEBUG] update_url event with url: #{url}")
-    IO.puts("[DEBUG] Current socket URL before update: #{socket.assigns.url}")
-    new_socket = socket |> assign(:url, url) |> assign(:error, nil)
-    IO.puts("[DEBUG] Socket URL after update: #{new_socket.assigns.url}")
-    {:noreply, new_socket}
+    {:noreply, socket |> assign(:url, url) |> assign(:error, nil)}
   end
-  
-  def handle_event("update_url", %{"value" => url}, socket) do
-    IO.puts("[DEBUG] update_url event with value: #{url}")
-    IO.puts("[DEBUG] Current socket URL before update: #{socket.assigns.url}")
-    new_socket = socket |> assign(:url, url) |> assign(:error, nil)
-    IO.puts("[DEBUG] Socket URL after update: #{new_socket.assigns.url}")
-    {:noreply, new_socket}
-  end
-  
+
   def handle_event("update_url", params, socket) do
-    IO.puts("[DEBUG] update_url event with unknown params: #{inspect(params)}")
-    {:noreply, socket |> assign(:error, nil)}
+    {:noreply, socket}
   end
 
   def handle_event("update_provider", %{"provider" => provider}, socket) do
@@ -389,30 +376,32 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
                 <label class="block text-sm font-medium text-gray-700 mb-2">
                   Job Posting URL
                 </label>
-                <div class="relative">
-                  <input
-                    type="text"
-                    phx-change="update_url"
-                    placeholder="https://www.linkedin.com/jobs/view/123456789"
-                    class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 pr-12"
-                    value={@url}
-                    disabled={@scraping}
-                  />
-                  <button
-                    type="button"
-                    phx-click="scrape_url"
-                    disabled={@scraping || @url == ""}
-                    class={"absolute right-2 top-1/2 -translate-y-1/2 btn btn-primary btn-sm " <> 
-                          if(@scraping || @url == "", do: "btn-disabled", else: "")}
-                  >
-                    <%= if @scraping do %>
-                      <.icon name="hero-arrow-path" class="w-4 h-4 animate-spin" />
-                    <% else %>
-                      <.icon name="hero-arrow-right" class="w-4 h-4" />
-                    <% end %>
-                    <%= if @scraping, do: "Processing...", else: "Import" %>
-                  </button>
-                </div>
+                <form phx-change="update_url">
+                  <div class="relative">
+                    <input
+                      type="text"
+                      name="url"
+                      placeholder="https://www.linkedin.com/jobs/view/123456789"
+                      class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 pr-12"
+                      value={@url}
+                      disabled={@scraping}
+                    />
+                    <button
+                      type="button"
+                      phx-click="scrape_url"
+                      disabled={@scraping || @url == ""}
+                      class={"absolute right-2 top-1/2 -translate-y-1/2 btn btn-primary btn-sm " <>
+                            if(@scraping || @url == "", do: "btn-disabled", else: "")}
+                    >
+                      <%= if @scraping do %>
+                        <.icon name="hero-arrow-path" class="w-4 h-4 animate-spin" />
+                      <% else %>
+                        <.icon name="hero-arrow-right" class="w-4 h-4" />
+                      <% end %>
+                      <%= if @scraping, do: "Processing...", else: "Import" %>
+                    </button>
+                  </div>
+                </form>
                 <%= if @error do %>
                   <p class="mt-2 text-sm text-red-600"><%= @error %></p>
                 <% end %>
