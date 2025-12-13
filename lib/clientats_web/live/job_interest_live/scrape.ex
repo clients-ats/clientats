@@ -199,10 +199,10 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
         {:error, :unavailable} -> send(self(), :ollama_unavailable)
       end
     end)
-    
-    # Set a timeout to prevent hanging
-    Process.send_after(self(), :ollama_unavailable, 5000)
-    
+
+    # Set a timeout to prevent hanging (must be longer than ping timeout)
+    Process.send_after(self(), :ollama_unavailable, 15_000)
+
     {:noreply, assign(socket, :llm_status, "checking")}
   end
 
