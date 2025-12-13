@@ -119,8 +119,9 @@ defmodule Clientats.LLM.Providers.Ollama do
     base_url = base_url || @default_base_url
 
     try do
-      case Req.get("#{base_url}", receive_timeout: 10_000) do
-        %{status: 200} -> {:ok, :available}
+      response = Req.get!("#{base_url}", receive_timeout: 10_000)
+      case response.status do
+        200 -> {:ok, :available}
         _ -> {:error, :unavailable}
       end
     rescue
