@@ -7,6 +7,7 @@ defmodule Clientats.LLM.Service do
   """
   
   alias Clientats.LLM.{PromptTemplates, Cache}
+  alias Clientats.Browser
   
   @type provider :: :openai | :anthropic | :mistral | atom()
   @type extraction_result :: {
@@ -59,20 +60,161 @@ defmodule Clientats.LLM.Service do
   end
   
   @doc """
-  Extract job data from URL by fetching content first.
-  
+  Extract job data from URL using browser screenshot + multimodal LLM.
+
   ## Parameters
     - url: URL of the job posting
     - mode: :specific or :generic extraction mode
-    - options: Additional options for content fetching and LLM processing
+    - options: Additional options for browser and LLM processing
+
+  ## Notes
+    This function captures a screenshot of the page and uses multimodal
+    LLM extraction (vision model) instead of raw HTML. If screenshot fails,
+    falls back to HTML fetching for non-vision providers.
   """
   def extract_job_data_from_url(url, mode \\ :generic, options \\ []) do
-    with {:ok, content} <- fetch_url_content(url),
-         {:ok, extracted} <- extract_job_data(content, url, mode, nil, options) do
-      {:ok, Map.put(extracted, :source_url, url)}
+    # Determine provider
+    provider = Keyword.get(options, :provider) || Application.get_env(:req_llm, :primary_provider, :openai)
+
+    # Try to use browser screenshot first (better for multimodal extraction)
+    case capture_page_screenshot(url) do
+      {:ok, screenshot_path} ->
+        IO.puts("[Service] Using screenshot-based extraction")
+        extract_with_screenshot(screenshot_path, url, mode, provider, options)
+
+      {:error, reason} ->
+        IO.puts("[Service] Screenshot failed (#{inspect(reason)}), falling back to HTML extraction")
+        # Fallback to HTML if screenshot unavailable
+        with {:ok, content} <- fetch_url_content(url),
+             {:ok, extracted} <- extract_job_data(content, url, mode, provider, options) do
+          {:ok, Map.put(extracted, :source_url, url)}
+        else
+          {:error, _} = error -> error
+        end
+    end
+  end
+
+  @doc """
+  Extract job data using a screenshot path for multimodal LLM processing.
+
+  ## Parameters
+    - screenshot_path: Path to the screenshot PNG file
+    - url: Original URL for context
+    - mode: :specific or :generic extraction mode
+    - provider: LLM provider to use
+    - options: Additional options
+  """
+  def extract_with_screenshot(screenshot_path, url, mode, provider, options) do
+    with {:ok, provider} <- determine_provider(provider) do
+      case attempt_screenshot_extraction(screenshot_path, url, mode, provider, options) do
+        {:ok, result} -> {:ok, Map.put(result, :source_url, url)}
+        {:error, :rate_limited} -> retry_with_fallback_screenshot(screenshot_path, url, mode, options)
+        {:error, :auth_error} -> retry_with_fallback_screenshot(screenshot_path, url, mode, options)
+        {:error, :timeout} -> retry_with_fallback_screenshot(screenshot_path, url, mode, options)
+        {:error, reason} -> {:error, reason}
+      end
     else
       {:error, _} = error -> error
     end
+  end
+
+  defp capture_page_screenshot(url) do
+    Browser.capture_screenshot(url, viewport_width: 1920, viewport_height: 1080, timeout: 30000)
+  end
+
+  defp attempt_screenshot_extraction(screenshot_path, url, mode, provider, options) do
+    # Check cache first by URL
+    case Cache.get(url) do
+      {:ok, cached} ->
+        IO.puts("[Service] Using cached result for #{url}")
+        {:ok, cached}
+
+      :not_found ->
+        # Build prompt for multimodal extraction
+        prompt = PromptTemplates.build_image_extraction_prompt(screenshot_path, url, mode)
+
+        IO.puts("[Service] Attempting image-based extraction with provider: #{inspect(provider)}")
+
+        # Call LLM with image
+        try do
+          result =
+            case provider do
+              :ollama ->
+                IO.puts("[Service] Calling Ollama with screenshot: #{screenshot_path}")
+                call_ollama_with_image(screenshot_path, prompt, options)
+
+              _ ->
+                # For other providers, would need different image handling
+                IO.puts("[Service] Non-Ollama provider selected, requires image support")
+                {:error, {:llm_error, "Image extraction not yet supported for provider #{provider}"}}
+            end
+
+          IO.puts("[Service] Received LLM result: #{inspect(result)}")
+
+          # Parse and validate response
+          case parse_llm_response(result) do
+            {:ok, parsed} ->
+              # Cache successful result
+              Cache.put(url, parsed)
+              {:ok, parsed}
+
+            {:error, reason} ->
+              IO.puts("[ERROR] Failed to parse LLM response: #{inspect(reason)}")
+              {:error, reason}
+          end
+        rescue
+          e ->
+            IO.puts("[ERROR] Exception in image extraction: #{Exception.message(e)}")
+            IO.puts("[ERROR] Stacktrace: #{inspect(__STACKTRACE__)}")
+            {:error, {:llm_error, Exception.message(e)}}
+        after
+          # Clean up screenshot file
+          if File.exists?(screenshot_path) do
+            File.rm(screenshot_path)
+            IO.puts("[Service] Cleaned up screenshot: #{screenshot_path}")
+          end
+        end
+    end
+  end
+
+  defp retry_with_fallback_screenshot(screenshot_path, url, mode, options) do
+    # Clean up screenshot
+    File.rm(screenshot_path)
+
+    fallback_providers = Application.get_env(:req_llm, :fallback_providers, [])
+
+    case try_screenshot_fallbacks(fallback_providers, screenshot_path, url, mode, options, []) do
+      {:ok, result} -> {:ok, result}
+      :error -> {:error, :all_providers_failed}
+    end
+  end
+
+  defp try_screenshot_fallbacks([provider | rest], screenshot_path, url, mode, options, _tried) do
+    case attempt_screenshot_extraction(screenshot_path, url, mode, provider, options) do
+      {:ok, result} -> {:ok, result}
+      {:error, _reason} -> try_screenshot_fallbacks(rest, screenshot_path, url, mode, options, [provider])
+    end
+  end
+  defp try_screenshot_fallbacks([], _screenshot_path, _url, _mode, _options, _tried), do: :error
+
+  defp call_ollama_with_image(screenshot_path, prompt, options) do
+    # Get Ollama configuration
+    providers = Application.get_env(:req_llm, :providers, %{})
+    ollama_config = providers[:ollama] || %{}
+
+    # Use vision model
+    model = ollama_config[:vision_model] || "llava"
+    base_url = ollama_config[:base_url] || "http://localhost:11434"
+
+    # Build Ollama options
+    ollama_options = [
+      temperature: options[:temperature] || 0.1,
+      top_p: options[:top_p] || 0.9,
+      num_predict: options[:max_tokens] || 4096
+    ]
+
+    # Call Ollama provider with image
+    Clientats.LLM.Providers.Ollama.generate_with_image(model, prompt, screenshot_path, ollama_options, base_url)
   end
   
   @doc """
