@@ -27,18 +27,35 @@ defmodule ClientatsWeb.JobScraperController do
     - 429: Rate limited
     - 500: Server error
   """
-  def scrape(conn, %{"url" => url, "mode" => mode, "provider" => provider, "save" => save}) do
+  def scrape(conn, params) do
+    # Extract parameters with defaults
+    url = params["url"]
+    mode = params["mode"] || "generic"
+    provider = params["provider"]
+    save = params["save"] || "false"
+    
     # Validate authentication
-    with {:ok, current_user} <- ensure_authenticated(conn),
-         {:ok, result} <- do_scrape(url, mode, provider, save, current_user) do
-      
-      conn
-      |> put_status(:ok)
-      |> json(%{
-           success: true,
-           data: result,
-           message: "Job data extracted successfully"
-         })
+    case ensure_authenticated(conn) do
+      conn when conn.halted -> conn
+      {:ok, current_user} ->
+        case do_scrape(url, mode, provider, save, current_user) do
+          {:ok, result} ->
+            conn
+            |> put_status(:ok)
+            |> json(%{
+                 success: true,
+                 data: result,
+                 message: "Job data extracted successfully"
+               })
+          {:error, reason} ->
+            conn
+            |> put_status(:bad_request)
+            |> json(%{
+                 success: false,
+                 error: reason,
+                 message: "Job scraping failed"
+               })
+        end
     end
   end
   
@@ -46,7 +63,7 @@ defmodule ClientatsWeb.JobScraperController do
   Get available LLM providers and their status.
   """
   def providers(conn, _params) do
-    with {:ok, current_user} <- ensure_authenticated(conn) do
+    with {:ok, _current_user} <- ensure_authenticated(conn) do
       providers = Service.get_available_providers()
       
       conn
@@ -63,7 +80,7 @@ defmodule ClientatsWeb.JobScraperController do
   Get LLM service configuration.
   """
   def config(conn, _params) do
-    with {:ok, current_user} <- ensure_authenticated(conn) do
+    with {:ok, _current_user} <- ensure_authenticated(conn) do
       config = Service.get_config()
       
       conn
