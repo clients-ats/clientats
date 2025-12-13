@@ -118,14 +118,15 @@ defmodule Clientats.Browser do
     end
   end
 
-  defp run_chrome_command(chrome_path, args, timeout) do
-    System.cmd(chrome_path, args,
-      stderr_to_stdout: true,
-      timeout: timeout
-    )
-  catch
-    :exit, {:timeout, _} ->
-      IO.puts("[Browser] Chrome screenshot timeout after #{timeout}ms")
-      {"", 124}  # Exit code 124 is standard for timeout
+  defp run_chrome_command(chrome_path, args, _timeout) do
+    # Note: System.cmd doesn't support timeout directly in older Elixir versions
+    # We rely on Chrome's built-in timeouts and the --disable-background-networking flag
+    try do
+      System.cmd(chrome_path, args, stderr_to_stdout: true)
+    catch
+      :exit, reason ->
+        IO.puts("[Browser] Chrome command failed: #{inspect(reason)}")
+        {"", 1}
+    end
   end
 end
