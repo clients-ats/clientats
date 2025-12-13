@@ -36,6 +36,12 @@ defmodule Clientats.LLM.Providers.Ollama do
       "options" => build_options(options)
     }
 
+    # Log request details
+    IO.puts("[Ollama] Sending request to #{base_url}/api/generate")
+    IO.puts("[Ollama] Model: #{model}")
+    IO.puts("[Ollama] Prompt size: #{byte_size(prompt)} bytes")
+    IO.puts("[Ollama] Options: #{inspect(body["options"])}")
+
     # Make HTTP request with proper error handling
     try do
       response = Req.post!("#{base_url}/api/generate",
@@ -50,19 +56,31 @@ defmodule Clientats.LLM.Providers.Ollama do
             %{} -> response_body
             _ -> Jason.decode!(response_body)
           end
+
+          # Log response details
+          IO.puts("[Ollama] Response received (status 200)")
+          IO.puts("[Ollama] Response keys: #{inspect(Map.keys(decoded))}")
+          if is_map(decoded) && Map.has_key?(decoded, "response") do
+            IO.puts("[Ollama] Response text size: #{byte_size(decoded["response"])} bytes")
+          end
+
           {:ok, decoded}
 
         %{status: status} ->
+          IO.puts("[Ollama] HTTP Error: #{status}")
           {:error, {:http_error, status}}
       end
     rescue
       e ->
         case e do
           %Req.TransportError{reason: :timeout} ->
+            IO.puts("[Ollama] Request timeout after #{@default_timeout}ms")
             {:error, {:timeout, "Ollama request timeout"}}
 
           _ ->
-            {:error, {:exception, Exception.message(e)}}
+            error_msg = Exception.message(e)
+            IO.puts("[Ollama] Exception: #{error_msg}")
+            {:error, {:exception, error_msg}}
         end
     end
   end
