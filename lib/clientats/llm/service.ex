@@ -152,14 +152,22 @@ defmodule Clientats.LLM.Service do
           IO.puts("[Service] Received LLM result: #{inspect(result)}")
 
           # Parse and validate response
-          case parse_llm_response(result) do
-            {:ok, parsed} ->
-              # Cache successful result
-              Cache.put(url, parsed)
-              {:ok, parsed}
+          case result do
+            {:ok, response_map} ->
+              case parse_llm_response(response_map) do
+                {:ok, parsed} ->
+                  # Cache successful result
+                  Cache.put(url, parsed)
+                  {:ok, parsed}
+
+                {:error, reason} ->
+                  IO.puts("[ERROR] Failed to parse LLM response: #{inspect(reason)}")
+                  IO.puts("[ERROR] Response map was: #{inspect(response_map)}")
+                  {:error, reason}
+              end
 
             {:error, reason} ->
-              IO.puts("[ERROR] Failed to parse LLM response: #{inspect(reason)}")
+              IO.puts("[ERROR] LLM call failed: #{inspect(reason)}")
               {:error, reason}
           end
         rescue
@@ -294,15 +302,22 @@ defmodule Clientats.LLM.Service do
             end
           
           IO.puts("[DEBUG] Received LLM result: #{inspect(result)}")
-          
+
           # Parse and validate response
-          case parse_llm_response(result) do
-            {:ok, parsed} ->
-              # Cache successful result
-              Cache.put(url, parsed)
-              {:ok, parsed}
+          case result do
+            {:ok, response_map} ->
+              case parse_llm_response(response_map) do
+                {:ok, parsed} ->
+                  # Cache successful result
+                  Cache.put(url, parsed)
+                  {:ok, parsed}
+                {:error, reason} ->
+                  IO.puts("[ERROR] Failed to parse LLM response: #{inspect(reason)}")
+                  IO.puts("[ERROR] Response map was: #{inspect(response_map)}")
+                  {:error, reason}
+              end
             {:error, reason} ->
-              IO.puts("[ERROR] Failed to parse LLM response: #{inspect(reason)}")
+              IO.puts("[ERROR] LLM call failed: #{inspect(reason)}")
               {:error, reason}
           end
         rescue
