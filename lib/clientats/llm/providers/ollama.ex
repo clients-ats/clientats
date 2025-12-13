@@ -1,13 +1,13 @@
 defmodule Clientats.LLM.Providers.Ollama do
   @moduledoc """
   Ollama provider for local LLM models.
-  
+
   Provides direct integration with Ollama's REST API for running
   local LLM models like Magistral-Small-2509-GGUF.
   """
-  
+
   @default_base_url "http://localhost:11434"
-  @default_timeout 60_000
+  @default_timeout 600_000  # 10 minutes for LLM generation
   
   @type options :: Keyword.t()
   @type response :: map()
@@ -27,7 +27,7 @@ defmodule Clientats.LLM.Providers.Ollama do
   """
   def generate(model, prompt, options \\ [], base_url \\ nil) do
     base_url = base_url || @default_base_url
-    
+
     # Build request body
     body = %{
       "model" => model,
@@ -35,10 +35,15 @@ defmodule Clientats.LLM.Providers.Ollama do
       "stream" => false,
       "options" => build_options(options)
     }
-    
-    # Make HTTP request
+
+    # Make HTTP request with proper error handling
     try do
-      case Req.post("#{base_url}/api/generate", json: body, timeout: @default_timeout) do
+      response = Req.post!("#{base_url}/api/generate",
+        json: body,
+        receive_timeout: @default_timeout
+      )
+
+      case response do
         %{status: 200, body: response_body} ->
           # Handle both string and map responses
           decoded = case response_body do
@@ -47,14 +52,18 @@ defmodule Clientats.LLM.Providers.Ollama do
           end
           {:ok, decoded}
 
-        %{status: status, body: _body} ->
+        %{status: status} ->
           {:error, {:http_error, status}}
-
-        error ->
-          {:error, {:request_error, inspect(error)}}
       end
     rescue
-      e -> {:error, {:exception, Exception.message(e)}}
+      e ->
+        case e do
+          %Req.TransportError{reason: :timeout} ->
+            {:error, {:timeout, "Ollama request timeout"}}
+
+          _ ->
+            {:error, {:exception, Exception.message(e)}}
+        end
     end
   end
   
@@ -86,9 +95,9 @@ defmodule Clientats.LLM.Providers.Ollama do
   """
   def list_models(base_url \\ nil) do
     base_url = base_url || @default_base_url
-    
+
     try do
-      case Req.get("#{base_url}/api/tags", timeout: 10_000) do
+      case Req.get("#{base_url}/api/tags", receive_timeout: 10_000) do
         %{status: 200, body: body} ->
           {:ok, Jason.decode!(body)}
         
@@ -108,9 +117,9 @@ defmodule Clientats.LLM.Providers.Ollama do
   """
   def ping(base_url \\ nil) do
     base_url = base_url || @default_base_url
-    
+
     try do
-      case Req.get("#{base_url}", timeout: 5_000) do
+      case Req.get("#{base_url}", receive_timeout: 5_000) do
         %{status: 200} -> {:ok, :available}
         _ -> {:error, :unavailable}
       end
