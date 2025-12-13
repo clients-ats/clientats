@@ -458,7 +458,7 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
                 <input
                   type="url"
                   name="url"
-                  value={@scraped_data.url || @url}
+                  value={@scraped_data[:source_url] || @scraped_data[:url] || @url}
                   class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   readonly
                 />
@@ -472,7 +472,7 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
                   <input
                     type="text"
                     name="company_name"
-                    value={@scraped_data.company_name || ""}
+                    value={@scraped_data[:company_name] || ""}
                     class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                     required
                   />
@@ -484,7 +484,7 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
                   <input
                     type="text"
                     name="position_title"
-                    value={@scraped_data.position_title || ""}
+                    value={@scraped_data[:position_title] || ""}
                     class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                     required
                   />
@@ -499,7 +499,7 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
                   name="job_description"
                   rows="6"
                   class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                ><%= @scraped_data.job_description || "" %></textarea>
+                ><%= @scraped_data[:job_description] || "" %></textarea>
               </div>
 
               <div class="grid md:grid-cols-2 gap-4">
@@ -510,7 +510,7 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
                   <input
                     type="text"
                     name="location"
-                    value={extract_location(@scraped_data.location) || ""}
+                    value={extract_location(@scraped_data[:location]) || ""}
                     placeholder="e.g., San Francisco, CA"
                     class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   />
@@ -523,14 +523,14 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
                     name="work_model"
                     class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   >
-                    <option value="remote" selected={@scraped_data.work_model == "remote"}>Remote</option>
-                    <option value="hybrid" selected={@scraped_data.work_model == "hybrid"}>Hybrid</option>
-                    <option value="on_site" selected={@scraped_data.work_model == "on_site"}>On-site</option>
+                    <option value="remote" selected={@scraped_data[:work_model] == "remote"}>Remote</option>
+                    <option value="hybrid" selected={@scraped_data[:work_model] == "hybrid"}>Hybrid</option>
+                    <option value="on_site" selected={@scraped_data[:work_model] == "on_site"}>On-site</option>
                   </select>
                 </div>
               </div>
 
-              <%= if @scraped_data.salary_min || @scraped_data.salary_max do %>
+              <%= if @scraped_data[:salary] && (@scraped_data[:salary][:min] || @scraped_data[:salary][:max]) do %>
                 <div class="bg-gray-50 rounded-lg p-4">
                   <h3 class="font-medium text-gray-800 mb-2">Extracted Salary Information</h3>
                   <p class="text-sm text-gray-600">
@@ -601,13 +601,14 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
   defp extract_location(_), do: ""
 
   defp format_salary(data) do
+    salary = data[:salary]
     cond do
-      data.salary_min && data.salary_max ->
-        "$#{data.salary_min} - $#{data.salary_max}"
-      data.salary_min ->
-        "$#{data.salary_min}+"
-      data.salary_max ->
-        "Up to $#{data.salary_max}"
+      salary && salary[:min] && salary[:max] ->
+        "$#{salary[:min]} - $#{salary[:max]}"
+      salary && salary[:min] ->
+        "$#{salary[:min]}+"
+      salary && salary[:max] ->
+        "Up to $#{salary[:max]}"
       true ->
         "Not specified"
     end
