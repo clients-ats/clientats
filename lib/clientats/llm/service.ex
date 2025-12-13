@@ -224,109 +224,124 @@ defmodule Clientats.LLM.Service do
     end
   end
   
-  # Handle Ollama response format
+  # Handle Ollama response format (string or atom keys)
   defp parse_llm_response(%{"response" => response}) when is_binary(response) do
     try do
       # Extract JSON from response (Ollama might include extra text)
       json_string = extract_json_from_text(response)
       parsed = Jason.decode!(json_string)
 
-      # Validate required fields
-      required_fields = ["company_name", "position_title", "job_description"]
-
-      if Enum.all?(required_fields, &Map.has_key?(parsed, &1)) do
-        # Transform to our standard format
-        result = %{
-          company_name: parsed["company_name"],
-          position_title: parsed["position_title"],
-          job_description: parsed["job_description"],
-          location: parsed["location"] || "",
-          work_model: parsed["work_model"] || "remote",
-          salary: parse_salary(parsed),
-          skills: parse_skills(parsed),
-          metadata: %{
-            posting_date: parsed["posting_date"] || nil,
-            application_deadline: parsed["application_deadline"] || nil,
-            employment_type: parsed["employment_type"] || "full_time",
-            seniority_level: parsed["seniority_level"] || nil
-          }
-        }
-        {:ok, result}
-      else
-        {:error, :missing_required_fields}
-      end
+      extract_job_fields(parsed)
     rescue
       e -> {:error, {:parse_error, Exception.message(e)}}
     end
   end
 
-  # Handle OpenAI-style response format
-  defp parse_llm_response(%{choices: [%{message: %{content: content}}]}) do
+  # Handle Ollama response format with atom keys
+  defp parse_llm_response(%{response: response}) when is_binary(response) do
     try do
-      # Parse JSON response
+      # Extract JSON from response (Ollama might include extra text)
+      json_string = extract_json_from_text(response)
+      parsed = Jason.decode!(json_string)
+
+      extract_job_fields(parsed)
+    rescue
+      e -> {:error, {:parse_error, Exception.message(e)}}
+    end
+  end
+
+  # Handle OpenAI-style response format (atom keys)
+  defp parse_llm_response(%{choices: [%{message: %{content: content}}]}) when is_binary(content) do
+    try do
       parsed = Jason.decode!(content)
+      extract_job_fields(parsed)
+    rescue
+      e -> {:error, {:parse_error, Exception.message(e)}}
+    end
+  end
 
-      # Validate required fields
-      required_fields = ["company_name", "position_title", "job_description"]
-
-      if Enum.all?(required_fields, &Map.has_key?(parsed, &1)) do
-        # Transform to our standard format
-        result = %{
-          company_name: parsed["company_name"],
-          position_title: parsed["position_title"],
-          job_description: parsed["job_description"],
-          location: parsed["location"] || "",
-          work_model: parsed["work_model"] || "remote",
-          salary: parse_salary(parsed),
-          skills: parse_skills(parsed),
-          metadata: %{
-            posting_date: parsed["posting_date"] || nil,
-            application_deadline: parsed["application_deadline"] || nil,
-            employment_type: parsed["employment_type"] || "full_time",
-            seniority_level: parsed["seniority_level"] || nil
-          }
-        }
-        {:ok, result}
-      else
-        {:error, :missing_required_fields}
-      end
+  # Handle OpenAI-style response format (string keys)
+  defp parse_llm_response(%{"choices" => [%{"message" => %{"content" => content}}]}) when is_binary(content) do
+    try do
+      parsed = Jason.decode!(content)
+      extract_job_fields(parsed)
     rescue
       e -> {:error, {:parse_error, Exception.message(e)}}
     end
   end
 
   defp parse_llm_response(_), do: {:error, :invalid_response_format}
+
+  # Helper function to extract job fields from parsed JSON
+  defp extract_job_fields(parsed) when is_map(parsed) do
+    # Get values, handling both string and atom keys
+    company_name = parsed["company_name"] || parsed[:company_name] || ""
+    position_title = parsed["position_title"] || parsed[:position_title] || ""
+    job_description = parsed["job_description"] || parsed[:job_description] || ""
+
+    # Validate required fields
+    required_fields = [company_name, position_title, job_description]
+
+    if Enum.all?(required_fields, &(is_binary(&1) && String.trim(&1) != "")) do
+      # Transform to our standard format
+      result = %{
+        company_name: company_name,
+        position_title: position_title,
+        job_description: job_description,
+        location: parsed["location"] || parsed[:location] || "",
+        work_model: parsed["work_model"] || parsed[:work_model] || "remote",
+        salary: parse_salary(parsed),
+        skills: parse_skills(parsed),
+        metadata: %{
+          posting_date: parsed["posting_date"] || parsed[:posting_date] || nil,
+          application_deadline: parsed["application_deadline"] || parsed[:application_deadline] || nil,
+          employment_type: parsed["employment_type"] || parsed[:employment_type] || "full_time",
+          seniority_level: parsed["seniority_level"] || parsed[:seniority_level] || nil
+        }
+      }
+      {:ok, result}
+    else
+      {:error, :missing_required_fields}
+    end
+  end
+  defp extract_job_fields(_), do: {:error, :invalid_response_format}
   
   defp parse_salary(parsed) do
+    salary_min = parsed["salary_min"] || parsed[:salary_min]
+    salary_max = parsed["salary_max"] || parsed[:salary_max]
+    currency = parsed["currency"] || parsed[:currency] || "USD"
+    salary_period = parsed["salary_period"] || parsed[:salary_period] || "yearly"
+
     cond do
-      parsed["salary_min"] && parsed["salary_max"] ->
+      salary_min && salary_max ->
         %{
-          min: parsed["salary_min"],
-          max: parsed["salary_max"],
-          currency: parsed["currency"] || "USD",
-          period: parsed["salary_period"] || "yearly"
+          min: salary_min,
+          max: salary_max,
+          currency: currency,
+          period: salary_period
         }
-      parsed["salary_min"] ->
+      salary_min ->
         %{
-          min: parsed["salary_min"],
-          currency: parsed["currency"] || "USD",
-          period: parsed["salary_period"] || "yearly"
+          min: salary_min,
+          currency: currency,
+          period: salary_period
         }
-      parsed["salary_max"] ->
+      salary_max ->
         %{
-          max: parsed["salary_max"],
-          currency: parsed["currency"] || "USD",
-          period: parsed["salary_period"] || "yearly"
+          max: salary_max,
+          currency: currency,
+          period: salary_period
         }
       true -> nil
     end
   end
-  
+
   defp parse_skills(parsed) do
-    case parsed["skills"] do
+    skills = parsed["skills"] || parsed[:skills]
+    case skills do
       nil -> []
       skills when is_list(skills) -> skills
-      skills when is_binary(skills) -> String.split(skills, ",")
+      skills when is_binary(skills) -> String.split(skills, ",") |> Enum.map(&String.trim/1)
       _ -> []
     end
   end
@@ -340,7 +355,7 @@ defmodule Clientats.LLM.Service do
              {"Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"},
              {"Accept-Language", "en-US,en;q=0.5"}
            ],
-           timeout: 30_000,  # Increased timeout for slower job sites
+           receive_timeout: 30_000,  # Increased timeout for slower job sites
            follow_redirects: true
           ) do
         %{status: 200, body: body} -> {:ok, body}
