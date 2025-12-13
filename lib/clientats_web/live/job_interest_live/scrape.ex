@@ -193,10 +193,13 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
 
   defp check_ollama_status(socket) do
     # Check if Ollama is available with timeout
+    # Capture the current process PID to send messages back to LiveView
+    liveview_pid = self()
+
     spawn(fn ->
       case Clientats.LLM.Providers.Ollama.ping() do
-        {:ok, :available} -> send(self(), :ollama_available)
-        {:error, :unavailable} -> send(self(), :ollama_unavailable)
+        {:ok, :available} -> send(liveview_pid, :ollama_available)
+        {:error, :unavailable} -> send(liveview_pid, :ollama_unavailable)
       end
     end)
 
@@ -208,7 +211,7 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
 
   defp start_scraping(url, provider, socket) do
     # Parse provider
-    llm_provider = 
+    llm_provider =
       case provider do
         "auto" -> nil
         "ollama" -> :ollama
@@ -217,26 +220,30 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
         "mistral" -> :mistral
         _ -> nil
       end
-    
+
+    # Capture the current process PID to send messages back to LiveView
+    liveview_pid = self()
+
+    # Spawn scraping process
+    spawn(fn ->
+      result =
+        case llm_provider do
+          :ollama ->
+            Service.extract_job_data_from_url(url, :generic, provider: :ollama)
+
+          _ ->
+            Service.extract_job_data_from_url(url, :generic, provider: llm_provider)
+        end
+
+      send(liveview_pid, {:scrape_result, %{result: result}})
+    end)
+
     # Start scraping process
-    {:noreply, 
+    {:noreply,
      socket
      |> assign(:scraping, true)
      |> assign(:error, nil)
      |> assign(:llm_status, "processing")}
-    
-    # Spawn scraping process
-    spawn(fn ->
-      result = 
-        case llm_provider do
-          :ollama ->
-            Service.extract_job_data_from_url(url, :generic, provider: :ollama)
-          _ ->
-            Service.extract_job_data_from_url(url, :generic, provider: llm_provider)
-        end
-      
-      send(self(), {:scrape_result, %{result: result}})
-    end)
   end
 
   defp get_provider_icon(provider_id) do
