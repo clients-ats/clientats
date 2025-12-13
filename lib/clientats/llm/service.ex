@@ -349,6 +349,8 @@ defmodule Clientats.LLM.Service do
   defp fetch_url_content(url) do
     # Enhanced URL fetching with proper headers and longer timeout
     try do
+      IO.puts("[Fetch] Fetching content from: #{url}")
+
       response = Req.get!(url,
            headers: [
              {"User-Agent", "Mozilla/5.0 (compatible; Clientats/1.0; +https://clientats.com)"},
@@ -365,18 +367,28 @@ defmodule Clientats.LLM.Service do
           content = response.body
           max_length = Application.get_env(:req_llm, :max_content_length, 500_000)
 
+          IO.puts("[Fetch] Response received: #{byte_size(content)} bytes")
+          IO.puts("[Fetch] Max content length: #{max_length} bytes")
+
           if byte_size(content) > max_length do
             # If content is too large, try to extract main text and truncate
             truncated = String.slice(content, 0, max_length)
+            IO.puts("[Fetch] Content truncated to #{byte_size(truncated)} bytes")
             {:ok, truncated}
           else
+            IO.puts("[Fetch] Content within limits")
             {:ok, content}
           end
 
-        status -> {:error, {:http_error, status}}
+        status ->
+          IO.puts("[Fetch] HTTP Error: #{status}")
+          {:error, {:http_error, status}}
       end
     rescue
-      e -> {:error, {:fetch_error, Exception.message(e)}}
+      e ->
+        error_msg = Exception.message(e)
+        IO.puts("[Fetch] Exception: #{error_msg}")
+        {:error, {:fetch_error, error_msg}}
     end
   end
 
