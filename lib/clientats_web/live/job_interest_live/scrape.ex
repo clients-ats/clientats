@@ -267,6 +267,9 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
         _ -> provider  # Pass through if already an atom or unknown
       end
 
+    # Get the estimated time for this specific provider
+    estimated_time_ms = get_estimated_provider_time(provider)
+
     # Capture the current process PID to send messages back to LiveView
     liveview_pid = self()
 
@@ -291,6 +294,8 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
      socket
      |> assign(:scraping, true)
      |> assign(:scraping_start_time, System.monotonic_time(:millisecond))
+     |> assign(:estimated_llm_time_ms, estimated_time_ms)
+     |> assign(:remaining_llm_time_ms, estimated_time_ms)
      |> assign(:error, nil)
      |> assign(:llm_status, "processing")}
   end
@@ -668,9 +673,13 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
   defp get_estimated_provider_time(provider) do
     case provider do
       "ollama" -> 120_000  # ~2 minutes for Ollama
+      :ollama -> 120_000
       "openai" -> 10_000   # ~10 seconds
+      :openai -> 10_000
       "anthropic" -> 15_000 # ~15 seconds
+      :anthropic -> 15_000
       "mistral" -> 12_000   # ~12 seconds
+      :mistral -> 12_000
       _ -> 15_000           # Default to 15 seconds
     end
   end
