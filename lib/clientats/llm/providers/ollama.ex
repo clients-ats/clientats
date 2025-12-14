@@ -248,12 +248,16 @@ defmodule Clientats.LLM.Providers.Ollama do
 
     try do
       case Req.get("#{base_url}/api/tags", receive_timeout: 10_000) do
-        %{status: 200, body: body} ->
-          {:ok, Jason.decode!(body)}
-        
-        %{status: status, body: _body} ->
+        {:ok, %{status: 200, body: body}} ->
+          decoded = if is_binary(body), do: Jason.decode!(body), else: body
+          {:ok, decoded}
+
+        {:ok, %{status: status}} ->
           {:error, {:http_error, status}}
-        
+
+        {:error, reason} ->
+          {:error, {:request_error, inspect(reason)}}
+
         error ->
           {:error, {:request_error, inspect(error)}}
       end
