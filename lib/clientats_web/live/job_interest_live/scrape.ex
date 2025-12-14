@@ -394,11 +394,24 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
                       <div class="flex-1">
                         <p class="text-sm font-medium text-gray-900">Processing job posting...</p>
                         <div class="mt-2 flex items-baseline gap-2">
-                          <p class="text-3xl font-bold text-blue-600"><%= get_remaining_seconds(@socket) %></p>
+                          <% remaining_seconds = case @scraping_start_time do
+                            nil -> div(@estimated_llm_time_ms, 1000)
+                            start_time ->
+                              elapsed = System.monotonic_time(:millisecond) - start_time
+                              remaining = max(0, @estimated_llm_time_ms - elapsed)
+                              div(remaining, 1000)
+                          end %>
+                          <p class="text-3xl font-bold text-blue-600"><%= remaining_seconds %></p>
                           <p class="text-sm text-gray-600">seconds remaining</p>
                         </div>
                         <div class="mt-3 w-full bg-gray-200 rounded-full h-1.5">
-                          <% progress_percent = max(0, min(100, calculate_progress_percent(@socket))) %>
+                          <% progress_percent = case @scraping_start_time do
+                            nil -> 0
+                            start_time ->
+                              elapsed = System.monotonic_time(:millisecond) - start_time
+                              progress = (elapsed * 100) / @estimated_llm_time_ms
+                              max(0, min(100, progress))
+                          end %>
                           <div class="bg-gradient-to-r from-blue-500 to-indigo-500 h-1.5 rounded-full transition-all duration-300" style={"width: #{progress_percent}%"}></div>
                         </div>
                         <p class="mt-2 text-xs text-gray-500">Using <%= String.capitalize(@llm_provider) %> provider</p>
@@ -648,27 +661,4 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
     end
   end
 
-  defp get_remaining_seconds(socket) do
-    case socket.assigns.scraping_start_time do
-      nil ->
-        div(socket.assigns.estimated_llm_time_ms, 1000)
-
-      start_time ->
-        elapsed = System.monotonic_time(:millisecond) - start_time
-        remaining = max(0, socket.assigns.estimated_llm_time_ms - elapsed)
-        div(remaining, 1000)
-    end
-  end
-
-  defp calculate_progress_percent(socket) do
-    case socket.assigns.scraping_start_time do
-      nil ->
-        0
-
-      start_time ->
-        elapsed = System.monotonic_time(:millisecond) - start_time
-        progress = (elapsed * 100) / socket.assigns.estimated_llm_time_ms
-        min(progress, 100)
-    end
-  end
 end
