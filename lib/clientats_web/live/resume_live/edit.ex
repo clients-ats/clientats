@@ -2,6 +2,7 @@ defmodule ClientatsWeb.ResumeLive.Edit do
   use ClientatsWeb, :live_view
 
   alias Clientats.Documents
+  alias Clientats.Logging.FormLogger
 
   on_mount {ClientatsWeb.UserAuth, :ensure_authenticated}
 
@@ -19,6 +20,8 @@ defmodule ClientatsWeb.ResumeLive.Edit do
 
   @impl true
   def handle_event("validate", %{"resume" => resume_params}, socket) do
+    FormLogger.log_form_validation(socket, "resume", resume_params)
+
     changeset =
       socket.assigns.resume
       |> Documents.change_resume(resume_params)
@@ -28,6 +31,8 @@ defmodule ClientatsWeb.ResumeLive.Edit do
   end
 
   def handle_event("save", %{"resume" => resume_params}, socket) do
+    FormLogger.log_form_save(socket, "resume", resume_params)
+
     case Documents.update_resume(socket.assigns.resume, resume_params) do
       {:ok, _resume} ->
         {:noreply,
