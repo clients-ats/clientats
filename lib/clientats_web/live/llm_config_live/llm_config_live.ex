@@ -178,8 +178,13 @@ defmodule ClientatsWeb.LLMConfigLive do
   end
 
   def handle_event("discover_ollama_models", %{"base_url" => base_url}, socket) do
-    send(self(), {:discover_ollama_models, base_url})
-    {:noreply, assign(socket, :discovering_models, true)}
+    # Filter out empty base_url
+    if base_url && base_url != "" do
+      send(self(), {:discover_ollama_models, base_url})
+      {:noreply, assign(socket, :discovering_models, true)}
+    else
+      {:noreply, assign(socket, :discovering_models, false)}
+    end
   end
 
   def handle_event("save_config", %{"setting" => params}, socket) do
