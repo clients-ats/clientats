@@ -14,19 +14,23 @@ defmodule ClientatsWeb.LLMConfigLive do
     provider_statuses = LLMConfig.get_provider_status(user_id)
     active_provider = Enum.at(providers, 0)
 
-    {:ok,
-     socket
-     |> assign(:user_id, user_id)
-     |> assign(:providers, providers)
-     |> assign(:provider_statuses, provider_statuses)
-     |> assign(:active_provider, active_provider)
-     |> assign(:testing, false)
-     |> assign(:test_result, nil)
-     |> assign(:save_success, nil)
-     |> assign(:form_errors, %{})
-     |> assign(:ollama_models, [])
-     |> assign(:discovering_models, false)
-     |> load_provider_data(user_id, active_provider)}
+    socket =
+      socket
+      |> assign(:user_id, user_id)
+      |> assign(:providers, providers)
+      |> assign(:provider_statuses, provider_statuses)
+      |> assign(:active_provider, active_provider)
+      |> assign(:testing, false)
+      |> assign(:test_result, nil)
+      |> assign(:save_success, nil)
+      |> assign(:form_errors, %{})
+      |> assign(:ollama_models, [])
+      |> assign(:discovering_models, false)
+      |> assign(:provider_config, nil)
+
+    socket = load_provider_data(socket, user_id, active_provider)
+
+    {:ok, socket}
   end
 
   defp load_provider_data(socket, user_id, provider) do
@@ -255,8 +259,6 @@ defmodule ClientatsWeb.LLMConfigLive do
   end
 
   defp provider_form(assigns) do
-    assigns = assign(assigns, :provider_config, assigns[:provider_config])
-
     ~H"""
     <.form :let={_f} for={%{}} as={:setting} phx-submit="save_config">
       <input type="hidden" name="setting[provider]" value={@provider} />
