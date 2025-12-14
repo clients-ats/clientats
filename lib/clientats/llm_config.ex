@@ -109,6 +109,9 @@ defmodule Clientats.LLMConfig do
       :mistral ->
         test_mistral_connection(config)
 
+      :gemini ->
+        test_gemini_connection(config)
+
       :ollama ->
         test_ollama_connection(config)
 
@@ -190,6 +193,13 @@ defmodule Clientats.LLMConfig do
           {:error, "Invalid Mistral API key format"}
         end
 
+      :gemini ->
+        if byte_size(api_key) > 10 do
+          :ok
+        else
+          {:error, "Invalid Gemini API key format"}
+        end
+
       :ollama ->
         # Ollama doesn't require an API key
         :ok
@@ -224,6 +234,13 @@ defmodule Clientats.LLMConfig do
         api_key: System.get_env("MISTRAL_API_KEY"),
         default_model: System.get_env("MISTRAL_MODEL") || "mistral-large-latest",
         enabled: System.get_env("MISTRAL_API_KEY") != nil
+      },
+      gemini: %{
+        api_key: System.get_env("GEMINI_API_KEY"),
+        default_model: System.get_env("GEMINI_MODEL") || "gemini-2.0-flash",
+        vision_model: System.get_env("GEMINI_VISION_MODEL") || "gemini-2.0-flash",
+        text_model: System.get_env("GEMINI_TEXT_MODEL") || "gemini-2.0-flash",
+        enabled: System.get_env("GEMINI_API_KEY") != nil
       },
       ollama: %{
         base_url: System.get_env("OLLAMA_BASE_URL") || "http://localhost:11434",
@@ -370,6 +387,46 @@ defmodule Clientats.LLMConfig do
       e ->
         error_msg = Exception.message(e)
         {:error, "Failed to connect: #{error_msg}"}
+    end
+  end
+
+  defp test_gemini_connection(config) do
+    api_key = config[:api_key]
+
+    if is_nil(api_key) or api_key == "" do
+      {:error, "API key is required"}
+    else
+      try do
+        response = Req.post!(
+          "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
+          headers: [{"x-goog-api-key", api_key}],
+          json: %{
+            "contents" => [%{"parts" => [%{"text" => "Test"}]}]
+          },
+          receive_timeout: 5000
+        )
+
+        case response do
+          %{status: 200} ->
+            {:ok, "connected"}
+
+          %{status: 401} ->
+            {:error, "Invalid API key"}
+
+          %{status: 403} ->
+            {:error, "Access denied - check API key and enable required APIs"}
+
+          %{status: 429} ->
+            {:error, "Rate limited"}
+
+          %{status: status} ->
+            {:error, "Connection failed with status #{status}"}
+        end
+      rescue
+        e ->
+          error_msg = Exception.message(e)
+          {:error, "Failed to connect: #{error_msg}"}
+      end
     end
   end
 end

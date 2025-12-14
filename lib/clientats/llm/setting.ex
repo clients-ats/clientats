@@ -2,7 +2,7 @@ defmodule Clientats.LLM.Setting do
   use Ecto.Schema
   import Ecto.Changeset
 
-  @providers ~w(ollama openai anthropic mistral)
+  @providers ~w(ollama openai anthropic mistral gemini)
   @statuses ~w(unconfigured configured connected error)
 
   schema "llm_settings" do
