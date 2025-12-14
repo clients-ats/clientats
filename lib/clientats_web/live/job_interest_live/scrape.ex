@@ -42,6 +42,7 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
        |> assign(:llm_provider, llm_provider)
        |> assign(:llm_status, nil)
        |> assign(:estimated_llm_time_ms, estimated_time_ms)
+       |> assign(:remaining_llm_time_ms, estimated_time_ms)
        |> assign(:supported_sites, [
          "linkedin.com",
          "indeed.com",
@@ -144,10 +145,17 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
   def handle_info(:update_eta, socket) do
     # Periodic update to refresh ETA display during scraping
     if socket.assigns[:scraping] do
+      # Calculate remaining time
+      start_time = socket.assigns[:scraping_start_time]
+      initial_estimate = socket.assigns[:estimated_llm_time_ms]
+      elapsed = System.monotonic_time(:millisecond) - start_time
+      remaining = max(0, initial_estimate - elapsed)
+
       # Schedule next update in 500ms
       Process.send_after(self(), :update_eta, 500)
-      # Force a re-render by touching an assign
-      {:noreply, assign(socket, :_eta_tick, System.monotonic_time())}
+
+      # Update the remaining time estimate
+      {:noreply, assign(socket, :remaining_llm_time_ms, remaining)}
     else
       {:noreply, socket}
     end
@@ -225,13 +233,14 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
 
   defp check_ollama_status(socket) do
     # Check if Ollama is available with timeout
-    # Capture the current process PID to send messages back to LiveView
     liveview_pid = self()
 
     spawn(fn ->
       case Clientats.LLM.Providers.Ollama.ping() do
-        {:ok, :available} -> send(liveview_pid, :ollama_available)
-        {:error, :unavailable} -> send(liveview_pid, :ollama_unavailable)
+        {:ok, :available} ->
+          send(liveview_pid, :ollama_available)
+        {:error, :unavailable} ->
+          send(liveview_pid, :ollama_unavailable)
       end
     end)
 
@@ -242,15 +251,20 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
   end
 
   defp start_scraping(url, provider, socket) do
-    # Parse provider
+    # Parse provider (handle both string and atom forms)
     llm_provider =
       case provider do
         "auto" -> nil
+        :auto -> nil
         "ollama" -> :ollama
+        :ollama -> :ollama
         "openai" -> :openai
+        :openai -> :openai
         "anthropic" -> :anthropic
+        :anthropic -> :anthropic
         "mistral" -> :mistral
-        _ -> nil
+        :mistral -> :mistral
+        _ -> provider  # Pass through if already an atom or unknown
       end
 
     # Capture the current process PID to send messages back to LiveView
@@ -270,7 +284,6 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
       send(liveview_pid, {:scrape_result, %{result: result}})
     end)
 
-    # Start scraping process, capturing current time for ETA display
     # Schedule periodic updates to refresh ETA countdown
     Process.send_after(self(), :update_eta, 500)
 
@@ -409,13 +422,13 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
                       <div class="flex-1">
                         <p class="text-sm font-medium text-gray-900">Processing job posting...</p>
                         <div class="mt-2 flex items-baseline gap-2">
-                          <p class="text-3xl font-bold text-blue-600"><%= div(@estimated_llm_time_ms, 1000) %></p>
-                          <p class="text-sm text-gray-600">seconds remaining (estimated)</p>
+                          <p class="text-3xl font-bold text-blue-600"><%= format_duration(@remaining_llm_time_ms) %></p>
+                          <p class="text-sm text-gray-600">remaining (estimated)</p>
                         </div>
                         <div class="mt-3 w-full bg-gray-200 rounded-full h-1.5">
                           <div class="bg-gradient-to-r from-blue-500 to-indigo-500 h-1.5 rounded-full transition-all duration-300 animate-pulse"></div>
                         </div>
-                        <p class="mt-2 text-xs text-gray-500">Using <%= String.capitalize(@llm_provider) %> provider</p>
+                        <p class="mt-2 text-xs text-gray-500">Using <%= @llm_provider %> provider</p>
                       </div>
                     </div>
                   </div>
@@ -661,5 +674,20 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
       _ -> 15_000           # Default to 15 seconds
     end
   end
+
+  defp format_duration(milliseconds) when is_integer(milliseconds) do
+    total_seconds = div(milliseconds, 1000)
+    minutes = div(total_seconds, 60)
+    seconds = rem(total_seconds, 60)
+
+    case {minutes, seconds} do
+      {0, 0} -> "done"
+      {0, s} -> "#{s}s"
+      {m, 0} -> "#{m}m"
+      {m, s} -> "#{m}m #{s}s"
+    end
+  end
+
+  defp format_duration(_), do: "calculating..."
 
 end
