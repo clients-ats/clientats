@@ -27,7 +27,6 @@ defmodule ClientatsWeb.LLMConfigLive do
       |> assign(:ollama_models, [])
       |> assign(:discovering_models, false)
       |> assign(:provider_config, nil)
-      |> assign(:ollama_base_url, nil)
 
     socket = load_provider_data(socket, user_id, active_provider)
 
@@ -178,12 +177,16 @@ defmodule ClientatsWeb.LLMConfigLive do
     end
   end
 
-  def handle_event("update_base_url", %{"setting" => %{"base_url" => base_url}}, socket) do
-    {:noreply, assign(socket, :ollama_base_url, base_url)}
-  end
+  def handle_event("discover_ollama_models", params, socket) do
+    # Try to get base_url from phx-value or form params
+    base_url =
+      case params do
+        %{"base_url" => url} when url != "" -> url
+        _ -> nil
+      end
 
-  def handle_event("discover_ollama_models", _params, socket) do
-    base_url = socket.assigns.ollama_base_url || (socket.assigns.provider_config && socket.assigns.provider_config.base_url)
+    # If not in params, try to get from provider_config
+    base_url = base_url || (socket.assigns.provider_config && socket.assigns.provider_config.base_url)
 
     # Filter out empty base_url
     if base_url && base_url != "" do
@@ -205,7 +208,8 @@ defmodule ClientatsWeb.LLMConfigLive do
       "default_model" => params["default_model"],
       "vision_model" => params["vision_model"],
       "text_model" => params["text_model"],
-      "enabled" => params["enabled"] == "true"
+      "enabled" => params["enabled"] == "true",
+      "provider_status" => "configured"
     }
 
     # Validate API key if provided
@@ -673,17 +677,19 @@ defmodule ClientatsWeb.LLMConfigLive do
         <div class="flex gap-2">
           <input
             type="text"
+            id="ollama_base_url"
             name="setting[base_url]"
             placeholder="http://localhost:11434"
-            value={@provider_config && @provider_config.base_url}
-            phx-change="update_base_url"
             class="input input-bordered flex-1"
+            value={@provider_config && @provider_config.base_url}
           />
           <button
             type="button"
             phx-click="discover_ollama_models"
+            phx-value-base_url={@provider_config && @provider_config.base_url}
             disabled={@discovering_models}
             class="btn btn-primary"
+            onclick="this.setAttribute('phx-value-base_url', document.getElementById('ollama_base_url').value)"
           >
             <%= if @discovering_models, do: "Discovering...", else: "Discover Models" %>
           </button>
