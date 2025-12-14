@@ -9,8 +9,6 @@ defmodule Clientats.Browser do
 
   require Logger
 
-  @default_viewport_width 1920
-  @default_viewport_height 1080
   @default_timeout 30000
 
   @doc """
@@ -76,56 +74,60 @@ defmodule Clientats.Browser do
   defp validate_url(_), do: {:error, :invalid_url}
 
   defp run_chrome_screenshot(url, options) do
-    case find_chrome() do
-      nil ->
-        IO.puts("[Browser] Chrome not found. Screenshot capture unavailable.")
-        {:error, :chrome_not_found}
+    output_file = "/tmp/clientats_screenshot_#{System.unique_integer()}.png"
 
-      chrome_path ->
-        viewport_width = options[:viewport_width] || @default_viewport_width
-        viewport_height = options[:viewport_height] || @default_viewport_height
-        output_file = "/tmp/clientats_screenshot_#{System.unique_integer()}.png"
+    # Use Playwright script for better page load handling
+    script_path = Path.join(:code.priv_dir(:clientats), "../../../scripts/capture_screenshot.js")
 
-        # Build Chrome arguments for headless screenshot
-        args = [
-          "--headless=new",
-          "--no-sandbox",
-          "--disable-dev-shm-usage",
-          "--disable-gpu",
-          "--window-size=#{viewport_width},#{viewport_height}",
-          "--screenshot=#{output_file}",
-          url
-        ]
+    # Fall back to direct script path if priv doesn't work
+    script_path = if File.exists?(script_path) do
+      script_path
+    else
+      "scripts/capture_screenshot.js"
+    end
 
+    case File.exists?(script_path) do
+      false ->
+        IO.puts("[Browser] Screenshot script not found at #{script_path}. Screenshot capture unavailable.")
+        {:error, :script_not_found}
+
+      true ->
         IO.puts("[Browser] Capturing screenshot from: #{url}")
-        IO.puts("[Browser] Using Chrome: #{chrome_path}")
+        IO.puts("[Browser] Using Playwright script: #{script_path}")
         IO.puts("[Browser] Output file: #{output_file}")
 
-        case run_chrome_command(chrome_path, args, options[:timeout] || @default_timeout) do
+        # Call the Node.js script with timeout
+        timeout_ms = options[:timeout] || @default_timeout
+        timeout_sec = div(timeout_ms, 1000)
+
+        case run_playwright_script(script_path, url, output_file, timeout_sec) do
           {_output, 0} ->
             if File.exists?(output_file) do
               IO.puts("[Browser] Screenshot saved successfully")
               {:ok, output_file}
             else
-              IO.puts("[Browser] Chrome reported success but file not found")
+              IO.puts("[Browser] Script reported success but file not found")
               {:error, :screenshot_file_not_created}
             end
 
           {error_output, exit_code} ->
-            IO.puts("[Browser] Chrome failed: #{error_output} (exit code: #{exit_code})")
-            {:error, {:chrome_error, "Exit code: #{exit_code}"}}
+            IO.puts("[Browser] Script failed: #{error_output} (exit code: #{exit_code})")
+            {:error, {:script_error, "Exit code: #{exit_code}"}}
         end
     end
   end
 
-  defp run_chrome_command(chrome_path, args, _timeout) do
-    # Note: System.cmd doesn't support timeout directly in older Elixir versions
-    # We rely on Chrome's built-in timeouts and the --disable-background-networking flag
+  defp run_playwright_script(script_path, url, output_file, _timeout_sec) do
+    # Note: System.cmd doesn't support timeout directly in Elixir.
+    # The node script has built-in timeouts (30s page load, 15s content wait)
+    # For longer timeouts, users can wrap this in Task.async_stream with timeouts
     try do
-      System.cmd(chrome_path, args, stderr_to_stdout: true)
+      System.cmd("node", [script_path, url, output_file],
+        stderr_to_stdout: true
+      )
     catch
       :exit, reason ->
-        IO.puts("[Browser] Chrome command failed: #{inspect(reason)}")
+        IO.puts("[Browser] Script command failed: #{inspect(reason)}")
         {"", 1}
     end
   end
