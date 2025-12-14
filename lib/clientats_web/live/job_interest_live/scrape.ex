@@ -25,7 +25,9 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
        )
        |> redirect(to: ~p"/dashboard")}
     else
-      providers = get_llm_providers()
+      # Get the user's preferred LLM provider (defaults to ollama if not set)
+      llm_provider = get_preferred_provider(user_id, enabled_providers)
+      estimated_time_ms = get_estimated_provider_time(llm_provider)
 
       {:ok,
        socket
@@ -33,14 +35,13 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
        |> assign(:step, 1)
        |> assign(:url, "")
        |> assign(:scraping, false)
+       |> assign(:scraping_start_time, nil)
        |> assign(:saving, false)
        |> assign(:scraped_data, %{})
        |> assign(:error, nil)
-       |> assign(:llm_provider, "ollama")
-       |> assign(:llm_providers, providers)
+       |> assign(:llm_provider, llm_provider)
        |> assign(:llm_status, nil)
-       |> assign(:show_provider_settings, false)
-       |> assign(:estimated_llm_time_ms, 15_000)
+       |> assign(:estimated_llm_time_ms, estimated_time_ms)
        |> assign(:supported_sites, [
          "linkedin.com",
          "indeed.com",
@@ -67,25 +68,17 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
     {:noreply, socket}
   end
 
-  def handle_event("update_provider", %{"provider" => provider}, socket) do
-    {:noreply, assign(socket, :llm_provider, provider)}
-  end
-
-  def handle_event("toggle_provider_settings", _params, socket) do
-    {:noreply, assign(socket, :show_provider_settings, !socket.assigns.show_provider_settings)}
-  end
-
   def handle_event("scrape_url", _params, socket) do
     url = String.trim(socket.assigns.url)
     provider = socket.assigns.llm_provider
-    
+
     # Validate URL first
     case validate_url(url) do
       {:error, :invalid_url} ->
-        {:noreply, 
+        {:noreply,
          socket
          |> assign(:error, "Please enter a valid URL starting with http:// or https://")}
-      
+
       {:ok, _valid_url} ->
         # Check if Ollama is selected and available
         if provider == "ollama" do
@@ -265,10 +258,11 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
       send(liveview_pid, {:scrape_result, %{result: result}})
     end)
 
-    # Start scraping process
+    # Start scraping process, capturing current time for ETA display
     {:noreply,
      socket
      |> assign(:scraping, true)
+     |> assign(:scraping_start_time, System.monotonic_time(:millisecond))
      |> assign(:error, nil)
      |> assign(:llm_status, "processing")}
   end
@@ -315,69 +309,17 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
             <p class="text-sm text-gray-600 mt-1">Paste a job posting URL to automatically extract details</p>
           </div>
 
-          <!-- Provider Selection -->
-          <div class="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <div class="flex justify-between items-center">
-              <div>
-                <h3 class="font-medium text-gray-900">LLM Provider</h3>
-                <p class="text-sm text-gray-600">Choose how to process the job posting</p>
+          <!-- Provider Info - Using Global Configuration -->
+          <div class="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <div class="flex items-center gap-3">
+              <div class="flex-shrink-0">
+                <.icon name="hero-cog-6-tooth" class="w-5 h-5 text-blue-600" />
               </div>
-              <button
-                phx-click="toggle_provider_settings"
-                class="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
-              >
-                <.icon name="hero-cog-6-tooth" class="w-4 h-4" />
-                <%= if @show_provider_settings, do: "Hide Settings", else: "Show Settings" %>
-              </button>
+              <div class="flex-1">
+                <p class="text-sm font-medium text-blue-900">Using configured LLM provider: <span class="capitalize"><%= @llm_provider %></span></p>
+                <p class="text-xs text-blue-600 mt-0.5">Change your provider in <.link navigate={~p"/dashboard/llm-config"} class="underline hover:text-blue-800">LLM Configuration</.link></p>
+              </div>
             </div>
-            
-            <%= if @show_provider_settings do %>
-              <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <%= for provider <- @llm_providers do %>
-                  <label class={"flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-white transition-colors " <> 
-                          if(provider.id == @llm_provider, do: "border-blue-300 bg-blue-50", else: "border-gray-200")}>
-                    <input
-                      type="radio"
-                      name="llm_provider"
-                      value={provider.id}
-                      phx-click="update_provider"
-                      phx-value-provider={provider.id}
-                      class="mt-1"
-                      checked={provider.id == @llm_provider}
-                    />
-                    <div class="flex-1">
-                      <div class="flex items-center gap-2">
-                        <.icon name={provider.icon} class="w-5 h-5 text-gray-600" />
-                        <span class="font-medium text-gray-900"><%= provider.name %></span>
-                        <%= if Map.get(provider, :local) do %>
-                          <span class="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full">Local</span>
-                        <% end %>
-                      </div>
-                      <p class="text-sm text-gray-500 mt-1"><%= provider.description %></p>
-                    </div>
-                  </label>
-                <% end %>
-              </div>
-              
-              <!-- Ollama Status -->
-              <%= if @llm_provider == "ollama" && @llm_status do %>
-                <div class="mt-4 p-3 rounded-md flex items-center gap-2" class={"bg-yellow-50 border border-yellow-200 text-yellow-800" <> 
-                        if(@llm_status == "success", do: "bg-green-50 border border-green-200 text-green-800", else: "")}>
-                  <.icon name={"hero-exclamation-triangle" <> if(@llm_status == "success", do: "hero-check-circle", else: "")} class="w-5 h-5" />
-                  <span class="text-sm">
-                    <%= 
-                      case @llm_status do
-                        "checking" -> "Checking Ollama server..."
-                        "success" -> "Ollama is ready!"
-                        "error" -> "Ollama encountered an error"
-                        "unavailable" -> "Ollama server is not available"
-                        _ -> "Status: " <> @llm_status
-                      end
-                    %>
-                  </span>
-                </div>
-              <% end %>
-            <% end %>
           </div>
 
           <!-- Progress Steps -->
@@ -438,6 +380,31 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
                 </form>
                 <%= if @error do %>
                   <p class="mt-2 text-sm text-red-600"><%= @error %></p>
+                <% end %>
+
+                <!-- ETA Display during scraping -->
+                <%= if @scraping do %>
+                  <div class="mt-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+                    <div class="flex items-center gap-4">
+                      <div class="flex-shrink-0">
+                        <div class="flex items-center justify-center h-12 w-12 rounded-md bg-blue-100">
+                          <.icon name="hero-clock" class="h-6 w-6 text-blue-600" />
+                        </div>
+                      </div>
+                      <div class="flex-1">
+                        <p class="text-sm font-medium text-gray-900">Processing job posting...</p>
+                        <div class="mt-2 flex items-baseline gap-2">
+                          <p class="text-3xl font-bold text-blue-600"><%= get_remaining_seconds(@socket) %></p>
+                          <p class="text-sm text-gray-600">seconds remaining</p>
+                        </div>
+                        <div class="mt-3 w-full bg-gray-200 rounded-full h-1.5">
+                          <% progress_percent = max(0, min(100, calculate_progress_percent(@socket))) %>
+                          <div class="bg-gradient-to-r from-blue-500 to-indigo-500 h-1.5 rounded-full transition-all duration-300" style={"width: #{progress_percent}%"}></div>
+                        </div>
+                        <p class="mt-2 text-xs text-gray-500">Using <%= String.capitalize(@llm_provider) %> provider</p>
+                      </div>
+                    </div>
+                  </div>
                 <% end %>
               </div>
 
@@ -654,6 +621,54 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
         "Up to $#{salary[:max]}"
       true ->
         "Not specified"
+    end
+  end
+
+  defp get_preferred_provider(user_id, enabled_providers) do
+    # Get the user's preferred provider from config, default to first enabled or ollama
+    case LLMConfig.get_provider_config(user_id, "preferred_provider") do
+      {:ok, %{"provider" => provider}} -> provider
+      _ ->
+        # Default to ollama if available, otherwise first enabled provider
+        if Enum.member?(enabled_providers, "ollama") do
+          "ollama"
+        else
+          List.first(enabled_providers, "ollama")
+        end
+    end
+  end
+
+  defp get_estimated_provider_time(provider) do
+    case provider do
+      "ollama" -> 120_000  # ~2 minutes for Ollama
+      "openai" -> 10_000   # ~10 seconds
+      "anthropic" -> 15_000 # ~15 seconds
+      "mistral" -> 12_000   # ~12 seconds
+      _ -> 15_000           # Default to 15 seconds
+    end
+  end
+
+  defp get_remaining_seconds(socket) do
+    case socket.assigns.scraping_start_time do
+      nil ->
+        div(socket.assigns.estimated_llm_time_ms, 1000)
+
+      start_time ->
+        elapsed = System.monotonic_time(:millisecond) - start_time
+        remaining = max(0, socket.assigns.estimated_llm_time_ms - elapsed)
+        div(remaining, 1000)
+    end
+  end
+
+  defp calculate_progress_percent(socket) do
+    case socket.assigns.scraping_start_time do
+      nil ->
+        0
+
+      start_time ->
+        elapsed = System.monotonic_time(:millisecond) - start_time
+        progress = (elapsed * 100) / socket.assigns.estimated_llm_time_ms
+        min(progress, 100)
     end
   end
 end
