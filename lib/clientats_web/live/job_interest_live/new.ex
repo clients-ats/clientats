@@ -4,6 +4,7 @@ defmodule ClientatsWeb.JobInterestLive.New do
   alias Clientats.Jobs
   alias Clientats.Jobs.JobInterest
   alias Clientats.LLMConfig
+  alias Clientats.Logging.FormLogger
 
   on_mount {ClientatsWeb.UserAuth, :ensure_authenticated}
 
@@ -23,6 +24,8 @@ defmodule ClientatsWeb.JobInterestLive.New do
 
   @impl true
   def handle_event("validate", %{"job_interest" => job_interest_params}, socket) do
+    FormLogger.log_form_validation(socket, "job_interest", job_interest_params)
+
     changeset =
       %JobInterest{}
       |> Jobs.change_job_interest(job_interest_params)
@@ -32,6 +35,8 @@ defmodule ClientatsWeb.JobInterestLive.New do
   end
 
   def handle_event("save", %{"job_interest" => job_interest_params}, socket) do
+    FormLogger.log_form_save(socket, "job_interest", job_interest_params)
+
     job_interest_params = Map.put(job_interest_params, "user_id", socket.assigns.current_user.id)
 
     case Jobs.create_job_interest(job_interest_params) do
