@@ -3,6 +3,7 @@ defmodule ClientatsWeb.LLMConfigLive do
 
   alias Clientats.LLMConfig
   alias Clientats.LLM.Setting
+  alias Clientats.LLM.Providers.Ollama
 
   on_mount {ClientatsWeb.UserAuth, :ensure_authenticated}
 
@@ -23,6 +24,8 @@ defmodule ClientatsWeb.LLMConfigLive do
      |> assign(:test_result, nil)
      |> assign(:save_success, nil)
      |> assign(:form_errors, %{})
+     |> assign(:ollama_models, [])
+     |> assign(:discovering_models, false)
      |> load_provider_data(user_id, active_provider)}
   end
 
@@ -32,7 +35,21 @@ defmodule ClientatsWeb.LLMConfigLive do
         assign(socket, :provider_config, config)
 
       {:error, :not_found} ->
-        assign(socket, :provider_config, nil)
+        # Apply defaults for Ollama on first load
+        defaults = LLMConfig.get_env_defaults()
+        provider_atom = String.to_atom(provider)
+        provider_defaults = Map.get(defaults, provider_atom, %{})
+
+        default_config = %Setting{
+          provider: provider,
+          base_url: Map.get(provider_defaults, :base_url),
+          default_model: Map.get(provider_defaults, :default_model),
+          vision_model: Map.get(provider_defaults, :vision_model),
+          text_model: Map.get(provider_defaults, :text_model),
+          enabled: false
+        }
+
+        assign(socket, :provider_config, default_config)
     end
   end
 
@@ -153,6 +170,11 @@ defmodule ClientatsWeb.LLMConfigLive do
     end
   end
 
+  def handle_event("discover_ollama_models", %{"base_url" => base_url}, socket) do
+    send(self(), {:discover_ollama_models, base_url})
+    {:noreply, assign(socket, :discovering_models, true)}
+  end
+
   def handle_event("save_config", %{"setting" => params}, socket) do
     user_id = socket.assigns.user_id
     provider = params["provider"]
@@ -208,6 +230,30 @@ defmodule ClientatsWeb.LLMConfigLive do
     end
   end
 
+  def handle_info({:discover_ollama_models, base_url}, socket) do
+    case Ollama.list_models(base_url) do
+      {:ok, response} ->
+        models = response["models"] || []
+        ollama_models = Enum.map(models, fn model ->
+          %{
+            name: model["name"],
+            vision: has_vision_capability(model["name"])
+          }
+        end)
+
+        {:noreply,
+         socket
+         |> assign(:ollama_models, ollama_models)
+         |> assign(:discovering_models, false)}
+
+      {:error, _} ->
+        {:noreply,
+         socket
+         |> assign(:ollama_models, [])
+         |> assign(:discovering_models, false)}
+    end
+  end
+
   defp provider_form(assigns) do
     assigns = assign(assigns, :provider_config, assigns[:provider_config])
 
@@ -245,6 +291,8 @@ defmodule ClientatsWeb.LLMConfigLive do
               <.anthropic_form provider={@provider} provider_config={@provider_config} form_errors={@form_errors} />
             <% "mistral" -> %>
               <.mistral_form provider={@provider} provider_config={@provider_config} form_errors={@form_errors} />
+            <% "gemini" -> %>
+              <.gemini_form provider={@provider} provider_config={@provider_config} form_errors={@form_errors} />
             <% "ollama" -> %>
               <.ollama_form provider={@provider} provider_config={@provider_config} form_errors={@form_errors} />
           <% end %>
@@ -502,33 +550,37 @@ defmodule ClientatsWeb.LLMConfigLive do
     """
   end
 
-  defp ollama_form(assigns) do
+  defp gemini_form(assigns) do
     ~H"""
     <div class="space-y-4">
       <div class="form-control">
         <label class="label">
-          <span class="label-text font-semibold">Base URL</span>
-          <span class="label-text-alt text-gray-500">e.g., http://localhost:11434</span>
+          <span class="label-text font-semibold">API Key</span>
+          <span class="label-text-alt text-gray-500">Get from https://aistudio.google.com/apikey</span>
         </label>
         <input
-          type="text"
-          name="setting[base_url]"
-          placeholder="http://localhost:11434"
-          value={@provider_config && @provider_config.base_url}
+          type="password"
+          name="setting[api_key]"
+          placeholder="Your Google Gemini API key"
+          value={@provider_config && @provider_config.api_key}
           class="input input-bordered"
         />
-        <span class="label-text-alt text-gray-600">The URL where Ollama is running</span>
+        <%= if @form_errors[:api_key] do %>
+          <label class="label">
+            <span class="label-text-alt text-error"><%= @form_errors[:api_key] %></span>
+          </label>
+        <% end %>
       </div>
 
       <div class="form-control">
         <label class="label">
-          <span class="label-text font-semibold">Default Model (Text)</span>
-          <span class="label-text-alt text-gray-500">e.g., mistral, neural-chat</span>
+          <span class="label-text font-semibold">Default Model</span>
+          <span class="label-text-alt text-gray-500">e.g., gemini-2.0-flash, gemini-1.5-pro</span>
         </label>
         <input
           type="text"
           name="setting[default_model]"
-          placeholder="mistral"
+          placeholder="gemini-2.0-flash"
           value={@provider_config && @provider_config.default_model}
           class="input input-bordered"
         />
@@ -537,33 +589,163 @@ defmodule ClientatsWeb.LLMConfigLive do
 
       <div class="form-control">
         <label class="label">
-          <span class="label-text font-semibold">Text Model</span>
-          <span class="label-text-alt text-gray-500">e.g., mistral, neural-chat</span>
-        </label>
-        <input
-          type="text"
-          name="setting[text_model]"
-          placeholder="mistral"
-          value={@provider_config && @provider_config.text_model}
-          class="input input-bordered"
-        />
-        <span class="label-text-alt text-gray-600">Explicit model for text-only tasks</span>
-      </div>
-
-      <div class="form-control">
-        <label class="label">
           <span class="label-text font-semibold">Vision Model</span>
-          <span class="label-text-alt text-gray-500">e.g., qwen2.5vl:7b, llava</span>
+          <span class="label-text-alt text-gray-500">e.g., gemini-2.0-flash, gemini-1.5-pro</span>
         </label>
         <input
           type="text"
           name="setting[vision_model]"
-          placeholder="qwen2.5vl:7b"
+          placeholder="gemini-2.0-flash"
           value={@provider_config && @provider_config.vision_model}
           class="input input-bordered"
         />
         <span class="label-text-alt text-gray-600">Model with vision capabilities for image processing</span>
       </div>
+
+      <div class="form-control">
+        <label class="label">
+          <span class="label-text font-semibold">Text Model</span>
+          <span class="label-text-alt text-gray-500">e.g., gemini-2.0-flash, gemini-1.5-pro</span>
+        </label>
+        <input
+          type="text"
+          name="setting[text_model]"
+          placeholder="gemini-2.0-flash"
+          value={@provider_config && @provider_config.text_model}
+          class="input input-bordered"
+        />
+        <span class="label-text-alt text-gray-600">Model for text-only tasks</span>
+      </div>
+
+      <div class="alert alert-info">
+        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+        <div>
+          <p class="font-semibold mb-1">Getting Started with Google Gemini</p>
+          <ul class="text-sm list-disc list-inside space-y-1">
+            <li>Get your API key from <a href="https://aistudio.google.com/apikey" target="_blank" class="link link-primary">Google AI Studio</a></li>
+            <li>Enable the Gemini API in your Google Cloud Console</li>
+            <li>Use the "Test Connection" button to verify your API key</li>
+            <li>Most Gemini models support both text and vision capabilities</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  defp ollama_form(assigns) do
+    assigns = assign(
+      assigns,
+      :text_models,
+      Enum.filter(assigns[:ollama_models] || [], fn m -> !m.vision end)
+    )
+
+    assigns = assign(
+      assigns,
+      :vision_models,
+      Enum.filter(assigns[:ollama_models] || [], fn m -> m.vision end)
+    )
+
+    ~H"""
+    <div class="space-y-4">
+      <div class="form-control">
+        <label class="label">
+          <span class="label-text font-semibold">Base URL</span>
+          <span class="label-text-alt text-gray-500">e.g., http://localhost:11434</span>
+        </label>
+        <div class="flex gap-2">
+          <input
+            type="text"
+            name="setting[base_url]"
+            placeholder="http://localhost:11434"
+            value={@provider_config && @provider_config.base_url}
+            class="input input-bordered flex-1"
+          />
+          <button
+            type="button"
+            phx-click="discover_ollama_models"
+            phx-value-base_url={@provider_config && @provider_config.base_url}
+            disabled={@discovering_models}
+            class="btn btn-primary"
+          >
+            <%= if @discovering_models, do: "Discovering...", else: "Discover Models" %>
+          </button>
+        </div>
+        <span class="label-text-alt text-gray-600">The URL where Ollama is running</span>
+      </div>
+
+      <%= if length(@ollama_models) > 0 do %>
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text font-semibold">Default Model (Text)</span>
+            <span class="label-text-alt text-gray-500">General text processing</span>
+          </label>
+          <select
+            name="setting[default_model]"
+            class="select select-bordered"
+          >
+            <option value="">Select a text model...</option>
+            <%= for model <- @text_models do %>
+              <option
+                value={model.name}
+                selected={@provider_config && @provider_config.default_model == model.name}
+              >
+                <%= model.name %>
+              </option>
+            <% end %>
+          </select>
+          <span class="label-text-alt text-gray-600">Used for general text processing</span>
+        </div>
+
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text font-semibold">Text Model</span>
+            <span class="label-text-alt text-gray-500">Explicit text-only tasks</span>
+          </label>
+          <select
+            name="setting[text_model]"
+            class="select select-bordered"
+          >
+            <option value="">Select a text model...</option>
+            <%= for model <- @text_models do %>
+              <option
+                value={model.name}
+                selected={@provider_config && @provider_config.text_model == model.name}
+              >
+                <%= model.name %>
+              </option>
+            <% end %>
+          </select>
+          <span class="label-text-alt text-gray-600">Explicit model for text-only tasks</span>
+        </div>
+
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text font-semibold">Vision Model</span>
+            <span class="label-text-alt text-gray-500">Image processing</span>
+          </label>
+          <select
+            name="setting[vision_model]"
+            class="select select-bordered"
+          >
+            <option value="">Select a vision model...</option>
+            <%= for model <- @vision_models do %>
+              <option
+                value={model.name}
+                selected={@provider_config && @provider_config.vision_model == model.name}
+              >
+                <%= model.name %>
+              </option>
+            <% end %>
+          </select>
+          <span class="label-text-alt text-gray-600">Model with vision capabilities for image processing</span>
+        </div>
+      <% else %>
+        <div class="alert alert-warning">
+          <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4v.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          <span>Click "Discover Models" to fetch available models from your Ollama instance</span>
+        </div>
+      <% end %>
 
       <div class="alert alert-info">
         <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -572,11 +754,19 @@ defmodule ClientatsWeb.LLMConfigLive do
           <ul class="text-sm list-disc list-inside space-y-1">
             <li>Ensure Ollama is running at the Base URL</li>
             <li>Models must be installed locally (e.g., <code class="text-xs bg-gray-100 px-1 rounded">ollama pull mistral</code>)</li>
+            <li>Click "Discover Models" to automatically populate available models</li>
             <li>Use the "Test Connection" button to verify your setup</li>
           </ul>
         </div>
       </div>
     </div>
     """
+  end
+
+  # Helper function to detect if a model has vision capabilities
+  defp has_vision_capability(model_name) do
+    vision_indicators = ["vision", "llava", "qwen", "vl", "multimodal", "image", "gpt-4v"]
+    String.downcase(model_name)
+    |> (fn name -> Enum.any?(vision_indicators, &String.contains?(name, &1)) end).()
   end
 end
