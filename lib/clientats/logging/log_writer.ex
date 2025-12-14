@@ -16,11 +16,13 @@ defmodule Clientats.Logging.LogWriter do
   Returns: {:ok, path} or {:error, reason}
   """
   def write_log(category, filename, data) when is_atom(category) and is_map(data) do
-    with :ok <- ensure_directory_exists(category),
-         log_path <- get_log_path(category, filename),
-         json_data <- Jason.encode!(data),
-         :ok <- File.write(log_path, json_data <> "\n", [:append]) do
-      {:ok, log_path}
+    try do
+      with :ok <- ensure_directory_exists(category),
+           log_path <- get_log_path(category, filename),
+           json_data <- Jason.encode!(data),
+           :ok <- File.write(log_path, json_data <> "\n", [:append]) do
+        {:ok, log_path}
+      end
     rescue
       e ->
         Logger.error("Failed to write log: #{inspect(e)}")
@@ -39,11 +41,13 @@ defmodule Clientats.Logging.LogWriter do
   Returns: {:ok, path} or {:error, reason}
   """
   def append_index(category, index_filename, entry) when is_atom(category) and is_map(entry) do
-    with :ok <- ensure_directory_exists(category),
-         index_path <- get_log_path(category, index_filename),
-         json_entry <- Jason.encode!(entry),
-         :ok <- File.write(index_path, json_entry <> "\n", [:append]) do
-      {:ok, index_path}
+    try do
+      with :ok <- ensure_directory_exists(category),
+           index_path <- get_log_path(category, index_filename),
+           json_entry <- Jason.encode!(entry),
+           :ok <- File.write(index_path, json_entry <> "\n", [:append]) do
+        {:ok, index_path}
+      end
     rescue
       e ->
         Logger.error("Failed to append to index: #{inspect(e)}")

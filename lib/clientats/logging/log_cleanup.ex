@@ -74,8 +74,7 @@ defmodule Clientats.Logging.LogCleanup do
 
           case File.stat(filepath) do
             {:ok, stat} ->
-              DateTime.from_unix!(stat.mtime, :second)
-              |> DateTime.compare(cutoff_time) in [:eq, :lt]
+              DateTime.compare(DateTime.from_unix!(stat.mtime, :second), cutoff_time) in [:eq, :lt]
 
             {:error, _} ->
               false
@@ -115,8 +114,7 @@ defmodule Clientats.Logging.LogCleanup do
 
             case File.stat(filepath) do
               {:ok, stat} ->
-                if DateTime.from_unix!(stat.mtime, :second)
-                   |> DateTime.compare(cutoff_time) in [:eq, :lt] do
+                if DateTime.compare(DateTime.from_unix!(stat.mtime, :second), cutoff_time) in [:eq, :lt] do
                   File.rm!(filepath)
                   Logger.debug("Deleted old log: #{filepath}")
                   count + 1
@@ -167,8 +165,7 @@ defmodule Clientats.Logging.LogCleanup do
 
             case File.stat(filepath) do
               {:ok, stat} ->
-                if DateTime.from_unix!(stat.mtime, :second)
-                   |> DateTime.compare(cutoff_time) in [:eq, :lt] do
+                if DateTime.compare(DateTime.from_unix!(stat.mtime, :second), cutoff_time) in [:eq, :lt] do
                   if archive do
                     case archive_file(filepath, category) do
                       :ok ->
@@ -201,7 +198,7 @@ defmodule Clientats.Logging.LogCleanup do
     end
   end
 
-  defp archive_old_files(category_dir, files, cutoff_time) do
+  defp archive_old_files(category_dir, files, _cutoff_time) do
     archive_base = LogWriter.archive_dir()
     File.mkdir_p!(archive_base)
 
@@ -230,7 +227,7 @@ defmodule Clientats.Logging.LogCleanup do
     {:ok, deleted_count}
   end
 
-  defp archive_file(filepath, category) do
+  defp archive_file(filepath, _category) do
     archive_base = LogWriter.archive_dir()
     File.mkdir_p!(archive_base)
 
@@ -246,7 +243,7 @@ defmodule Clientats.Logging.LogCleanup do
 
   defp get_category_stats(category) do
     try do
-      category_dir = LogWriter.get_log_path(category, "")
+      category_dir = LogWriter.get_log_path(category, "dummy.json") |> Path.dirname()
 
       stats =
         File.ls!(category_dir)
@@ -277,7 +274,14 @@ defmodule Clientats.Logging.LogCleanup do
 
       oldest_date =
         if stats.oldest_file do
-          DateTime.from_unix!(stats.oldest_file, :second) |> DateTime.to_iso8601()
+          # stat.mtime is an Erlang universal_time tuple {{Y,M,D},{H,M,S}}
+          case stats.oldest_file do
+            {{_,_,_},{_,_,_}} = erl_datetime ->
+              DateTime.from_naive!(NaiveDateTime.from_erl!(erl_datetime), "Etc/UTC")
+              |> DateTime.to_iso8601()
+            _other ->
+              nil
+          end
         else
           nil
         end
@@ -287,7 +291,8 @@ defmodule Clientats.Logging.LogCleanup do
       |> Map.put(:oldest_date, oldest_date)
       |> Map.put(:total_size_mb, Float.round(stats.total_size / 1024 / 1024, 2))
     rescue
-      _e ->
+      e ->
+        Logger.debug("Error getting category stats for #{category}: #{inspect(e)}")
         %{file_count: 0, total_size: 0, total_size_mb: 0.0, oldest_date: nil}
     end
   end

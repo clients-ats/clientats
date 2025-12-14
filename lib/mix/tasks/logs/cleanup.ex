@@ -16,7 +16,7 @@ defmodule Mix.Tasks.Logs.Cleanup do
     {:ok, _} = Application.ensure_all_started(:clientats)
 
     {opts, _args, _invalid} =
-      OptionParser.parse(args, options: [days: :integer, archive: :boolean])
+      OptionParser.parse(args, switches: [days: :integer, archive: :boolean])
 
     days_to_keep = Keyword.get(opts, :days, 7)
     archive = Keyword.get(opts, :archive, true)
@@ -28,10 +28,7 @@ defmodule Mix.Tasks.Logs.Cleanup do
         Logger.info("✓ Cleanup successful!")
         Logger.info("  - Deleted: #{stats.deleted} files")
         Logger.info("  - Archived: #{stats.archived} files")
-
-      {:error, reason} ->
-        Logger.error("✗ Cleanup failed: #{inspect(reason)}")
-        exit({:shutdown, 1})
+        Logger.info("  - Errors: #{Enum.count(stats.errors)}")
     end
   end
 end
