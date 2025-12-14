@@ -33,12 +33,14 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
        |> assign(:step, 1)
        |> assign(:url, "")
        |> assign(:scraping, false)
+       |> assign(:saving, false)
        |> assign(:scraped_data, %{})
        |> assign(:error, nil)
        |> assign(:llm_provider, "ollama")
        |> assign(:llm_providers, providers)
        |> assign(:llm_status, nil)
        |> assign(:show_provider_settings, false)
+       |> assign(:estimated_llm_time_ms, 15_000)
        |> assign(:supported_sites, [
          "linkedin.com",
          "indeed.com",
@@ -95,6 +97,9 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
   end
 
   def handle_event("save_job_interest", params, socket) do
+    # Set saving state immediately to prevent multiple submissions
+    socket = assign(socket, :saving, true)
+
     job_interest_params = %{
       user_id: socket.assigns.current_user.id,
       company_name: params["company_name"] || "",
@@ -106,17 +111,18 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
       status: "interested",
       priority: "medium"
     }
-    
+
     case Jobs.create_job_interest(job_interest_params) do
       {:ok, job_interest} ->
         {:noreply,
          socket
          |> put_flash(:info, "Job interest created successfully!")
          |> push_navigate(to: ~p"/dashboard/job-interests/#{job_interest.id}")}
-      
+
       {:error, _changeset} ->
-        {:noreply, 
+        {:noreply,
          socket
+         |> assign(:saving, false)
          |> assign(:error, "Failed to create job interest. Please check the form.")}
     end
   end
@@ -451,7 +457,7 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
 
           <!-- Step 2: Review Data -->
           <%= if @step == 2 do %>
-            <div class="space-y-6">
+            <form phx-submit="save_job_interest" class="space-y-6">
               <!-- Provider Info -->
               <div class="bg-gray-50 rounded-lg p-4 flex items-center gap-3">
                 <.icon name={get_provider_icon(@llm_provider)} class="w-6 h-6 text-gray-600" />
@@ -488,6 +494,7 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
                     value={@scraped_data[:company_name] || ""}
                     class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                     required
+                    disabled={@saving}
                   />
                 </div>
                 <div>
@@ -500,6 +507,7 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
                     value={@scraped_data[:position_title] || ""}
                     class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                     required
+                    disabled={@saving}
                   />
                 </div>
               </div>
@@ -512,6 +520,7 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
                   name="job_description"
                   rows="6"
                   class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  disabled={@saving}
                 ><%= @scraped_data[:job_description] || "" %></textarea>
               </div>
 
@@ -526,6 +535,7 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
                     value={extract_location(@scraped_data[:location]) || ""}
                     placeholder="e.g., San Francisco, CA"
                     class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    disabled={@saving}
                   />
                 </div>
                 <div>
@@ -535,6 +545,7 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
                   <select
                     name="work_model"
                     class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    disabled={@saving}
                   >
                     <option value="remote" selected={@scraped_data[:work_model] == "remote"}>Remote</option>
                     <option value="hybrid" selected={@scraped_data[:work_model] == "hybrid"}>Hybrid</option>
@@ -552,27 +563,46 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
                 </div>
               <% end %>
 
+              <!-- Loading Indicator during save -->
+              <%= if @saving do %>
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center gap-3">
+                  <div class="flex items-center gap-2">
+                    <.icon name="hero-arrow-path" class="w-5 h-5 text-blue-600 animate-spin" />
+                    <div>
+                      <p class="text-sm font-medium text-blue-900">Saving job interest...</p>
+                      <p class="text-xs text-blue-600 mt-0.5">This typically takes <%= div(@estimated_llm_time_ms, 1000) %> seconds</p>
+                    </div>
+                  </div>
+                </div>
+              <% end %>
+
               <div class="flex justify-between items-center pt-6 border-t border-gray-200">
                 <button
                   type="button"
                   phx-click="back_to_url"
                   class="btn btn-ghost"
+                  disabled={@saving}
                 >
                   <.icon name="hero-arrow-left" class="w-4 h-4 mr-2" />
                   Back
                 </button>
-                
+
                 <button
                   type="submit"
-                  phx-click="save_job_interest"
-                  form="job-interest-form"
-                  class="btn btn-primary"
+                  class={"btn btn-primary " <> if(@saving, do: "btn-disabled", else: "")}
+                  disabled={@saving}
+                  phx-disable-with="Saving..."
                 >
-                  <.icon name="hero-check" class="w-4 h-4 mr-2" />
-                  Save Job Interest
+                  <%= if @saving do %>
+                    <.icon name="hero-arrow-path" class="w-4 h-4 mr-2 animate-spin" />
+                    Saving...
+                  <% else %>
+                    <.icon name="hero-check" class="w-4 h-4 mr-2" />
+                    Save Job Interest
+                  <% end %>
                 </button>
               </div>
-            </div>
+            </form>
           <% end %>
         </div>
       </div>
