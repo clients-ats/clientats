@@ -55,6 +55,16 @@ if config_env() == :prod do
 
   config :clientats, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
+  llm_encryption_key =
+    System.get_env("LLM_ENCRYPTION_KEY") ||
+      raise """
+      environment variable LLM_ENCRYPTION_KEY is missing.
+      This is used to encrypt API keys in the database.
+      """
+
+  config :clientats,
+    llm_encryption_key: llm_encryption_key
+
   # LLM Configuration for job scraping feature
   config :req_llm,
     primary_provider: :openai,

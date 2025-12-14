@@ -9,7 +9,8 @@ import Config
 
 config :clientats,
   ecto_repos: [Clientats.Repo],
-  generators: [timestamp_type: :utc_datetime]
+  generators: [timestamp_type: :utc_datetime],
+  llm_encryption_key: "default-dev-key-for-local-development-only"
 
 # Configures the endpoint
 config :clientats, ClientatsWeb.Endpoint,

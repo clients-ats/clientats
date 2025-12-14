@@ -34,6 +34,9 @@ defmodule ClientatsWeb.DashboardLive do
           <.link navigate={~p"/dashboard/cover-letters"} class="btn btn-outline">
             <.icon name="hero-document-duplicate" class="w-5 h-5" /> Cover Letter Templates
           </.link>
+          <.link navigate={~p"/dashboard/llm-config"} class="btn btn-outline">
+            <.icon name="hero-cog-6-tooth" class="w-5 h-5" /> LLM Configuration
+          </.link>
         </div>
 
         <div class="grid md:grid-cols-2 gap-8">

@@ -3,18 +3,22 @@ defmodule ClientatsWeb.JobInterestLive.New do
 
   alias Clientats.Jobs
   alias Clientats.Jobs.JobInterest
+  alias Clientats.LLMConfig
 
   on_mount {ClientatsWeb.UserAuth, :ensure_authenticated}
 
   @impl true
   def mount(_params, _session, socket) do
     changeset = Jobs.change_job_interest(%JobInterest{})
+    user_id = socket.assigns.current_user.id
+    enabled_providers = LLMConfig.get_enabled_providers(user_id)
 
     {:ok,
      socket
      |> assign(:page_title, "New Job Interest")
      |> assign(:job_interest, %JobInterest{})
-     |> assign(:form, to_form(changeset))}
+     |> assign(:form, to_form(changeset))
+     |> assign(:llm_configured, !Enum.empty?(enabled_providers))}
   end
 
   @impl true
@@ -63,14 +67,25 @@ defmodule ClientatsWeb.JobInterestLive.New do
                 <p class="text-sm text-gray-600 mt-1">Track jobs you're interested in applying to</p>
               </div>
               <div class="text-right">
-                <.link
-                  navigate={~p"/dashboard/job-interests/scrape"}
-                  class="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
-                >
-                  <.icon name="hero-magic-wand" class="w-4 h-4" />
-                  Import from URL
-                </.link>
-                <p class="text-xs text-gray-500 mt-1">Use AI to extract job details</p>
+                <%= if @llm_configured do %>
+                  <.link
+                    navigate={~p"/dashboard/job-interests/scrape"}
+                    class="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                  >
+                    <.icon name="hero-magic-wand" class="w-4 h-4" />
+                    Import from URL
+                  </.link>
+                  <p class="text-xs text-gray-500 mt-1">Use AI to extract job details</p>
+                <% else %>
+                  <p class="text-sm text-gray-500">
+                    <span class="text-gray-400">Import from URL (disabled)</span>
+                  </p>
+                  <p class="text-xs text-gray-400 mt-1">
+                    <.link navigate={~p"/dashboard/llm-config"} class="text-blue-600 hover:text-blue-800">
+                      Configure an LLM provider
+                    </.link>
+                  </p>
+                <% end %>
               </div>
             </div>
           </div>
