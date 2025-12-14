@@ -364,10 +364,12 @@ defmodule Clientats.LLMConfig do
           {:ok, "connected"}
 
         %{status: status} ->
-          {:error, "Connection failed (#{status})"}
+          {:error, "Connection failed with status #{status}"}
       end
     rescue
-      _e -> {:error, "Connection to Ollama failed"}
+      e ->
+        error_msg = Exception.message(e)
+        {:error, "Failed to connect: #{error_msg}"}
     end
   end
 end
