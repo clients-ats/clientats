@@ -94,7 +94,8 @@ async function captureScreenshot() {
     await page.waitForTimeout(2000);
 
     console.log(`[Script] Taking screenshot and saving to: ${outputPath}`);
-    await page.screenshot({ path: outputPath, fullPage: false });
+    // Capture the full scrollable page, not just the viewport
+    await page.screenshot({ path: outputPath, fullPage: true });
 
     console.log(`[Script] Screenshot saved successfully`);
 
