@@ -294,7 +294,7 @@ defmodule ClientatsWeb.LLMConfigLive do
             <% "gemini" -> %>
               <.gemini_form provider={@provider} provider_config={@provider_config} form_errors={@form_errors} />
             <% "ollama" -> %>
-              <.ollama_form provider={@provider} provider_config={@provider_config} form_errors={@form_errors} />
+              <.ollama_form provider={@provider} provider_config={@provider_config} form_errors={@form_errors} ollama_models={@ollama_models} discovering_models={@discovering_models} />
           <% end %>
         </div>
 
