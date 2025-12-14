@@ -52,19 +52,37 @@ defmodule Clientats.LLM.Providers.Ollama do
       case response do
         %{status: 200, body: response_body} ->
           # Handle both string and map responses
-          decoded = case response_body do
-            %{} -> response_body
-            _ -> Jason.decode!(response_body)
-          end
+          decoded =
+            case response_body do
+              %{} -> response_body
+              _ -> Jason.decode!(response_body)
+            end
 
           # Log response details
           IO.puts("[Ollama] Response received (status 200)")
           IO.puts("[Ollama] Response keys: #{inspect(Map.keys(decoded))}")
+
           if is_map(decoded) && Map.has_key?(decoded, "response") do
             IO.puts("[Ollama] Response text size: #{byte_size(decoded["response"])} bytes")
           end
 
           {:ok, decoded}
+
+        %{status: 429} ->
+          IO.puts("[Ollama] Rate limited (429)")
+          {:error, :rate_limited}
+
+        %{status: 401} ->
+          IO.puts("[Ollama] Authentication failed (401)")
+          {:error, :auth_error}
+
+        %{status: 403} ->
+          IO.puts("[Ollama] Access denied (403)")
+          {:error, :auth_error}
+
+        %{status: status} when status >= 500 ->
+          IO.puts("[Ollama] Server error (#{status})")
+          {:error, {:http_error, status}}
 
         %{status: status} ->
           IO.puts("[Ollama] HTTP Error: #{status}")
@@ -165,19 +183,37 @@ defmodule Clientats.LLM.Providers.Ollama do
           case response do
             %{status: 200, body: response_body} ->
               # Handle both string and map responses
-              decoded = case response_body do
-                %{} -> response_body
-                _ -> Jason.decode!(response_body)
-              end
+              decoded =
+                case response_body do
+                  %{} -> response_body
+                  _ -> Jason.decode!(response_body)
+                end
 
               # Log response details
               IO.puts("[Ollama] Response received (status 200)")
               IO.puts("[Ollama] Response keys: #{inspect(Map.keys(decoded))}")
+
               if is_map(decoded) && Map.has_key?(decoded, "response") do
                 IO.puts("[Ollama] Response text size: #{byte_size(decoded["response"])} bytes")
               end
 
               {:ok, decoded}
+
+            %{status: 429} ->
+              IO.puts("[Ollama] Rate limited (429)")
+              {:error, :rate_limited}
+
+            %{status: 401} ->
+              IO.puts("[Ollama] Authentication failed (401)")
+              {:error, :auth_error}
+
+            %{status: 403} ->
+              IO.puts("[Ollama] Access denied (403)")
+              {:error, :auth_error}
+
+            %{status: status} when status >= 500 ->
+              IO.puts("[Ollama] Server error (#{status})")
+              {:error, {:http_error, status}}
 
             %{status: status} ->
               IO.puts("[Ollama] HTTP Error: #{status}")

@@ -2,6 +2,7 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
   use ClientatsWeb, :live_view
 
   alias Clientats.LLM.Service
+  alias Clientats.LLM.ErrorHandler
   alias Clientats.LLMConfig
   alias Clientats.Jobs
 
@@ -152,18 +153,13 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
          |> assign(:llm_status, "success")}
 
       {:error, reason} ->
-        # Format error message - reason can be a tuple or string
-        error_msg = case reason do
-          {error_type, details} when is_atom(error_type) -> "#{error_type}: #{inspect(details)}"
-          {error_type, code} when is_atom(error_type) and is_integer(code) -> "#{error_type}: #{code}"
-          msg when is_binary(msg) -> msg
-          other -> inspect(other)
-        end
+        # Format error message using ErrorHandler for user-friendly messages
+        error_msg = ErrorHandler.user_friendly_message(reason)
 
         {:noreply,
          socket
          |> assign(:scraping, false)
-         |> assign(:error, "Scraping failed: #{error_msg}")
+         |> assign(:error, error_msg)
          |> assign(:llm_status, "error")}
     end
   end
