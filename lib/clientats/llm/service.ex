@@ -6,9 +6,11 @@ defmodule Clientats.LLM.Service do
   with built-in error handling, fallback mechanisms, and token management.
   """
   
-  alias Clientats.LLM.{PromptTemplates, Cache}
+  alias Clientats.LLM.{PromptTemplates, Cache, ErrorHandler}
   alias Clientats.LLMConfig
   alias Clientats.Browser
+
+  require Logger
   
   @type provider :: :openai | :anthropic | :mistral | atom()
   @type extraction_result :: {
@@ -46,14 +48,22 @@ defmodule Clientats.LLM.Service do
     with {:ok, content} <- validate_content(content),
          {:ok, url} <- validate_url(url),
          {:ok, provider} <- determine_provider(provider) do
-      
+
       # Try to extract with primary provider first
       case attempt_extraction(content, url, mode, provider, options) do
-        {:ok, result} -> {:ok, result}
-        {:error, :rate_limited} -> retry_with_fallback(content, url, mode, options)
-        {:error, :auth_error} -> retry_with_fallback(content, url, mode, options)
-        {:error, :timeout} -> retry_with_fallback(content, url, mode, options)
-        {:error, reason} -> {:error, reason}
+        {:ok, result} ->
+          {:ok, result}
+
+        {:error, reason} ->
+          if ErrorHandler.retryable?(reason) do
+            # Log the error and attempt fallback
+            Logger.debug("Primary provider failed with retryable error: #{inspect(reason)}")
+            retry_with_fallback(content, url, mode, options)
+          else
+            # Permanent error, return immediately
+            Logger.warning("Permanent extraction error: #{inspect(reason)}")
+            {:error, reason}
+          end
       end
     else
       {:error, _} = error -> error
@@ -108,11 +118,17 @@ defmodule Clientats.LLM.Service do
   def extract_with_screenshot(screenshot_path, url, mode, provider, options) do
     with {:ok, provider} <- determine_provider(provider) do
       case attempt_screenshot_extraction(screenshot_path, url, mode, provider, options) do
-        {:ok, result} -> {:ok, Map.put(result, :source_url, url)}
-        {:error, :rate_limited} -> retry_with_fallback_screenshot(screenshot_path, url, mode, options)
-        {:error, :auth_error} -> retry_with_fallback_screenshot(screenshot_path, url, mode, options)
-        {:error, :timeout} -> retry_with_fallback_screenshot(screenshot_path, url, mode, options)
-        {:error, reason} -> {:error, reason}
+        {:ok, result} ->
+          {:ok, Map.put(result, :source_url, url)}
+
+        {:error, reason} ->
+          if ErrorHandler.retryable?(reason) do
+            Logger.debug("Screenshot extraction failed with retryable error: #{inspect(reason)}")
+            retry_with_fallback_screenshot(screenshot_path, url, mode, options)
+          else
+            Logger.warning("Permanent screenshot extraction error: #{inspect(reason)}")
+            {:error, reason}
+          end
       end
     else
       {:error, _} = error -> error
@@ -332,21 +348,55 @@ defmodule Clientats.LLM.Service do
   
   defp retry_with_fallback(content, url, mode, options) do
     fallback_providers = Application.get_env(:req_llm, :fallback_providers, [])
-    
-    # Try each fallback provider
+
+    Logger.info("Retrying with fallback providers. Available: #{inspect(fallback_providers)}")
+
+    # Try each fallback provider with retry logic
     case try_fallbacks(fallback_providers, content, url, mode, options, []) do
-      {:ok, result} -> {:ok, result}
-      [] -> {:error, :all_providers_failed}
+      {:ok, result} ->
+        Logger.debug("Fallback extraction succeeded")
+        {:ok, result}
+
+      :error ->
+        Logger.error("All fallback providers failed")
+        {:error, :all_providers_failed}
     end
   end
-  
+
   defp try_fallbacks([provider | rest], content, url, mode, options, tried) do
-    case attempt_extraction(content, url, mode, provider, options) do
-      {:ok, result} -> {:ok, result}
-      {:error, _reason} -> try_fallbacks(rest, content, url, mode, options, [provider | tried])
+    Logger.debug("Attempting extraction with provider: #{inspect(provider)}")
+
+    # Use exponential backoff for retries
+    case attempt_extraction_with_retry(content, url, mode, provider, options) do
+      {:ok, result} ->
+        Logger.info("Fallback provider succeeded: #{inspect(provider)}")
+        {:ok, result}
+
+      {:error, reason} ->
+        Logger.warning("Fallback provider failed: #{inspect(provider)} - #{inspect(reason)}")
+        # Continue with next provider
+        try_fallbacks(rest, content, url, mode, options, [provider | tried])
     end
   end
+
   defp try_fallbacks([], _content, _url, _mode, _options, _tried), do: :error
+
+  defp attempt_extraction_with_retry(content, url, mode, provider, options) do
+    max_retries = get_provider_max_retries(provider)
+
+    ErrorHandler.with_retry(
+      fn -> attempt_extraction(content, url, mode, provider, options) end,
+      max_retries: max_retries,
+      base_delay: 100,
+      retryable: &ErrorHandler.retryable?/1
+    )
+  end
+
+  defp get_provider_max_retries(provider) do
+    providers_config = Application.get_env(:req_llm, :providers, %{})
+    provider_config = Map.get(providers_config, provider, %{})
+    Map.get(provider_config, :max_retries, 3)
+  end
   
   defp call_ollama(prompt, options) do
     # Get Ollama configuration from env (fallback)

@@ -8,6 +8,7 @@ defmodule ClientatsWeb.JobScraperController do
   use ClientatsWeb, :controller
   
   alias Clientats.LLM.Service
+  alias Clientats.LLM.ErrorHandler
   alias Clientats.Jobs
   alias Clientats.Accounts
   
@@ -152,17 +153,9 @@ defmodule ClientatsWeb.JobScraperController do
   defp parse_provider("mistral"), do: :mistral
   defp parse_provider(_), do: nil
   
-  defp map_error_reason({:llm_error, message}), do: "LLM Error: " <> message
-  defp map_error_reason({:fetch_error, message}), do: "Fetch Error: " <> message
-  defp map_error_reason({:parse_error, message}), do: "Parse Error: " <> message
-  defp map_error_reason(:content_too_large), do: "Content too large for processing"
-  defp map_error_reason(:invalid_url), do: "Invalid URL format"
-  defp map_error_reason(:invalid_content), do: "Invalid content for processing"
-  defp map_error_reason(:rate_limited), do: "Rate limited - please try again later"
-  defp map_error_reason(:auth_error), do: "Authentication error with LLM provider"
-  defp map_error_reason(:timeout), do: "Request timeout - please try again"
-  defp map_error_reason(:all_providers_failed), do: "All LLM providers failed"
-  defp map_error_reason(reason), do: "Error: " <> to_string(reason)
+  defp map_error_reason(reason) do
+    ErrorHandler.user_friendly_message(reason)
+  end
   
   defp create_job_interest_from_data(job_data, current_user) do
     job_interest_params = %{

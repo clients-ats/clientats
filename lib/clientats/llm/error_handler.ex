@@ -1,0 +1,173 @@
+defmodule Clientats.LLM.ErrorHandler do
+  @moduledoc """
+  Centralized error handling for LLM operations.
+
+  Provides:
+  - Error classification (retryable vs permanent)
+  - User-friendly error messages
+  - Retry logic with exponential backoff
+  - Detailed error context preservation
+  """
+
+  @type error_reason :: atom() | {atom(), any()} | String.t()
+  @type retry_config :: %{max_retries: integer(), base_delay: integer()}
+
+  @default_base_delay 100  # milliseconds
+  @default_max_retries 3
+
+  @doc """
+  Determine if an error is retryable (temporary failure vs permanent).
+
+  Retryable errors:
+  - :timeout - Connection timeout
+  - :rate_limited - HTTP 429
+  - :auth_error - Transient auth issues (but not invalid API key)
+  - :http_error with status 5xx - Server errors
+  - :connection_refused - Network issue
+  - :unavailable - Service temporarily down
+
+  Permanent errors (should NOT retry):
+  - :invalid_content - Bad input data
+  - :content_too_large - Content exceeds limits
+  - :invalid_url - Bad URL format
+  - :invalid_api_key - Wrong credentials
+  - :invalid_response_format - Response parsing issue
+  - :http_error with status 4xx (except 429) - Client errors
+  """
+  @spec retryable?({atom(), any()} | atom()) :: boolean()
+  def retryable?(:timeout), do: true
+  def retryable?(:rate_limited), do: true
+  def retryable?(:unavailable), do: true
+  def retryable?(:connection_refused), do: true
+  def retryable?({:timeout, _}), do: true
+  def retryable?({:rate_limited, _}), do: true
+  def retryable?({:http_error, status}) when status >= 500, do: true
+  def retryable?({:http_error, status}) when status in [408, 429], do: true
+  def retryable?({:connection_error, _}), do: true
+  def retryable?({:exception, _}), do: false
+  def retryable?(:invalid_content), do: false
+  def retryable?(:content_too_large), do: false
+  def retryable?(:invalid_url), do: false
+  def retryable?(:invalid_api_key), do: false
+  def retryable?(:invalid_response_format), do: false
+  def retryable?(_), do: false
+
+  @doc """
+  Calculate exponential backoff delay in milliseconds.
+
+  Formula: base_delay * (2 ^ attempt_number) + jitter
+  Example: attempt 0 = 100ms, attempt 1 = 200ms, attempt 2 = 400ms (plus up to 10% jitter)
+  """
+  @spec calculate_backoff(non_neg_integer(), integer()) :: integer()
+  def calculate_backoff(attempt, base_delay \\ @default_base_delay) when attempt >= 0 do
+    delay = base_delay * Integer.pow(2, attempt)
+    jitter = :rand.uniform(max(1, div(delay, 10)))
+    delay + jitter
+  end
+
+  @doc """
+  Retry a function with exponential backoff.
+
+  ## Options
+    - max_retries: Maximum number of retry attempts (default: 3)
+    - base_delay: Base delay in milliseconds (default: 100)
+    - retryable: Custom function to determine if error is retryable
+  """
+  @spec with_retry(
+    function :: (() -> {:ok, any()} | {:error, any()}),
+    options :: Keyword.t()
+  ) :: {:ok, any()} | {:error, any()}
+  def with_retry(fun, options \\ []) do
+    max_retries = Keyword.get(options, :max_retries, @default_max_retries)
+    base_delay = Keyword.get(options, :base_delay, @default_base_delay)
+    retryable_fn = Keyword.get(options, :retryable, &retryable?/1)
+
+    do_retry(fun, 0, max_retries, base_delay, retryable_fn)
+  end
+
+  @doc """
+  Convert error to user-friendly message suitable for display.
+  """
+  @spec user_friendly_message({atom(), any()} | atom() | String.t()) :: String.t()
+  def user_friendly_message(:timeout), do: "Request timed out. Please try again."
+  def user_friendly_message({:timeout, _}), do: "Request timed out. Please try again."
+  def user_friendly_message(:rate_limited), do: "Rate limited. Please wait a moment and try again."
+  def user_friendly_message({:rate_limited, _}), do: "Rate limited. Please wait a moment and try again."
+  def user_friendly_message(:invalid_api_key), do: "Invalid API key or credentials."
+  def user_friendly_message(:auth_error), do: "Authentication failed. Please check your API key."
+  def user_friendly_message({:auth_error, _}), do: "Authentication failed. Please check your API key."
+  def user_friendly_message(:invalid_url), do: "Invalid URL format. Please check and try again."
+  def user_friendly_message(:content_too_large), do: "Job posting content is too large. Please try a different page."
+  def user_friendly_message(:invalid_content), do: "Could not extract job data. Page may not be a valid job posting."
+  def user_friendly_message(:unavailable), do: "Service is temporarily unavailable. Please try again shortly."
+  def user_friendly_message({:unavailable, _}), do: "Service is temporarily unavailable. Please try again shortly."
+  def user_friendly_message(:connection_refused), do: "Cannot connect to service. Please check your connection."
+  def user_friendly_message({:connection_error, _}), do: "Connection error. Please try again."
+  def user_friendly_message(:all_providers_failed), do: "All LLM providers failed. Please check your configuration and try again."
+  def user_friendly_message({:http_error, 404}), do: "Job page not found. Please verify the URL."
+  def user_friendly_message({:http_error, 403}), do: "Access denied. You may need to update cookies or authentication."
+  def user_friendly_message({:http_error, 500}), do: "Server error. Please try again in a moment."
+  def user_friendly_message({:http_error, status}) when status >= 500, do: "Service error (#{status}). Please try again."
+  def user_friendly_message({:http_error, status}) when status >= 400, do: "Error: HTTP #{status}"
+  def user_friendly_message({:parse_error, _}), do: "Could not parse job data. The page format may not be supported."
+  def user_friendly_message({:exception, msg}), do: "Unexpected error: #{msg}"
+  def user_friendly_message(msg) when is_binary(msg), do: msg
+  def user_friendly_message(other), do: "An unexpected error occurred: #{inspect(other)}"
+
+  @doc """
+  Create detailed error context for logging.
+  """
+  @spec error_context(
+    error :: {atom(), any()} | atom() | String.t(),
+    context :: map()
+  ) :: map()
+  def error_context(error, context \\ %{}) do
+    Map.merge(context, %{
+      error: error,
+      retryable: retryable?(error),
+      user_message: user_friendly_message(error),
+      timestamp: DateTime.utc_now()
+    })
+  end
+
+  @doc """
+  Normalize different error types to a standard format.
+  """
+  @spec normalize_error(any()) :: {atom(), String.t()}
+  def normalize_error({:http_error, status}), do: {:http_error, "HTTP #{status}"}
+  def normalize_error({:exception, msg}), do: {:exception, msg}
+  def normalize_error({:parse_error, msg}), do: {:parse_error, msg}
+  def normalize_error({type, details}) when is_atom(type), do: {type, inspect(details)}
+  def normalize_error(atom) when is_atom(atom), do: {atom, atom_to_string(atom)}
+  def normalize_error(msg) when is_binary(msg), do: {:error, msg}
+  def normalize_error(other), do: {:error, inspect(other)}
+
+  # Private functions
+
+  defp do_retry(fun, attempt, max_retries, _base_delay, _retryable_fn) when attempt > max_retries do
+    fun.()
+  end
+
+  defp do_retry(fun, attempt, max_retries, base_delay, retryable_fn) do
+    case fun.() do
+      {:ok, result} ->
+        {:ok, result}
+
+      {:error, reason} = error ->
+        if retryable_fn.(reason) and attempt < max_retries do
+          delay = calculate_backoff(attempt, base_delay)
+          Process.sleep(delay)
+          do_retry(fun, attempt + 1, max_retries, base_delay, retryable_fn)
+        else
+          error
+        end
+    end
+  end
+
+  defp atom_to_string(atom) do
+    atom
+    |> Atom.to_string()
+    |> String.replace("_", " ")
+    |> String.capitalize()
+  end
+end
