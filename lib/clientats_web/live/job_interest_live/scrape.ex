@@ -132,12 +132,23 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
   def handle_info(:ollama_unavailable, socket) do
     # Check if we're still in checking state (not already processed)
     if socket.assigns.llm_status == "checking" do
-      {:noreply, 
+      {:noreply,
        socket
        |> assign(:llm_status, "unavailable")
        |> assign(:error, "Ollama server is not available. Please start Ollama or select another provider.")}
     else
       {:noreply, socket}  # Already handled, do nothing
+    end
+  end
+
+  def handle_info(:update_eta, socket) do
+    # Periodic update to refresh ETA display during scraping
+    if socket.assigns.scraping do
+      # Schedule next update in 500ms
+      Process.send_after(self(), :update_eta, 500)
+      {:noreply, socket}
+    else
+      {:noreply, socket}
     end
   end
 
@@ -259,6 +270,9 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
     end)
 
     # Start scraping process, capturing current time for ETA display
+    # Schedule periodic updates to refresh ETA countdown
+    Process.send_after(self(), :update_eta, 500)
+
     {:noreply,
      socket
      |> assign(:scraping, true)
