@@ -143,10 +143,11 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
 
   def handle_info(:update_eta, socket) do
     # Periodic update to refresh ETA display during scraping
-    if socket.assigns.scraping do
+    if socket.assigns[:scraping] do
       # Schedule next update in 500ms
       Process.send_after(self(), :update_eta, 500)
-      {:noreply, socket}
+      # Force a re-render by touching an assign
+      {:noreply, assign(socket, :_eta_tick, System.monotonic_time())}
     else
       {:noreply, socket}
     end
