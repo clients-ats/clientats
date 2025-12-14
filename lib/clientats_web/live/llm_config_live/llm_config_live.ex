@@ -209,6 +209,8 @@ defmodule ClientatsWeb.LLMConfigLive do
   end
 
   defp provider_form(assigns) do
+    assigns = assign(assigns, :provider_config, assigns[:provider_config])
+
     ~H"""
     <.form :let={_f} for={%{}} as={:setting} phx-submit="save_config">
       <input type="hidden" name="setting[provider]" value={@provider} />
