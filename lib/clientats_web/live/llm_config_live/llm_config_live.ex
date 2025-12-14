@@ -41,8 +41,11 @@ defmodule ClientatsWeb.LLMConfigLive do
     ~H"""
     <div class="min-h-screen bg-gray-50">
       <div class="bg-white shadow">
-        <div class="container mx-auto px-4 py-4">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
           <h1 class="text-2xl font-bold text-gray-900">LLM Configuration</h1>
+          <.link navigate={~p"/dashboard"} class="text-sm text-gray-600 hover:text-gray-900">
+            ← Back to Dashboard
+          </.link>
         </div>
       </div>
 
@@ -206,87 +209,90 @@ defmodule ClientatsWeb.LLMConfigLive do
   end
 
   defp provider_form(assigns) do
-    config = assigns[:provider_config]
-
     ~H"""
-    <.form :let={f} for={%{}} as={:setting} phx-submit="save_config">
+    <.form :let={_f} for={%{}} as={:setting} phx-submit="save_config">
       <input type="hidden" name="setting[provider]" value={@provider} />
 
-      <div class="space-y-4">
+      <div class="space-y-6">
         <!-- Enable/Disable Toggle -->
-        <div class="form-control">
-          <label class="label cursor-pointer">
+        <div class="flex items-center gap-4">
+          <label class="label cursor-pointer flex items-center gap-2 flex-1">
             <span class="label-text font-semibold">Enable this provider</span>
             <input
               type="checkbox"
               name="setting[enabled]"
               value="true"
-              checked={config && config.enabled}
+              checked={@provider_config && @provider_config.enabled}
               class="checkbox"
             />
           </label>
-        </div>
-
-        <!-- Status Indicator -->
-        <div class="alert">
-          <div class="flex items-center gap-2">
-            <div class="w-3 h-3 rounded-full bg-gray-400"></div>
-            <span class="text-sm text-gray-600">Status: Not tested</span>
-          </div>
-        </div>
-
-        <!-- Provider-specific fields -->
-        <%= case @provider do %>
-          <% "openai" -> %>
-            <.openai_form provider={@provider} config={config} form_errors={@form_errors} />
-          <% "anthropic" -> %>
-            <.anthropic_form provider={@provider} config={config} form_errors={@form_errors} />
-          <% "mistral" -> %>
-            <.mistral_form provider={@provider} config={config} form_errors={@form_errors} />
-          <% "ollama" -> %>
-            <.ollama_form provider={@provider} config={config} form_errors={@form_errors} />
-        <% end %>
-
-        <!-- Test Connection Button -->
-        <div class="flex gap-2">
-          <button
-            type="button"
-            phx-click="test_connection"
-            phx-value-provider={@provider}
-            disabled={@testing}
-            class="btn btn-outline"
-          >
-            <%= if @testing do %>
-              <span class="loading loading-spinner loading-sm"></span>
-              Testing...
-            <% else %>
-              Test Connection
-            <% end %>
-          </button>
-
-          <!-- Test Result -->
-          <%= if @test_result do %>
-            <%= case @test_result do %>
-              <% {:ok, status} -> %>
-                <div class="alert alert-success flex-1">
-                  <span>✓ Connection successful: <%= status %></span>
-                </div>
-              <% {:error, msg} -> %>
-                <div class="alert alert-error flex-1">
-                  <span>✗ Connection failed: <%= msg %></span>
-                </div>
-            <% end %>
+          <%= if @provider_config && @provider_config.enabled do %>
+            <span class="badge badge-success">Enabled</span>
+          <% else %>
+            <span class="badge badge-outline">Disabled</span>
           <% end %>
         </div>
 
-        <!-- Save Button -->
-        <div class="flex gap-2 pt-4 border-t">
+        <!-- Provider-specific fields -->
+        <div class="border-t pt-6">
+          <h3 class="font-semibold text-gray-900 mb-4">Configuration</h3>
+          <%= case @provider do %>
+            <% "openai" -> %>
+              <.openai_form provider={@provider} provider_config={@provider_config} form_errors={@form_errors} />
+            <% "anthropic" -> %>
+              <.anthropic_form provider={@provider} provider_config={@provider_config} form_errors={@form_errors} />
+            <% "mistral" -> %>
+              <.mistral_form provider={@provider} provider_config={@provider_config} form_errors={@form_errors} />
+            <% "ollama" -> %>
+              <.ollama_form provider={@provider} provider_config={@provider_config} form_errors={@form_errors} />
+          <% end %>
+        </div>
+
+        <!-- Test Connection Section -->
+        <div class="border-t pt-6">
+          <h3 class="font-semibold text-gray-900 mb-4">Connection Test</h3>
+          <div class="space-y-3">
+            <button
+              type="button"
+              phx-click="test_connection"
+              phx-value-provider={@provider}
+              disabled={@testing}
+              class="btn btn-outline w-full"
+            >
+              <%= if @testing do %>
+                <span class="loading loading-spinner loading-sm"></span>
+                Testing connection...
+              <% else %>
+                Test Connection
+              <% end %>
+            </button>
+
+            <!-- Test Result -->
+            <%= if @test_result do %>
+              <%= case @test_result do %>
+                <% {:ok, _} -> %>
+                  <div class="alert alert-success">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <span>Connection successful!</span>
+                  </div>
+                <% {:error, msg} -> %>
+                  <div class="alert alert-error">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l-2-2m0 0l-2-2m2 2l2-2m-2 2l-2 2m2-2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <span><%= msg %></span>
+                  </div>
+              <% end %>
+            <% end %>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex gap-2 pt-6 border-t">
           <button type="submit" class="btn btn-primary">
             Save Configuration
           </button>
-          <button type="button" class="btn btn-outline">
+          <.link navigate={~p"/dashboard"} class="btn btn-outline">
             Cancel
-          </button>
+          </.link>
         </div>
       </div>
     </.form>
@@ -299,12 +305,13 @@ defmodule ClientatsWeb.LLMConfigLive do
       <div class="form-control">
         <label class="label">
           <span class="label-text font-semibold">API Key</span>
+          <span class="label-text-alt text-gray-500">Get from https://platform.openai.com/api-keys</span>
         </label>
         <input
           type="password"
           name="setting[api_key]"
           placeholder="sk-..."
-          value={@config && @config.api_key}
+          value={@provider_config && @provider_config.api_key}
           class="input input-bordered"
         />
         <%= if @form_errors[:api_key] do %>
@@ -317,12 +324,13 @@ defmodule ClientatsWeb.LLMConfigLive do
       <div class="form-control">
         <label class="label">
           <span class="label-text font-semibold">Default Model</span>
+          <span class="label-text-alt text-gray-500">e.g., gpt-4o</span>
         </label>
         <input
           type="text"
           name="setting[default_model]"
           placeholder="gpt-4o"
-          value={@config && @config.default_model}
+          value={@provider_config && @provider_config.default_model}
           class="input input-bordered"
         />
       </div>
@@ -330,12 +338,13 @@ defmodule ClientatsWeb.LLMConfigLive do
       <div class="form-control">
         <label class="label">
           <span class="label-text font-semibold">Vision Model</span>
+          <span class="label-text-alt text-gray-500">e.g., gpt-4-vision</span>
         </label>
         <input
           type="text"
           name="setting[vision_model]"
           placeholder="gpt-4-vision"
-          value={@config && @config.vision_model}
+          value={@provider_config && @provider_config.vision_model}
           class="input input-bordered"
         />
       </div>
@@ -343,12 +352,13 @@ defmodule ClientatsWeb.LLMConfigLive do
       <div class="form-control">
         <label class="label">
           <span class="label-text font-semibold">Text Model</span>
+          <span class="label-text-alt text-gray-500">e.g., gpt-4o</span>
         </label>
         <input
           type="text"
           name="setting[text_model]"
           placeholder="gpt-4o"
-          value={@config && @config.text_model}
+          value={@provider_config && @provider_config.text_model}
           class="input input-bordered"
         />
       </div>
@@ -362,12 +372,13 @@ defmodule ClientatsWeb.LLMConfigLive do
       <div class="form-control">
         <label class="label">
           <span class="label-text font-semibold">API Key</span>
+          <span class="label-text-alt text-gray-500">Get from https://console.anthropic.com/account/keys</span>
         </label>
         <input
           type="password"
           name="setting[api_key]"
           placeholder="sk-ant-..."
-          value={@config && @config.api_key}
+          value={@provider_config && @provider_config.api_key}
           class="input input-bordered"
         />
         <%= if @form_errors[:api_key] do %>
@@ -380,12 +391,13 @@ defmodule ClientatsWeb.LLMConfigLive do
       <div class="form-control">
         <label class="label">
           <span class="label-text font-semibold">Default Model</span>
+          <span class="label-text-alt text-gray-500">e.g., claude-opus-4-20250514</span>
         </label>
         <input
           type="text"
           name="setting[default_model]"
-          placeholder="claude-3-opus-20240229"
-          value={@config && @config.default_model}
+          placeholder="claude-opus-4-20250514"
+          value={@provider_config && @provider_config.default_model}
           class="input input-bordered"
         />
       </div>
@@ -393,12 +405,13 @@ defmodule ClientatsWeb.LLMConfigLive do
       <div class="form-control">
         <label class="label">
           <span class="label-text font-semibold">Vision Model</span>
+          <span class="label-text-alt text-gray-500">e.g., claude-opus-4-20250514</span>
         </label>
         <input
           type="text"
           name="setting[vision_model]"
-          placeholder="claude-3-opus-20240229"
-          value={@config && @config.vision_model}
+          placeholder="claude-opus-4-20250514"
+          value={@provider_config && @provider_config.vision_model}
           class="input input-bordered"
         />
       </div>
@@ -406,12 +419,13 @@ defmodule ClientatsWeb.LLMConfigLive do
       <div class="form-control">
         <label class="label">
           <span class="label-text font-semibold">Text Model</span>
+          <span class="label-text-alt text-gray-500">e.g., claude-opus-4-20250514</span>
         </label>
         <input
           type="text"
           name="setting[text_model]"
-          placeholder="claude-3-opus-20240229"
-          value={@config && @config.text_model}
+          placeholder="claude-opus-4-20250514"
+          value={@provider_config && @provider_config.text_model}
           class="input input-bordered"
         />
       </div>
@@ -425,12 +439,13 @@ defmodule ClientatsWeb.LLMConfigLive do
       <div class="form-control">
         <label class="label">
           <span class="label-text font-semibold">API Key</span>
+          <span class="label-text-alt text-gray-500">Get from https://console.mistral.ai/api-keys</span>
         </label>
         <input
           type="password"
           name="setting[api_key]"
           placeholder="Your Mistral API key"
-          value={@config && @config.api_key}
+          value={@provider_config && @provider_config.api_key}
           class="input input-bordered"
         />
         <%= if @form_errors[:api_key] do %>
@@ -443,12 +458,13 @@ defmodule ClientatsWeb.LLMConfigLive do
       <div class="form-control">
         <label class="label">
           <span class="label-text font-semibold">Default Model</span>
+          <span class="label-text-alt text-gray-500">e.g., mistral-large-latest</span>
         </label>
         <input
           type="text"
           name="setting[default_model]"
           placeholder="mistral-large-latest"
-          value={@config && @config.default_model}
+          value={@provider_config && @provider_config.default_model}
           class="input input-bordered"
         />
       </div>
@@ -456,12 +472,13 @@ defmodule ClientatsWeb.LLMConfigLive do
       <div class="form-control">
         <label class="label">
           <span class="label-text font-semibold">Vision Model</span>
+          <span class="label-text-alt text-gray-500">e.g., mistral-vision-latest</span>
         </label>
         <input
           type="text"
           name="setting[vision_model]"
           placeholder="mistral-vision-latest"
-          value={@config && @config.vision_model}
+          value={@provider_config && @provider_config.vision_model}
           class="input input-bordered"
         />
       </div>
@@ -469,12 +486,13 @@ defmodule ClientatsWeb.LLMConfigLive do
       <div class="form-control">
         <label class="label">
           <span class="label-text font-semibold">Text Model</span>
+          <span class="label-text-alt text-gray-500">e.g., mistral-large-latest</span>
         </label>
         <input
           type="text"
           name="setting[text_model]"
           placeholder="mistral-large-latest"
-          value={@config && @config.text_model}
+          value={@provider_config && @provider_config.text_model}
           class="input input-bordered"
         />
       </div>
@@ -488,57 +506,73 @@ defmodule ClientatsWeb.LLMConfigLive do
       <div class="form-control">
         <label class="label">
           <span class="label-text font-semibold">Base URL</span>
+          <span class="label-text-alt text-gray-500">e.g., http://localhost:11434</span>
         </label>
         <input
           type="text"
           name="setting[base_url]"
           placeholder="http://localhost:11434"
-          value={@config && @config.base_url}
+          value={@provider_config && @provider_config.base_url}
           class="input input-bordered"
         />
+        <span class="label-text-alt text-gray-600">The URL where Ollama is running</span>
       </div>
 
       <div class="form-control">
         <label class="label">
-          <span class="label-text font-semibold">Default Model</span>
+          <span class="label-text font-semibold">Default Model (Text)</span>
+          <span class="label-text-alt text-gray-500">e.g., mistral, neural-chat</span>
         </label>
         <input
           type="text"
           name="setting[default_model]"
           placeholder="mistral"
-          value={@config && @config.default_model}
+          value={@provider_config && @provider_config.default_model}
           class="input input-bordered"
         />
-      </div>
-
-      <div class="form-control">
-        <label class="label">
-          <span class="label-text font-semibold">Vision Model</span>
-        </label>
-        <input
-          type="text"
-          name="setting[vision_model]"
-          placeholder="qwen2.5vl:7b"
-          value={@config && @config.vision_model}
-          class="input input-bordered"
-        />
+        <span class="label-text-alt text-gray-600">Used for general text processing</span>
       </div>
 
       <div class="form-control">
         <label class="label">
           <span class="label-text font-semibold">Text Model</span>
+          <span class="label-text-alt text-gray-500">e.g., mistral, neural-chat</span>
         </label>
         <input
           type="text"
           name="setting[text_model]"
           placeholder="mistral"
-          value={@config && @config.text_model}
+          value={@provider_config && @provider_config.text_model}
           class="input input-bordered"
         />
+        <span class="label-text-alt text-gray-600">Explicit model for text-only tasks</span>
+      </div>
+
+      <div class="form-control">
+        <label class="label">
+          <span class="label-text font-semibold">Vision Model</span>
+          <span class="label-text-alt text-gray-500">e.g., qwen2.5vl:7b, llava</span>
+        </label>
+        <input
+          type="text"
+          name="setting[vision_model]"
+          placeholder="qwen2.5vl:7b"
+          value={@provider_config && @provider_config.vision_model}
+          class="input input-bordered"
+        />
+        <span class="label-text-alt text-gray-600">Model with vision capabilities for image processing</span>
       </div>
 
       <div class="alert alert-info">
-        <span class="text-sm">Ollama requires a running instance at the specified URL</span>
+        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+        <div>
+          <p class="font-semibold mb-1">Getting Started with Ollama</p>
+          <ul class="text-sm list-disc list-inside space-y-1">
+            <li>Ensure Ollama is running at the Base URL</li>
+            <li>Models must be installed locally (e.g., <code class="text-xs bg-gray-100 px-1 rounded">ollama pull mistral</code>)</li>
+            <li>Use the "Test Connection" button to verify your setup</li>
+          </ul>
+        </div>
       </div>
     </div>
     """
