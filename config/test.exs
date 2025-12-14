@@ -43,3 +43,6 @@ config :wallaby,
   screenshot_on_failure: true
 
 config :clientats, :sql_sandbox, true
+
+config :clientats,
+  llm_encryption_key: "test-encryption-key-for-testing"

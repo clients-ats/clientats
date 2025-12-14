@@ -7,6 +7,7 @@ defmodule Clientats.LLM.Service do
   """
   
   alias Clientats.LLM.{PromptTemplates, Cache}
+  alias Clientats.LLMConfig
   alias Clientats.Browser
   
   @type provider :: :openai | :anthropic | :mistral | atom()
@@ -348,22 +349,43 @@ defmodule Clientats.LLM.Service do
   defp try_fallbacks([], _content, _url, _mode, _options, _tried), do: :error
   
   defp call_ollama(prompt, options) do
-    # Get Ollama configuration
+    # Get Ollama configuration from env (fallback)
     providers = Application.get_env(:req_llm, :providers, %{})
     ollama_config = providers[:ollama] || %{}
 
     model = ollama_config[:default_model] || "hf.co/unsloth/Magistral-Small-2509-GGUF:UD-Q4_K_XL"
     base_url = ollama_config[:base_url] || "http://localhost:11434"
-    
+
     # Build Ollama options
     ollama_options = [
       temperature: options[:temperature] || 0.1,
       top_p: options[:top_p] || 0.9,
       num_predict: options[:max_tokens] || 4096
     ]
-    
+
     # Call Ollama provider
     Clientats.LLM.Providers.Ollama.generate(model, prompt, ollama_options, base_url)
+  end
+
+  defp call_ollama(prompt, options, user_id) do
+    # Get Ollama configuration from database or env
+    case LLMConfig.get_provider_config(user_id, :ollama) do
+      {:ok, config} ->
+        model = config.default_model || "hf.co/unsloth/Magistral-Small-2509-GGUF:UD-Q4_K_XL"
+        base_url = config.base_url || "http://localhost:11434"
+
+        ollama_options = [
+          temperature: options[:temperature] || 0.1,
+          top_p: options[:top_p] || 0.9,
+          num_predict: options[:max_tokens] || 4096
+        ]
+
+        Clientats.LLM.Providers.Ollama.generate(model, prompt, ollama_options, base_url)
+
+      {:error, :not_found} ->
+        # Fallback to environment configuration
+        call_ollama(prompt, options)
+    end
   end
   
   defp get_model_for_provider(provider) do
@@ -378,6 +400,51 @@ defmodule Clientats.LLM.Service do
           :ollama -> "hf.co/unsloth/Magistral-Small-2509-GGUF:UD-Q4_K_XL"
           _ -> "gpt-4o"
         end
+    end
+  end
+
+  defp get_model_for_provider(provider, user_id) do
+    case LLMConfig.get_provider_config(user_id, provider) do
+      {:ok, config} ->
+        config.default_model || get_model_for_provider(provider)
+
+      {:error, :not_found} ->
+        get_model_for_provider(provider)
+    end
+  end
+
+  @doc """
+  Get provider configuration from database, with fallback to environment variables.
+  """
+  def get_provider_config_with_fallback(user_id, provider) do
+    case LLMConfig.get_provider_config(user_id, provider) do
+      {:ok, config} -> {:ok, config}
+      {:error, :not_found} -> get_env_provider_config(provider)
+    end
+  end
+
+  defp get_env_provider_config(provider) do
+    providers = Application.get_env(:req_llm, :providers, %{})
+
+    case providers[provider] do
+      nil -> {:error, :not_found}
+      config -> {:ok, config}
+    end
+  end
+
+  @doc """
+  Check if a provider is available (configured in database or environment).
+  """
+  def provider_available?(user_id, provider) do
+    case get_provider_config_with_fallback(user_id, provider) do
+      {:ok, config} ->
+        case provider do
+          :ollama -> true
+          _ -> config[:api_key] != nil
+        end
+
+      {:error, :not_found} ->
+        false
     end
   end
   

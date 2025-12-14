@@ -2,35 +2,52 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
   use ClientatsWeb, :live_view
 
   alias Clientats.LLM.Service
+  alias Clientats.LLMConfig
   alias Clientats.Jobs
 
   on_mount {ClientatsWeb.UserAuth, :ensure_authenticated}
 
   @impl true
   def mount(_params, _session, socket) do
-    providers = get_llm_providers()
+    user_id = socket.assigns.current_user.id
 
-    {:ok,
-     socket
-     |> assign(:page_title, "Import Job from URL")
-     |> assign(:step, 1)
-     |> assign(:url, "")
-     |> assign(:scraping, false)
-     |> assign(:scraped_data, %{})
-     |> assign(:error, nil)
-     |> assign(:llm_provider, "ollama")
-     |> assign(:llm_providers, providers)
-     |> assign(:llm_status, nil)
-     |> assign(:show_provider_settings, false)
-     |> assign(:supported_sites, [
-       "linkedin.com",
-       "indeed.com",
-       "glassdoor.com",
-       "angel.co",
-       "lever.co",
-       "greenhouse.io",
-       "workday.com"
-     ])}
+    # Check if any LLM providers are configured
+    enabled_providers = LLMConfig.get_enabled_providers(user_id)
+
+    if Enum.empty?(enabled_providers) do
+      # Redirect to dashboard with error message
+      {:ok,
+       socket
+       |> put_flash(
+         :error,
+         "Please configure at least one LLM provider first. Visit the LLM Configuration page."
+       )
+       |> redirect(to: ~p"/dashboard")}
+    else
+      providers = get_llm_providers()
+
+      {:ok,
+       socket
+       |> assign(:page_title, "Import Job from URL")
+       |> assign(:step, 1)
+       |> assign(:url, "")
+       |> assign(:scraping, false)
+       |> assign(:scraped_data, %{})
+       |> assign(:error, nil)
+       |> assign(:llm_provider, "ollama")
+       |> assign(:llm_providers, providers)
+       |> assign(:llm_status, nil)
+       |> assign(:show_provider_settings, false)
+       |> assign(:supported_sites, [
+         "linkedin.com",
+         "indeed.com",
+         "glassdoor.com",
+         "angel.co",
+         "lever.co",
+         "greenhouse.io",
+         "workday.com"
+       ])}
+    end
   end
 
   @impl true
