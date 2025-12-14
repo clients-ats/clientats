@@ -22,7 +22,7 @@ defmodule Mix.Tasks.Logs.View do
 
     {opts, _args, _invalid} =
       OptionParser.parse(args,
-        options: [provider: :string, type: :string, days: :integer, failed: :boolean]
+        switches: [provider: :string, type: :string, days: :integer, failed: :boolean]
       )
 
     if Keyword.get(opts, :failed) do

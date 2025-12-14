@@ -59,9 +59,7 @@ defmodule Clientats.Logging.FormLogger do
   Usage: FormLogger.log_form_validation(socket, "job_interest", params)
   """
   def log_form_validation(socket, provider_name, params, opts \\ []) do
-    log_form_event(socket, "validate", params, [
-      provider_name: provider_name | opts
-    ])
+    log_form_event(socket, "validate", params, [provider_name: provider_name] ++ opts)
   end
 
   @doc """
@@ -70,9 +68,7 @@ defmodule Clientats.Logging.FormLogger do
   Usage: FormLogger.log_form_save(socket, "job_interest", params)
   """
   def log_form_save(socket, provider_name, params, opts \\ []) do
-    log_form_event(socket, "save", params, [
-      provider_name: provider_name | opts
-    ])
+    log_form_event(socket, "save", params, [provider_name: provider_name] ++ opts)
   end
 
   @doc """

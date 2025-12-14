@@ -184,7 +184,13 @@ defmodule Clientats.Logging.Utils do
     |> Enum.filter(fn entry ->
       case entry["timestamp"] do
         nil -> false
-        ts -> DateTime.from_iso8601(ts) |> elem(0) |> DateTime.compare(cutoff_time) in [:eq, :gt]
+        ts ->
+          case DateTime.from_iso8601(ts) do
+            {:ok, entry_time, _offset} ->
+              DateTime.compare(entry_time, cutoff_time) in [:eq, :gt]
+            _error ->
+              false
+          end
       end
     end)
   end
