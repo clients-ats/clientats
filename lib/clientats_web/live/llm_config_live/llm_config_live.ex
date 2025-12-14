@@ -105,6 +105,9 @@ defmodule ClientatsWeb.LLMConfigLive do
               test_result={@test_result}
               save_success={@save_success}
               form_errors={@form_errors}
+              provider_config={@provider_config}
+              ollama_models={@ollama_models}
+              discovering_models={@discovering_models}
             />
           </div>
         </div>
