@@ -164,10 +164,14 @@ defmodule Clientats.LLM.Service do
                 IO.puts("[Service] Calling Google Gemini with screenshot: #{screenshot_path}")
                 call_google_gemini_with_image(screenshot_path, prompt, options)
 
+              :gemini ->
+                IO.puts("[Service] Calling Google Gemini with screenshot: #{screenshot_path}")
+                call_google_gemini_with_image(screenshot_path, prompt, options)
+
               _ ->
                 # For other providers, would need different image handling
-                IO.puts("[Service] Non-Ollama provider selected, requires image support")
-                {:error, {:llm_error, "Image extraction not yet supported for provider #{provider}"}}
+                IO.puts("[Service] Image extraction not supported for provider #{provider}, will retry with fallback providers")
+                {:error, :unsupported_for_screenshot}
             end
 
           IO.puts("[Service] Received LLM result: #{inspect(result)}")
@@ -207,14 +211,17 @@ defmodule Clientats.LLM.Service do
   end
 
   defp retry_with_fallback_screenshot(screenshot_path, url, mode, options) do
-    # Clean up screenshot
-    File.rm(screenshot_path)
-
     fallback_providers = Application.get_env(:req_llm, :fallback_providers, [])
 
     case try_screenshot_fallbacks(fallback_providers, screenshot_path, url, mode, options, []) do
-      {:ok, result} -> {:ok, result}
-      :error -> {:error, :all_providers_failed}
+      {:ok, result} ->
+        # Clean up screenshot only after successful extraction
+        File.rm(screenshot_path)
+        {:ok, result}
+      :error ->
+        # Clean up screenshot if all providers failed
+        File.rm(screenshot_path)
+        {:error, :all_providers_failed}
     end
   end
 
