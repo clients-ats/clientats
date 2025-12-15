@@ -1,7 +1,6 @@
 defmodule ClientatsWeb.JobScraperControllerTest do
   use ClientatsWeb.ConnCase
-  
-  alias Clientats.LLM.Service
+
   alias Clientats.Accounts
   
   setup do

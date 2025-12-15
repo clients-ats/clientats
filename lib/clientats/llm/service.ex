@@ -86,7 +86,7 @@ defmodule Clientats.LLM.Service do
   def extract_job_data_from_url(url, mode \\ :generic, options \\ []) do
     # Determine provider
     provider = Keyword.get(options, :provider) || Application.get_env(:req_llm, :primary_provider, :openai)
-    user_id = Keyword.get(options, :user_id)
+    _user_id = Keyword.get(options, :user_id)
 
     # Try to use browser screenshot first (better for multimodal extraction)
     case capture_page_screenshot(url) do

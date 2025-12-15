@@ -21,7 +21,6 @@ defmodule Clientats.LLM.CircuitBreaker do
   @default_failure_threshold 5
   @default_success_threshold 2
   @default_timeout_seconds 60
-  @default_health_check_timeout 5_000
 
   # Client API
 
