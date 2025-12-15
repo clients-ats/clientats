@@ -39,6 +39,7 @@ defmodule Clientats.LLM.ErrorHandler do
   def retryable?(:rate_limited), do: true
   def retryable?(:unavailable), do: true
   def retryable?(:connection_refused), do: true
+  def retryable?(:unsupported_for_screenshot), do: true
   def retryable?({:timeout, _}), do: true
   def retryable?({:rate_limited, _}), do: true
   def retryable?({:http_error, status}) when status >= 500, do: true
