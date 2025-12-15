@@ -36,6 +36,13 @@ defmodule ClientatsWeb.LLMConfigLive do
   defp load_provider_data(socket, user_id, provider) do
     case LLMConfig.get_provider_config(user_id, provider) do
       {:ok, config} ->
+        # Verify API key is valid (plain text), if not clear it
+        config =
+          if config.api_key && !is_valid_api_key(config.api_key) do
+            %{config | api_key: nil}
+          else
+            config
+          end
         assign(socket, :provider_config, config)
 
       {:error, :not_found} ->
@@ -56,6 +63,12 @@ defmodule ClientatsWeb.LLMConfigLive do
         assign(socket, :provider_config, default_config)
     end
   end
+
+  defp is_valid_api_key(api_key) when is_binary(api_key) do
+    # API keys should be valid UTF-8 and not contain too many non-printable characters
+    String.valid?(api_key) && String.length(api_key) > 0
+  end
+  defp is_valid_api_key(_), do: false
 
   @impl true
   def render(assigns) do
