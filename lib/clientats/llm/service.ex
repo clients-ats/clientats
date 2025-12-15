@@ -586,27 +586,6 @@ defmodule Clientats.LLM.Service do
     Clientats.LLM.Providers.Ollama.generate(model, prompt, ollama_options, base_url)
   end
 
-  defp call_ollama(prompt, options, user_id) do
-    # Get Ollama configuration from database or env
-    case LLMConfig.get_provider_config(user_id, :ollama) do
-      {:ok, config} ->
-        model = config.default_model || "hf.co/unsloth/Magistral-Small-2509-GGUF:UD-Q4_K_XL"
-        base_url = config.base_url || "http://localhost:11434"
-
-        ollama_options = [
-          temperature: options[:temperature] || 0.1,
-          top_p: options[:top_p] || 0.9,
-          num_predict: options[:max_tokens] || 4096
-        ]
-
-        Clientats.LLM.Providers.Ollama.generate(model, prompt, ollama_options, base_url)
-
-      {:error, :not_found} ->
-        # Fallback to environment configuration
-        call_ollama(prompt, options)
-    end
-  end
-  
   defp get_model_for_provider(provider) do
     providers = Application.get_env(:req_llm, :providers, %{})
     case providers[provider] do
@@ -620,16 +599,6 @@ defmodule Clientats.LLM.Service do
           :ollama -> "hf.co/unsloth/Magistral-Small-2509-GGUF:UD-Q4_K_XL"
           _ -> "gpt-4o"
         end
-    end
-  end
-
-  defp get_model_for_provider(provider, user_id) do
-    case LLMConfig.get_provider_config(user_id, provider) do
-      {:ok, config} ->
-        config.default_model || get_model_for_provider(provider)
-
-      {:error, :not_found} ->
-        get_model_for_provider(provider)
     end
   end
 
@@ -660,7 +629,14 @@ defmodule Clientats.LLM.Service do
       {:ok, config} ->
         case provider do
           :ollama -> true
-          _ -> config[:api_key] != nil
+          _ ->
+            # Handle both map and struct formats
+            api_key = case config do
+              %{api_key: key} -> key
+              %{"api_key" => key} -> key
+              _ -> nil
+            end
+            api_key != nil
         end
 
       {:error, :not_found} ->
