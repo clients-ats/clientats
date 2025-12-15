@@ -100,15 +100,6 @@ defmodule Clientats.LLMConfig do
 
   def test_connection(provider, config) when is_atom(provider) do
     case provider do
-      :openai ->
-        test_openai_connection(config)
-
-      :anthropic ->
-        test_anthropic_connection(config)
-
-      :mistral ->
-        test_mistral_connection(config)
-
       :gemini ->
         test_gemini_connection(config)
 
@@ -172,27 +163,6 @@ defmodule Clientats.LLMConfig do
 
   def validate_api_key(provider, api_key) when is_atom(provider) and is_binary(api_key) do
     case provider do
-      :openai ->
-        if String.starts_with?(api_key, "sk-") and byte_size(api_key) > 20 do
-          :ok
-        else
-          {:error, "Invalid OpenAI API key format"}
-        end
-
-      :anthropic ->
-        if byte_size(api_key) > 20 do
-          :ok
-        else
-          {:error, "Invalid Anthropic API key format"}
-        end
-
-      :mistral ->
-        if byte_size(api_key) > 20 do
-          :ok
-        else
-          {:error, "Invalid Mistral API key format"}
-        end
-
       :gemini ->
         if byte_size(api_key) > 10 do
           :ok
@@ -220,21 +190,6 @@ defmodule Clientats.LLMConfig do
   """
   def get_env_defaults do
     %{
-      openai: %{
-        api_key: System.get_env("OPENAI_API_KEY"),
-        default_model: System.get_env("OPENAI_MODEL") || "gpt-4o",
-        enabled: System.get_env("OPENAI_API_KEY") != nil
-      },
-      anthropic: %{
-        api_key: System.get_env("ANTHROPIC_API_KEY"),
-        default_model: System.get_env("ANTHROPIC_MODEL") || "claude-3-opus-20240229",
-        enabled: System.get_env("ANTHROPIC_API_KEY") != nil
-      },
-      mistral: %{
-        api_key: System.get_env("MISTRAL_API_KEY"),
-        default_model: System.get_env("MISTRAL_MODEL") || "mistral-large-latest",
-        enabled: System.get_env("MISTRAL_API_KEY") != nil
-      },
       gemini: %{
         api_key: System.get_env("GEMINI_API_KEY"),
         default_model: System.get_env("GEMINI_MODEL") || "gemini-2.0-flash",
@@ -302,84 +257,6 @@ defmodule Clientats.LLMConfig do
       model: setting.default_model,
       configured: configured
     }
-  end
-
-  defp test_openai_connection(config) do
-    api_key = config[:api_key]
-
-    if !api_key || !String.starts_with?(api_key, "sk-") do
-      {:error, "Invalid OpenAI API key"}
-    else
-      try do
-        case Req.post!("https://api.openai.com/v1/models",
-          auth: {:bearer, api_key},
-          receive_timeout: 5000
-        ) do
-          %{status: 200} ->
-            {:ok, "connected"}
-
-          %{status: 401} ->
-            {:error, "Invalid API key"}
-
-          %{status: status} ->
-            {:error, "Connection failed (#{status})"}
-        end
-      rescue
-        _e -> {:error, "Connection failed"}
-      end
-    end
-  end
-
-  defp test_anthropic_connection(config) do
-    api_key = config[:api_key]
-
-    if !api_key do
-      {:error, "Missing Anthropic API key"}
-    else
-      try do
-        case Req.get!("https://api.anthropic.com/v1/models",
-          headers: [{"x-api-key", api_key}],
-          receive_timeout: 5000
-        ) do
-          %{status: 200} ->
-            {:ok, "connected"}
-
-          %{status: 401} ->
-            {:error, "Invalid API key"}
-
-          %{status: status} ->
-            {:error, "Connection failed (#{status})"}
-        end
-      rescue
-        _e -> {:error, "Connection failed"}
-      end
-    end
-  end
-
-  defp test_mistral_connection(config) do
-    api_key = config[:api_key]
-
-    if !api_key do
-      {:error, "Missing Mistral API key"}
-    else
-      try do
-        case Req.get!("https://api.mistral.ai/v1/models",
-          headers: [{"Authorization", "Bearer #{api_key}"}],
-          receive_timeout: 5000
-        ) do
-          %{status: 200} ->
-            {:ok, "connected"}
-
-          %{status: 401} ->
-            {:error, "Invalid API key"}
-
-          %{status: status} ->
-            {:error, "Connection failed (#{status})"}
-        end
-      rescue
-        _e -> {:error, "Connection failed"}
-      end
-    end
   end
 
   defp test_ollama_connection(config) do

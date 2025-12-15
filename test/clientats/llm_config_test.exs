@@ -13,34 +13,34 @@ defmodule Clientats.LLMConfigTest do
 
     test "returns provider config when configured", %{user: user} do
       config = %{
-        "provider" => "openai",
-        "api_key" => "sk-test-key",
-        "default_model" => "gpt-4o",
+        "provider" => "gemini",
+        "api_key" => "AIza123456789abcdefghijklmnop",
+        "default_model" => "gemini-2.0-flash",
         "enabled" => true
       }
 
-      {:ok, _setting} = LLMConfig.save_provider_config(user.id, :openai, config)
+      {:ok, _setting} = LLMConfig.save_provider_config(user.id, :gemini, config)
 
-      {:ok, retrieved} = LLMConfig.get_provider_config(user.id, :openai)
-      assert retrieved.provider == "openai"
+      {:ok, retrieved} = LLMConfig.get_provider_config(user.id, :gemini)
+      assert retrieved.provider == "gemini"
       assert retrieved.enabled == true
     end
 
     test "returns :not_found when not configured", %{user: user} do
-      {:error, :not_found} = LLMConfig.get_provider_config(user.id, :openai)
+      {:error, :not_found} = LLMConfig.get_provider_config(user.id, :gemini)
     end
 
     test "accepts provider name as string or atom", %{user: user} do
       config = %{
-        "provider" => "openai",
-        "api_key" => "sk-test-key",
+        "provider" => "gemini",
+        "api_key" => "AIza123456789abcdefghijklmnop",
         "enabled" => true
       }
 
-      {:ok, _setting} = LLMConfig.save_provider_config(user.id, :openai, config)
+      {:ok, _setting} = LLMConfig.save_provider_config(user.id, :gemini, config)
 
-      {:ok, _retrieved_atom} = LLMConfig.get_provider_config(user.id, :openai)
-      {:ok, _retrieved_string} = LLMConfig.get_provider_config(user.id, "openai")
+      {:ok, _retrieved_atom} = LLMConfig.get_provider_config(user.id, :gemini)
+      {:ok, _retrieved_string} = LLMConfig.get_provider_config(user.id, "gemini")
     end
   end
 
@@ -52,48 +52,48 @@ defmodule Clientats.LLMConfigTest do
 
     test "saves new provider configuration", %{user: user} do
       config = %{
-        "provider" => "openai",
-        "api_key" => "sk-test-key",
-        "default_model" => "gpt-4o",
+        "provider" => "gemini",
+        "api_key" => "AIza123456789abcdefghijklmnop",
+        "default_model" => "gemini-2.0-flash",
         "enabled" => true
       }
 
-      {:ok, setting} = LLMConfig.save_provider_config(user.id, :openai, config)
+      {:ok, setting} = LLMConfig.save_provider_config(user.id, :gemini, config)
       assert setting.user_id == user.id
-      assert setting.provider == "openai"
+      assert setting.provider == "gemini"
       assert setting.enabled == true
     end
 
     test "updates existing provider configuration", %{user: user} do
       config1 = %{
-        "provider" => "openai",
-        "api_key" => "sk-test-key-1",
+        "provider" => "gemini",
+        "api_key" => "AIza111111111111111111111111",
         "enabled" => true
       }
 
-      {:ok, _} = LLMConfig.save_provider_config(user.id, :openai, config1)
+      {:ok, _} = LLMConfig.save_provider_config(user.id, :gemini, config1)
 
       config2 = %{
-        "provider" => "openai",
-        "api_key" => "sk-test-key-2",
+        "provider" => "gemini",
+        "api_key" => "AIza222222222222222222222222",
         "enabled" => false
       }
 
-      {:ok, updated} = LLMConfig.save_provider_config(user.id, :openai, config2)
+      {:ok, updated} = LLMConfig.save_provider_config(user.id, :gemini, config2)
       assert updated.enabled == false
     end
 
     test "stores API keys as plain text", %{user: user} do
       config = %{
-        "provider" => "openai",
-        "api_key" => "sk-test-key",
+        "provider" => "gemini",
+        "api_key" => "AIza123456789abcdefghijklmnop",
         "enabled" => true
       }
 
-      {:ok, setting} = LLMConfig.save_provider_config(user.id, :openai, config)
+      {:ok, setting} = LLMConfig.save_provider_config(user.id, :gemini, config)
 
       # Verify API key is stored as plain text
-      assert setting.api_key == "sk-test-key"
+      assert setting.api_key == "AIza123456789abcdefghijklmnop"
       assert is_binary(setting.api_key)
     end
   end
@@ -105,21 +105,21 @@ defmodule Clientats.LLMConfigTest do
     end
 
     test "returns list of enabled providers", %{user: user} do
-      LLMConfig.save_provider_config(user.id, :openai, %{
-        "provider" => "openai",
-        "api_key" => "sk-key",
+      LLMConfig.save_provider_config(user.id, :gemini, %{
+        "provider" => "gemini",
+        "api_key" => "AIza123456789abcdefghijklmnop",
         "enabled" => true
       })
 
-      LLMConfig.save_provider_config(user.id, :anthropic, %{
-        "provider" => "anthropic",
-        "api_key" => "sk-anthropic",
+      LLMConfig.save_provider_config(user.id, :ollama, %{
+        "provider" => "ollama",
+        "base_url" => "http://localhost:11434",
         "enabled" => false
       })
 
       enabled = LLMConfig.get_enabled_providers(user.id)
-      assert :openai in enabled
-      refute :anthropic in enabled
+      assert :gemini in enabled
+      refute :ollama in enabled
     end
 
     test "returns empty list when no providers enabled", %{user: user} do
@@ -135,38 +135,22 @@ defmodule Clientats.LLMConfigTest do
     end
 
     test "returns status of all providers for user", %{user: user} do
-      LLMConfig.save_provider_config(user.id, :openai, %{
-        "provider" => "openai",
-        "api_key" => "sk-valid-key-thats-long-enough",
-        "default_model" => "gpt-4o",
+      LLMConfig.save_provider_config(user.id, :gemini, %{
+        "provider" => "gemini",
+        "api_key" => "AIza123456789abcdefghijklmnop",
+        "default_model" => "gemini-2.0-flash",
         "enabled" => true
       })
 
       statuses = LLMConfig.get_provider_status(user.id)
       assert length(statuses) >= 1
 
-      openai_status = Enum.find(statuses, &(&1[:provider] == "openai"))
-      assert openai_status[:enabled] == true
+      gemini_status = Enum.find(statuses, &(&1[:provider] == "gemini"))
+      assert gemini_status[:enabled] == true
     end
   end
 
   describe "validate_api_key/2" do
-    test "validates OpenAI API key format" do
-      assert :ok = LLMConfig.validate_api_key(:openai, "sk-proj-abc123def456ghi789")
-      assert {:error, _} = LLMConfig.validate_api_key(:openai, "invalid-key")
-      assert {:error, _} = LLMConfig.validate_api_key(:openai, "sk-short")
-    end
-
-    test "validates Anthropic API key format" do
-      assert :ok = LLMConfig.validate_api_key(:anthropic, "sk-ant-abc123def456ghi789jkl")
-      assert {:error, _} = LLMConfig.validate_api_key(:anthropic, "short")
-    end
-
-    test "validates Mistral API key format" do
-      assert :ok = LLMConfig.validate_api_key(:mistral, "abc123def456ghi789jkl")
-      assert {:error, _} = LLMConfig.validate_api_key(:mistral, "short")
-    end
-
     test "allows nil or no API key for Ollama" do
       assert :ok = LLMConfig.validate_api_key(:ollama, nil)
       assert :ok = LLMConfig.validate_api_key(:ollama, "")
@@ -184,17 +168,6 @@ defmodule Clientats.LLMConfigTest do
   end
 
   describe "test_connection/2" do
-    test "returns error for invalid OpenAI API key" do
-      config = %{api_key: "invalid"}
-      {:error, _} = LLMConfig.test_connection(:openai, config)
-    end
-
-    test "handles connection timeout gracefully" do
-      config = %{api_key: "sk-proj-test"}
-      result = LLMConfig.test_connection(:openai, config)
-      assert {:error, _} = result
-    end
-
     test "handles Ollama local connection" do
       # This test might fail if Ollama is not running, which is expected
       config = %{base_url: "http://localhost:11434"}
@@ -236,28 +209,28 @@ defmodule Clientats.LLMConfigTest do
     end
 
     test "returns changeset for new configuration", %{user: user} do
-      changeset = LLMConfig.change_provider_config(user.id, :openai)
+      changeset = LLMConfig.change_provider_config(user.id, :gemini)
       # Changeset is for a new configuration, just verify it's a changeset
       assert is_map(changeset)
 
       changeset =
-        LLMConfig.change_provider_config(user.id, :openai, %{
-          api_key: "sk-test-valid-key-long-enough",
-          default_model: "gpt-4o"
+        LLMConfig.change_provider_config(user.id, :gemini, %{
+          api_key: "AIza123456789abcdefghijklmnop",
+          default_model: "gemini-2.0-flash"
         })
 
       assert is_map(changeset)
     end
 
     test "returns changeset with existing data for edit", %{user: user} do
-      LLMConfig.save_provider_config(user.id, :openai, %{
-        "provider" => "openai",
-        "api_key" => "sk-test",
-        "default_model" => "gpt-4o"
+      LLMConfig.save_provider_config(user.id, :gemini, %{
+        "provider" => "gemini",
+        "api_key" => "AIza123456789abcdefghijklmnop",
+        "default_model" => "gemini-2.0-flash"
       })
 
-      changeset = LLMConfig.change_provider_config(user.id, :openai)
-      assert changeset.data.provider == "openai"
+      changeset = LLMConfig.change_provider_config(user.id, :gemini)
+      assert changeset.data.provider == "gemini"
     end
   end
 
@@ -266,9 +239,6 @@ defmodule Clientats.LLMConfigTest do
       defaults = LLMConfig.get_env_defaults()
 
       # Verify structure
-      assert is_map(defaults[:openai])
-      assert is_map(defaults[:anthropic])
-      assert is_map(defaults[:mistral])
       assert is_map(defaults[:ollama])
       assert is_map(defaults[:gemini])
 
