@@ -86,6 +86,7 @@ defmodule Clientats.LLM.Service do
   def extract_job_data_from_url(url, mode \\ :generic, options \\ []) do
     # Determine provider
     provider = Keyword.get(options, :provider) || Application.get_env(:req_llm, :primary_provider, :openai)
+    user_id = Keyword.get(options, :user_id)
 
     # Try to use browser screenshot first (better for multimodal extraction)
     case capture_page_screenshot(url) do
@@ -254,13 +255,37 @@ defmodule Clientats.LLM.Service do
   end
 
   defp call_google_gemini(prompt, options) do
-    # Get Google configuration from application config
-    providers = Application.get_env(:req_llm, :providers, %{})
-    google_config = providers[:google] || %{}
+    # Get user_id from options to fetch user-specific API key
+    user_id = Keyword.get(options, :user_id)
 
-    api_key = google_config[:api_key]
-    model = google_config[:default_model] || "gemini-2.0-flash"
-    api_version = google_config[:api_version] || "v1beta"
+    # Get Google configuration - first try user-specific config, then fall back to app config
+    api_key =
+      if user_id do
+        case LLMConfig.get_provider_config(user_id, :gemini) do
+          {:ok, setting} ->
+            # API key is stored in plain text
+            setting.api_key
+          {:error, :not_found} ->
+            nil
+        end
+      else
+        nil
+      end
+
+    # Fall back to application config if no user-specific config
+    api_key = api_key || Application.get_env(:req_llm, :providers, %{})[:google][:api_key]
+
+    model =
+      if user_id do
+        case LLMConfig.get_provider_config(user_id, :gemini) do
+          {:ok, setting} -> setting.default_model || "gemini-2.0-flash"
+          {:error, :not_found} -> "gemini-2.0-flash"
+        end
+      else
+        Application.get_env(:req_llm, :providers, %{})[:google][:default_model] || "gemini-2.0-flash"
+      end
+
+    api_version = Application.get_env(:req_llm, :providers, %{})[:google][:api_version] || "v1beta"
 
     if !api_key do
       {:error, :missing_api_key}
@@ -294,13 +319,37 @@ defmodule Clientats.LLM.Service do
   end
 
   defp call_google_gemini_with_image(screenshot_path, prompt, options) do
-    # Get Google configuration
-    providers = Application.get_env(:req_llm, :providers, %{})
-    google_config = providers[:google] || %{}
+    # Get user_id from options to fetch user-specific API key
+    user_id = Keyword.get(options, :user_id)
 
-    api_key = google_config[:api_key]
-    model = google_config[:vision_model] || "gemini-2.0-flash"
-    api_version = google_config[:api_version] || "v1beta"
+    # Get Google configuration - first try user-specific config, then fall back to app config
+    api_key =
+      if user_id do
+        case LLMConfig.get_provider_config(user_id, :gemini) do
+          {:ok, setting} ->
+            # API key is stored in plain text
+            setting.api_key
+          {:error, :not_found} ->
+            nil
+        end
+      else
+        nil
+      end
+
+    # Fall back to application config if no user-specific config
+    api_key = api_key || Application.get_env(:req_llm, :providers, %{})[:google][:api_key]
+
+    model =
+      if user_id do
+        case LLMConfig.get_provider_config(user_id, :gemini) do
+          {:ok, setting} -> setting.vision_model || "gemini-2.0-flash"
+          {:error, :not_found} -> "gemini-2.0-flash"
+        end
+      else
+        Application.get_env(:req_llm, :providers, %{})[:google][:vision_model] || "gemini-2.0-flash"
+      end
+
+    api_version = Application.get_env(:req_llm, :providers, %{})[:google][:api_version] || "v1beta"
 
     if !api_key do
       {:error, :missing_api_key}

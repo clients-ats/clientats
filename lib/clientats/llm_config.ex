@@ -278,8 +278,8 @@ defmodule Clientats.LLMConfig do
   # Private functions
 
   defp decrypt_setting(%Setting{} = setting) do
-    decrypted_key = if setting.api_key, do: Setting.decrypt_api_key(setting.api_key)
-    %{setting | api_key: decrypted_key}
+    # API keys are now stored in plain text, no decryption needed
+    setting
   end
 
   defp decrypt_setting(setting), do: setting
