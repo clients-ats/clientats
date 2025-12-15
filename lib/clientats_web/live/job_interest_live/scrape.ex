@@ -39,6 +39,8 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
        |> assign(:saving, false)
        |> assign(:scraped_data, %{})
        |> assign(:error, nil)
+       |> assign(:error_details, nil)
+       |> assign(:manual_entry_mode, false)
        |> assign(:llm_provider, llm_provider)
        |> assign(:llm_status, nil)
        |> assign(:estimated_llm_time_ms, estimated_time_ms)
@@ -122,7 +124,33 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
   end
 
   def handle_event("back_to_url", _params, socket) do
-    {:noreply, socket |> assign(:step, 1) |> assign(:error, nil)}
+    {:noreply, socket |> assign(:step, 1) |> assign(:error, nil) |> assign(:error_details, nil) |> assign(:manual_entry_mode, false)}
+  end
+
+  def handle_event("toggle_manual_entry", _params, socket) do
+    current_mode = socket.assigns.manual_entry_mode
+    {:noreply, socket |> assign(:manual_entry_mode, !current_mode)}
+  end
+
+  def handle_event("retry_scrape", _params, socket) do
+    # Clear error and try scraping the same URL again
+    url = String.trim(socket.assigns.url)
+
+    case validate_url(url) do
+      {:error, :invalid_url} ->
+        {:noreply,
+         socket
+         |> assign(:error, "Please enter a valid URL starting with http:// or https://")}
+
+      {:ok, _valid_url} ->
+        provider = socket.assigns.llm_provider
+
+        if provider == "ollama" do
+          check_ollama_status(socket)
+        else
+          start_scraping(url, provider, socket)
+        end
+    end
   end
 
   @impl true
@@ -169,16 +197,19 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
          |> assign(:scraping, false)
          |> assign(:scraped_data, data)
          |> assign(:step, 2)
+         |> assign(:error, nil)
+         |> assign(:error_details, nil)
          |> assign(:llm_status, "success")}
 
       {:error, reason} ->
-        # Format error message using ErrorHandler for user-friendly messages
-        error_msg = ErrorHandler.user_friendly_message(reason)
+        # Get comprehensive error details for fallback UI
+        error_details = ErrorHandler.error_details(reason)
 
         {:noreply,
          socket
          |> assign(:scraping, false)
-         |> assign(:error, error_msg)
+         |> assign(:error, error_details.user_message)
+         |> assign(:error_details, error_details)
          |> assign(:llm_status, "error")}
     end
   end
@@ -416,8 +447,124 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
                     </button>
                   </div>
                 </form>
-                <%= if @error do %>
-                  <p class="mt-2 text-sm text-red-600"><%= @error %></p>
+
+                <!-- Error Recovery Panel with Fallback Options -->
+                <%= if @error_details do %>
+                  <div class="mt-4">
+                    <.error_recovery_panel
+                      error_details={@error_details}
+                      on_manual_entry="toggle_manual_entry"
+                      on_retry="retry_scrape"
+                      on_config={~p"/dashboard/llm-config"}
+                    />
+                  </div>
+                <% end %>
+
+                <!-- Manual Entry Form (appears when all LLM providers fail) -->
+                <%= if @manual_entry_mode && @error_details do %>
+                  <div class="mt-6 bg-white rounded-lg border border-gray-300 p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Enter Job Details Manually</h3>
+                    <p class="text-sm text-gray-600 mb-6">Fill in the job information below. You can always edit it later.</p>
+
+                    <form phx-submit="save_job_interest" class="space-y-4">
+                      <div class="grid md:grid-cols-2 gap-4">
+                        <div>
+                          <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Company Name <span class="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            name="company_name"
+                            placeholder="e.g., Acme Inc."
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Position Title <span class="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            name="position_title"
+                            placeholder="e.g., Senior Engineer"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                          Job URL
+                        </label>
+                        <input
+                          type="url"
+                          name="url"
+                          value={@url}
+                          placeholder="https://..."
+                          class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                          Job Description
+                        </label>
+                        <textarea
+                          name="job_description"
+                          rows="4"
+                          placeholder="Paste the job description here..."
+                          class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        ></textarea>
+                      </div>
+
+                      <div class="grid md:grid-cols-2 gap-4">
+                        <div>
+                          <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Location
+                          </label>
+                          <input
+                            type="text"
+                            name="location"
+                            placeholder="e.g., San Francisco, CA"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Work Model
+                          </label>
+                          <select
+                            name="work_model"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          >
+                            <option value="remote">Remote</option>
+                            <option value="hybrid">Hybrid</option>
+                            <option value="on_site">On-site</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div class="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                        <button
+                          type="button"
+                          phx-click="toggle_manual_entry"
+                          class="btn btn-ghost"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          class="btn btn-primary"
+                          phx-disable-with="Saving..."
+                        >
+                          <.icon name="hero-check" class="w-4 h-4 mr-2" />
+                          Save Job Interest
+                        </button>
+                      </div>
+                    </form>
+                  </div>
                 <% end %>
 
                 <!-- ETA Display during scraping -->
