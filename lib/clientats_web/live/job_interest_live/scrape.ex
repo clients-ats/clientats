@@ -264,6 +264,10 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
         :anthropic -> :anthropic
         "mistral" -> :mistral
         :mistral -> :mistral
+        "gemini" -> :gemini
+        :gemini -> :gemini
+        "google" -> :google
+        :google -> :google
         _ -> provider  # Pass through if already an atom or unknown
       end
 
@@ -272,16 +276,17 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
 
     # Capture the current process PID to send messages back to LiveView
     liveview_pid = self()
+    user_id = socket.assigns.current_user.id
 
     # Spawn scraping process
     spawn(fn ->
       result =
         case llm_provider do
           :ollama ->
-            Service.extract_job_data_from_url(url, :generic, provider: :ollama)
+            Service.extract_job_data_from_url(url, :generic, provider: :ollama, user_id: user_id)
 
           _ ->
-            Service.extract_job_data_from_url(url, :generic, provider: llm_provider)
+            Service.extract_job_data_from_url(url, :generic, provider: llm_provider, user_id: user_id)
         end
 
       send(liveview_pid, {:scrape_result, %{result: result}})
@@ -680,6 +685,10 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
       :anthropic -> 15_000
       "mistral" -> 12_000   # ~12 seconds
       :mistral -> 12_000
+      "gemini" -> 20_000    # ~20 seconds for Gemini
+      :gemini -> 20_000
+      "google" -> 20_000    # ~20 seconds for Google
+      :google -> 20_000
       _ -> 15_000           # Default to 15 seconds
     end
   end

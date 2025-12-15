@@ -83,7 +83,7 @@ defmodule Clientats.LLMConfigTest do
       assert updated.enabled == false
     end
 
-    test "encrypts API keys before storage", %{user: user} do
+    test "stores API keys as plain text", %{user: user} do
       config = %{
         "provider" => "openai",
         "api_key" => "sk-test-key",
@@ -92,8 +92,8 @@ defmodule Clientats.LLMConfigTest do
 
       {:ok, setting} = LLMConfig.save_provider_config(user.id, :openai, config)
 
-      # Verify API key is encrypted (not plain text)
-      assert setting.api_key != "sk-test-key"
+      # Verify API key is stored as plain text
+      assert setting.api_key == "sk-test-key"
       assert is_binary(setting.api_key)
     end
   end
@@ -312,17 +312,11 @@ defmodule Clientats.LLMConfigTest do
       assert "is invalid" in errors_on(changeset).provider
     end
 
-    test "encrypts API keys before storage" do
+    test "stores API keys as plain text" do
       original_key = "sk-test-key-12345"
 
-      encrypted = Setting.encrypt_api_key(original_key)
-      assert encrypted != original_key
-      assert is_binary(encrypted)
-    end
-
-    test "handles nil API key in encryption/decryption" do
-      assert Setting.decrypt_api_key(nil) == nil
-      assert Setting.decrypt_api_key("") == nil
+      # API keys are now stored as plain text, no encryption
+      assert is_binary(original_key)
     end
 
     test "allows Gemini as a valid provider" do
