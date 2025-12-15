@@ -1,16 +1,18 @@
 defmodule ClientatsWeb.JobScraperController do
   @moduledoc """
   API Controller for job scraping functionality.
-  
+
   Provides REST endpoints for extracting job data from URLs using LLM services.
+  Supports API versioning (v1, v2) with deprecation headers and metadata.
   """
-  
+
   use ClientatsWeb, :controller
-  
+
   alias Clientats.LLM.Service
   alias Clientats.LLM.ErrorHandler
   alias Clientats.Jobs
   alias Clientats.Accounts
+  alias ClientatsWeb.Versioning.APIVersion
   
   @doc """
   Scrape job data from URL.
@@ -41,21 +43,36 @@ defmodule ClientatsWeb.JobScraperController do
       {:ok, current_user} ->
         case do_scrape(url, mode, provider, save, current_user) do
           {:ok, result} ->
+            version = get_api_version(conn)
+
             conn
             |> put_status(:ok)
+            |> put_resp_header("api-version", version)
             |> json(%{
-                 success: true,
-                 data: result,
-                 message: "Job data extracted successfully"
-               })
+              success: true,
+              data: result,
+              message: "Job data extracted successfully",
+              _api: %{
+                version: version,
+                supported_versions: APIVersion.supported_versions()
+              }
+            })
+
           {:error, reason} ->
+            version = get_api_version(conn)
+
             conn
             |> put_status(:bad_request)
+            |> put_resp_header("api-version", version)
             |> json(%{
-                 success: false,
-                 error: reason,
-                 message: "Job scraping failed"
-               })
+              success: false,
+              error: reason,
+              message: "Job scraping failed",
+              _api: %{
+                version: version,
+                supported_versions: APIVersion.supported_versions()
+              }
+            })
         end
     end
   end
@@ -66,36 +83,58 @@ defmodule ClientatsWeb.JobScraperController do
   def providers(conn, _params) do
     with {:ok, _current_user} <- ensure_authenticated(conn) do
       providers = Service.get_available_providers()
-      
+      version = get_api_version(conn)
+
       conn
       |> put_status(:ok)
+      |> put_resp_header("api-version", version)
       |> json(%{
-           success: true,
-           providers: providers,
-           message: "Available LLM providers"
-         })
+        success: true,
+        providers: providers,
+        message: "Available LLM providers",
+        _api: %{
+          version: version,
+          supported_versions: APIVersion.supported_versions()
+        }
+      })
     end
   end
-  
+
   @doc """
   Get LLM service configuration.
   """
   def config(conn, _params) do
     with {:ok, _current_user} <- ensure_authenticated(conn) do
       config = Service.get_config()
-      
+      version = get_api_version(conn)
+
       conn
       |> put_status(:ok)
+      |> put_resp_header("api-version", version)
       |> json(%{
-           success: true,
-           config: config,
-           message: "Current LLM configuration"
-         })
+        success: true,
+        config: config,
+        message: "Current LLM configuration",
+        _api: %{
+          version: version,
+          supported_versions: APIVersion.supported_versions()
+        }
+      })
     end
   end
   
   # Private functions
-  
+
+  defp get_api_version(conn) do
+    # Extract version from request path (e.g., /api/v1/scrape_job -> v1)
+    case String.split(conn.request_path, "/") do
+      [_, "api", "v1" | _] -> "v1"
+      [_, "api", "v2" | _] -> "v2"
+      [_, "api" | _] -> "v1"  # Default to v1 for legacy /api/* routes
+      _ -> APIVersion.current_version()
+    end
+  end
+
   defp ensure_authenticated(conn) do
     case Accounts.get_authenticated_user(conn) do
       nil -> 

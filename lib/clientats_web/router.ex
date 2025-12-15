@@ -42,10 +42,30 @@ defmodule ClientatsWeb.Router do
     delete "/logout", UserSessionController, :delete
   end
 
-  # API Routes
+  # API Routes - Version 1 (Current)
+  scope "/api/v1", ClientatsWeb do
+    pipe_through :api
+
+    post "/scrape_job", JobScraperController, :scrape
+    get "/llm/providers", JobScraperController, :providers
+    get "/llm/config", JobScraperController, :config
+  end
+
+  # API Routes - Version 2 (Future - Beta)
+  # Planned for future enhancements like enhanced response formats,
+  # additional metadata, and improved error handling
+  scope "/api/v2", ClientatsWeb do
+    pipe_through :api
+
+    post "/scrape_job", JobScraperController, :scrape
+    get "/llm/providers", JobScraperController, :providers
+    get "/llm/config", JobScraperController, :config
+  end
+
+  # Legacy: Support /api without version (redirects to v1 for backward compatibility)
   scope "/api", ClientatsWeb do
     pipe_through :api
-    
+
     post "/scrape_job", JobScraperController, :scrape
     get "/llm/providers", JobScraperController, :providers
     get "/llm/config", JobScraperController, :config
