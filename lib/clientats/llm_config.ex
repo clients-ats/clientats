@@ -424,7 +424,7 @@ defmodule Clientats.LLMConfig do
     end
   end
 
-  defp handle_gemini_response(%{status: 200, body: body}) do
+  defp handle_gemini_response(%{status: 200}) do
     require Logger
     Logger.info("Gemini connection successful", provider: "gemini")
     {:ok, "connected"}
@@ -484,36 +484,10 @@ defmodule Clientats.LLMConfig do
 
   defp extract_gemini_error_message(_), do: "(no error details)"
 
-  defp handle_gemini_connection_error(%HTTPConnectionError{} = e) do
-    require Logger
-    error_msg = Exception.message(e)
-    Logger.error("Gemini connection error: #{error_msg}", provider: "gemini", error_type: "http")
-    {:error, "Connection error: Unable to reach Google Generative AI service. Check your internet connection."}
-  rescue
-    _ ->
-      require Logger
-      error_msg = Exception.message(e)
-      Logger.error("Gemini connection error: #{error_msg}", provider: "gemini")
-      {:error, "Failed to connect to Gemini service: #{error_msg}"}
-  end
-
-  defp handle_gemini_connection_error(%Mint.TransportError{} = e) do
-    require Logger
-    error_msg = Exception.message(e)
-    Logger.error("Gemini transport error: #{error_msg}", provider: "gemini", error_type: "transport")
-    {:error, "Network error: Failed to establish connection to Gemini service."}
-  rescue
-    _ ->
-      require Logger
-      error_msg = Exception.message(e)
-      Logger.error("Gemini transport error: #{error_msg}", provider: "gemini")
-      {:error, "Network error: #{error_msg}"}
-  end
-
   defp handle_gemini_connection_error(e) do
     require Logger
     error_msg = Exception.message(e)
-    Logger.error("Gemini connection error: #{error_msg}", provider: "gemini", error_type: "unknown")
-    {:error, "Connection failed: #{error_msg}"}
+    Logger.error("Gemini connection error: #{error_msg}", provider: "gemini")
+    {:error, "Failed to connect to Gemini service: #{error_msg}"}
   end
 end
