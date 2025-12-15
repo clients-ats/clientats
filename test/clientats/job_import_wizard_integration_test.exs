@@ -204,7 +204,6 @@ defmodule Clientats.JobImportWizardIntegrationTest do
 
             {:error, _reason} ->
               ScreenshotMock.cleanup_screenshot(screenshot1)
-              ScreenshotMock.cleanup_screenshot(screenshot2)
           end
 
         {:error, _reason} ->
@@ -349,7 +348,6 @@ defmodule Clientats.JobImportWizardIntegrationTest do
 
             {:error, _} ->
               ScreenshotMock.cleanup_screenshot(screenshot1)
-              ScreenshotMock.cleanup_screenshot(screenshot2)
           end
 
         {:error, _reason} ->
@@ -552,7 +550,7 @@ defmodule Clientats.JobImportWizardIntegrationTest do
           response = LLMResponseMock.generate_response(:successful)
 
           case Clientats.JobImportWizard.process_screenshot(wizard_state, screenshot, response) do
-            {:ok, extracted} ->
+            {:ok, _extracted} ->
               case Clientats.JobImportWizard.get_import_summary(wizard_state) do
                 {:ok, summary} ->
                   assert is_map(summary)
