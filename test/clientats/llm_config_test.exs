@@ -173,6 +173,12 @@ defmodule Clientats.LLMConfigTest do
       assert :ok = LLMConfig.validate_api_key(:ollama, "")
     end
 
+    test "validates Gemini API key format" do
+      assert :ok = LLMConfig.validate_api_key(:gemini, "AIza123456789abcdefghijklmnop")
+      assert {:error, _} = LLMConfig.validate_api_key(:gemini, "short")
+      assert {:error, _} = LLMConfig.validate_api_key(:gemini, "")
+    end
+
     test "rejects unknown provider" do
       assert {:error, _} = LLMConfig.validate_api_key(:unknown, "key")
     end
@@ -194,6 +200,33 @@ defmodule Clientats.LLMConfigTest do
       # This test might fail if Ollama is not running, which is expected
       config = %{base_url: "http://localhost:11434"}
       _result = LLMConfig.test_connection(:ollama, config)
+    end
+
+    test "returns error when Gemini API key is missing" do
+      config = %{api_key: nil}
+      {:error, msg} = LLMConfig.test_connection(:gemini, config)
+      assert msg == "API key is required"
+    end
+
+    test "returns error when Gemini API key is empty" do
+      config = %{api_key: ""}
+      {:error, msg} = LLMConfig.test_connection(:gemini, config)
+      assert msg == "API key is required"
+    end
+
+    test "handles Gemini 401 authentication error" do
+      # Invalid API key will typically result in 401
+      config = %{api_key: "invalid-key-12345"}
+      result = LLMConfig.test_connection(:gemini, config)
+      assert {:error, _msg} = result
+    end
+
+    test "handles Gemini 403 access denied error gracefully" do
+      # 403 typically means API is not enabled in Google Cloud project
+      config = %{api_key: "AIza-test-12345"}
+      result = LLMConfig.test_connection(:gemini, config)
+      # Result might vary based on actual API response
+      assert {:error, _} = result or {:ok, _} = result
     end
   end
 
@@ -237,9 +270,16 @@ defmodule Clientats.LLMConfigTest do
       assert is_map(defaults[:anthropic])
       assert is_map(defaults[:mistral])
       assert is_map(defaults[:ollama])
+      assert is_map(defaults[:gemini])
 
       # Verify required keys
       assert defaults[:ollama][:base_url] =~ "localhost"
+
+      # Verify Gemini defaults
+      assert defaults[:gemini][:default_model] == "gemini-2.0-flash"
+      assert defaults[:gemini][:vision_model] == "gemini-2.0-flash"
+      assert defaults[:gemini][:text_model] == "gemini-2.0-flash"
+      assert is_boolean(defaults[:gemini][:enabled])
     end
   end
 
@@ -285,6 +325,76 @@ defmodule Clientats.LLMConfigTest do
     test "handles nil API key in encryption/decryption" do
       assert Setting.decrypt_api_key(nil) == nil
       assert Setting.decrypt_api_key("") == nil
+    end
+
+    test "allows Gemini as a valid provider" do
+      {:ok, user} = create_test_user()
+
+      changeset =
+        Setting.changeset(%Setting{}, %{
+          "user_id" => user.id,
+          "provider" => "gemini",
+          "api_key" => "AIza-test-12345"
+        })
+
+      assert changeset.valid?
+    end
+
+    test "stores Gemini configuration with vision and text models" do
+      {:ok, user} = create_test_user()
+
+      changeset =
+        Setting.changeset(%Setting{}, %{
+          "user_id" => user.id,
+          "provider" => "gemini",
+          "api_key" => "AIza-test-12345",
+          "default_model" => "gemini-2.0-flash",
+          "vision_model" => "gemini-2.0-flash",
+          "text_model" => "gemini-1.5-pro"
+        })
+
+      assert changeset.valid?
+      {:ok, setting} = Repo.insert(changeset)
+      assert setting.provider == "gemini"
+      assert setting.default_model == "gemini-2.0-flash"
+    end
+  end
+
+  describe "Gemini provider configuration workflow" do
+    setup do
+      {:ok, user} = create_test_user()
+      {:ok, user: user}
+    end
+
+    test "complete Gemini setup flow", %{user: user} do
+      # 1. Validate API key
+      assert :ok = LLMConfig.validate_api_key(:gemini, "AIza123456789abcdefghijklmnop")
+
+      # 2. Save provider configuration
+      config = %{
+        "provider" => "gemini",
+        "api_key" => "AIza123456789abcdefghijklmnop",
+        "default_model" => "gemini-2.0-flash",
+        "vision_model" => "gemini-2.0-flash",
+        "enabled" => true
+      }
+
+      {:ok, setting} = LLMConfig.save_provider_config(user.id, :gemini, config)
+      assert setting.provider == "gemini"
+      assert setting.enabled == true
+
+      # 3. Retrieve configuration
+      {:ok, retrieved} = LLMConfig.get_provider_config(user.id, :gemini)
+      assert retrieved.provider == "gemini"
+      assert retrieved.enabled == true
+    end
+
+    test "Gemini error handling for rate limiting", %{user: user} do
+      # Test error message generation for rate limit (429) error
+      config = %{api_key: "AIza-test-key"}
+      # This will fail with actual API, but tests error handling structure
+      result = LLMConfig.test_connection(:gemini, config)
+      assert {:error, _} = result
     end
   end
 

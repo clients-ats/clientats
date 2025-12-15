@@ -416,27 +416,104 @@ defmodule Clientats.LLMConfig do
           receive_timeout: 5000
         )
 
-        case response do
-          %{status: 200} ->
-            {:ok, "connected"}
-
-          %{status: 401} ->
-            {:error, "Invalid API key"}
-
-          %{status: 403} ->
-            {:error, "Access denied - check API key and enable required APIs"}
-
-          %{status: 429} ->
-            {:error, "Rate limited"}
-
-          %{status: status} ->
-            {:error, "Connection failed with status #{status}"}
-        end
+        handle_gemini_response(response)
       rescue
         e ->
-          error_msg = Exception.message(e)
-          {:error, "Failed to connect: #{error_msg}"}
+          handle_gemini_connection_error(e)
       end
     end
+  end
+
+  defp handle_gemini_response(%{status: 200, body: body}) do
+    require Logger
+    Logger.info("Gemini connection successful", provider: "gemini")
+    {:ok, "connected"}
+  end
+
+  defp handle_gemini_response(%{status: 400, body: body}) do
+    require Logger
+    error_detail = extract_gemini_error_message(body)
+    Logger.warning("Gemini validation error: #{error_detail}", provider: "gemini", status: 400)
+    {:error, "Invalid request: #{error_detail}. Check your API configuration."}
+  end
+
+  defp handle_gemini_response(%{status: 401, body: body}) do
+    require Logger
+    error_detail = extract_gemini_error_message(body)
+    Logger.warning("Gemini authentication failed: #{error_detail}", provider: "gemini", status: 401)
+    {:error, "Authentication failed: Invalid API key or expired credentials"}
+  end
+
+  defp handle_gemini_response(%{status: 403, body: body}) do
+    require Logger
+    error_detail = extract_gemini_error_message(body)
+    Logger.warning("Gemini access denied: #{error_detail}", provider: "gemini", status: 403)
+    {:error, "Access denied: Generative AI API may not be enabled in your Google Cloud project. Enable it at console.cloud.google.com"}
+  end
+
+  defp handle_gemini_response(%{status: 429, body: body}) do
+    require Logger
+    error_detail = extract_gemini_error_message(body)
+    Logger.warning("Gemini rate limited: #{error_detail}", provider: "gemini", status: 429)
+    {:error, "Rate limited: Too many requests. Please wait before trying again."}
+  end
+
+  defp handle_gemini_response(%{status: 500, body: body}) do
+    require Logger
+    error_detail = extract_gemini_error_message(body)
+    Logger.error("Gemini server error: #{error_detail}", provider: "gemini", status: 500)
+    {:error, "Server error: Google Generative AI service is temporarily unavailable. Please try again later."}
+  end
+
+  defp handle_gemini_response(%{status: status, body: body}) do
+    require Logger
+    error_detail = extract_gemini_error_message(body)
+    Logger.error("Gemini connection failed (#{status}): #{error_detail}", provider: "gemini", status: status)
+    {:error, "Connection failed with status #{status}: #{error_detail}"}
+  end
+
+  defp extract_gemini_error_message(body) when is_binary(body) do
+    case Jason.decode(body) do
+      {:ok, %{"error" => %{"message" => message}}} -> message
+      {:ok, %{"error" => error}} when is_binary(error) -> error
+      _ -> "(no error details)"
+    end
+  rescue
+    _ -> "(unable to parse error details)"
+  end
+
+  defp extract_gemini_error_message(_), do: "(no error details)"
+
+  defp handle_gemini_connection_error(%HTTPConnectionError{} = e) do
+    require Logger
+    error_msg = Exception.message(e)
+    Logger.error("Gemini connection error: #{error_msg}", provider: "gemini", error_type: "http")
+    {:error, "Connection error: Unable to reach Google Generative AI service. Check your internet connection."}
+  rescue
+    _ ->
+      require Logger
+      error_msg = Exception.message(e)
+      Logger.error("Gemini connection error: #{error_msg}", provider: "gemini")
+      {:error, "Failed to connect to Gemini service: #{error_msg}"}
+  end
+
+  defp handle_gemini_connection_error(%Mint.TransportError{} = e) do
+    require Logger
+    error_msg = Exception.message(e)
+    Logger.error("Gemini transport error: #{error_msg}", provider: "gemini", error_type: "transport")
+    {:error, "Network error: Failed to establish connection to Gemini service."}
+  rescue
+    _ ->
+      require Logger
+      error_msg = Exception.message(e)
+      Logger.error("Gemini transport error: #{error_msg}", provider: "gemini")
+      {:error, "Network error: #{error_msg}"}
+  end
+
+  defp handle_gemini_connection_error(e) do
+    require Logger
+    error_msg = Exception.message(e)
+    Logger.error("Gemini connection error: #{error_msg}", provider: "gemini", error_type: "unknown")
+    {:error, "Connection failed: #{error_msg}"}
   end
 end
