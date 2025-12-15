@@ -84,9 +84,15 @@ config :req_llm,
       default_model: System.get_env("OLLAMA_MODEL") || "hf.co/unsloth/Magistral-Small-2509-GGUF:UD-Q4_K_XL",
       vision_model: System.get_env("OLLAMA_VISION_MODEL") || "qwen2.5vl:7b",
       timeout: 60_000
+    },
+    google: %{
+      api_key: System.get_env("GEMINI_API_KEY"),
+      default_model: System.get_env("GEMINI_MODEL") || "gemini-2.0-flash",
+      vision_model: System.get_env("GEMINI_VISION_MODEL") || "gemini-2.0-flash",
+      api_version: System.get_env("GEMINI_API_VERSION") || "v1beta"
     }
   },
-  fallback_providers: [:anthropic, :mistral, :ollama],
+  fallback_providers: [:anthropic, :mistral, :google, :ollama],
   max_content_length: 2_000_000,
   enable_logging: true,
   cache_ttl: 86400

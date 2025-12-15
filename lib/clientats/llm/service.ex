@@ -160,6 +160,10 @@ defmodule Clientats.LLM.Service do
                 IO.puts("[Service] Calling Ollama with screenshot: #{screenshot_path}")
                 call_ollama_with_image(screenshot_path, prompt, options)
 
+              :google ->
+                IO.puts("[Service] Calling Google Gemini with screenshot: #{screenshot_path}")
+                call_google_gemini_with_image(screenshot_path, prompt, options)
+
               _ ->
                 # For other providers, would need different image handling
                 IO.puts("[Service] Non-Ollama provider selected, requires image support")
@@ -241,7 +245,167 @@ defmodule Clientats.LLM.Service do
     # Call Ollama provider with image
     Clientats.LLM.Providers.Ollama.generate_with_image(model, prompt, screenshot_path, ollama_options, base_url)
   end
-  
+
+  defp call_google_gemini(prompt, options) do
+    # Get Google configuration from application config
+    providers = Application.get_env(:req_llm, :providers, %{})
+    google_config = providers[:google] || %{}
+
+    api_key = google_config[:api_key]
+    model = google_config[:default_model] || "gemini-2.0-flash"
+    api_version = google_config[:api_version] || "v1beta"
+
+    if !api_key do
+      {:error, :missing_api_key}
+    else
+      # Build Google Gemini API request
+      url = "https://generativelanguage.googleapis.com/#{api_version}/models/#{model}:generateContent"
+
+      body = %{
+        "contents" => [%{
+          "parts" => [%{
+            "text" => prompt
+          }]
+        }]
+      }
+
+      try do
+        response = Req.post!(
+          url,
+          headers: [{"x-goog-api-key", api_key}],
+          json: body,
+          receive_timeout: options[:timeout] || 30_000
+        )
+
+        handle_google_response(response)
+      rescue
+        e ->
+          IO.puts("[ERROR] Google Gemini API call failed: #{Exception.message(e)}")
+          {:error, {:llm_error, "Google Gemini API call failed: #{Exception.message(e)}"}}
+      end
+    end
+  end
+
+  defp call_google_gemini_with_image(screenshot_path, prompt, options) do
+    # Get Google configuration
+    providers = Application.get_env(:req_llm, :providers, %{})
+    google_config = providers[:google] || %{}
+
+    api_key = google_config[:api_key]
+    model = google_config[:vision_model] || "gemini-2.0-flash"
+    api_version = google_config[:api_version] || "v1beta"
+
+    if !api_key do
+      {:error, :missing_api_key}
+    else
+      # Read and encode image
+      with {:ok, image_data} <- File.read(screenshot_path) do
+        base64_image = Base.encode64(image_data)
+
+        # Build Google Gemini API request with image
+        url = "https://generativelanguage.googleapis.com/#{api_version}/models/#{model}:generateContent"
+
+        body = %{
+          "contents" => [%{
+            "parts" => [
+              %{
+                "text" => prompt
+              },
+              %{
+                "inlineData" => %{
+                  "mimeType" => "image/png",
+                  "data" => base64_image
+                }
+              }
+            ]
+          }]
+        }
+
+        try do
+          response = Req.post!(
+            url,
+            headers: [{"x-goog-api-key", api_key}],
+            json: body,
+            receive_timeout: options[:timeout] || 30_000
+          )
+
+          handle_google_response(response)
+        rescue
+          e ->
+            IO.puts("[ERROR] Google Gemini Vision API call failed: #{Exception.message(e)}")
+            {:error, {:llm_error, "Google Gemini Vision API call failed: #{Exception.message(e)}"}}
+        end
+      else
+        {:error, reason} ->
+          IO.puts("[ERROR] Failed to read screenshot: #{inspect(reason)}")
+          {:error, {:llm_error, "Failed to read screenshot: #{inspect(reason)}"}}
+      end
+    end
+  end
+
+  defp handle_google_response(%{status: 200, body: body}) when is_binary(body) do
+    case Jason.decode(body) do
+      {:ok, %{"candidates" => [%{"content" => %{"parts" => [%{"text" => text}]}} | _]}} ->
+        # Parse the response text as JSON
+        case Jason.decode(text) do
+          {:ok, parsed} -> {:ok, parsed}
+          {:error, _} -> {:ok, %{"response" => text}}
+        end
+
+      {:ok, response} ->
+        {:ok, response}
+
+      {:error, reason} ->
+        IO.puts("[ERROR] Failed to parse Google response: #{inspect(reason)}")
+        {:error, {:parse_error, "Failed to parse Google response"}}
+    end
+  end
+
+  defp handle_google_response(%{status: 200, body: body}) when is_map(body) do
+    case body do
+      %{"candidates" => [%{"content" => %{"parts" => [%{"text" => text}]}} | _]} ->
+        case Jason.decode(text) do
+          {:ok, parsed} -> {:ok, parsed}
+          {:error, _} -> {:ok, %{"response" => text}}
+        end
+
+      _ ->
+        {:ok, body}
+    end
+  end
+
+  defp handle_google_response(%{status: status, body: body}) when status >= 400 do
+    error_msg = extract_google_error_message(body)
+    IO.puts("[ERROR] Google API error (#{status}): #{error_msg}")
+    {:error, {:http_error, status, error_msg}}
+  end
+
+  defp handle_google_response(%{status: status} = response) do
+    IO.puts("[ERROR] Unexpected Google response status: #{status}")
+    IO.puts("[ERROR] Response: #{inspect(response)}")
+    {:error, {:http_error, status, "Unexpected response from Google Gemini API"}}
+  end
+
+  defp extract_google_error_message(body) when is_binary(body) do
+    case Jason.decode(body) do
+      {:ok, %{"error" => %{"message" => message}}} -> message
+      {:ok, %{"error" => error}} when is_binary(error) -> error
+      _ -> body
+    end
+  rescue
+    _ -> "Unknown error"
+  end
+
+  defp extract_google_error_message(body) when is_map(body) do
+    case body do
+      %{"error" => %{"message" => message}} -> message
+      %{"error" => error} when is_binary(error) -> error
+      _ -> inspect(body)
+    end
+  end
+
+  defp extract_google_error_message(_), do: "Unknown error"
+
   @doc """
   Get available LLM providers and their status.
   """
@@ -309,6 +473,11 @@ defmodule Clientats.LLM.Service do
                 # Use direct Ollama client
                 IO.puts("[DEBUG] Calling Ollama with prompt length: #{byte_size(prompt)}")
                 call_ollama(prompt, options)
+
+              :google ->
+                # Use Google Gemini provider
+                IO.puts("[DEBUG] Calling Google Gemini via ReqLLM")
+                call_google_gemini(prompt, options)
 
               _ ->
                 # Use req_llm for other providers
@@ -447,6 +616,7 @@ defmodule Clientats.LLM.Service do
           :openai -> "gpt-4o"
           :anthropic -> "claude-3-opus-20240229"
           :mistral -> "mistral-large-latest"
+          :google -> "gemini-2.0-flash"
           :ollama -> "hf.co/unsloth/Magistral-Small-2509-GGUF:UD-Q4_K_XL"
           _ -> "gpt-4o"
         end

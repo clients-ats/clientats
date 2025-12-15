@@ -94,9 +94,17 @@ if config_env() == :prod do
         vision_model: System.get_env("OLLAMA_VISION_MODEL") || "qwen2.5vl:7b",
         timeout: 60_000,
         max_retries: 2
+      },
+      google: %{
+        api_key: System.get_env("GEMINI_API_KEY"),
+        default_model: System.get_env("GEMINI_MODEL") || "gemini-2.0-flash",
+        vision_model: System.get_env("GEMINI_VISION_MODEL") || "gemini-2.0-flash",
+        api_version: System.get_env("GEMINI_API_VERSION") || "v1beta",
+        timeout: 30_000,
+        max_retries: 3
       }
     },
-    fallback_providers: [:anthropic, :mistral, :ollama],
+    fallback_providers: [:anthropic, :mistral, :google, :ollama],
     max_content_length: 2_000_000,
     enable_logging: System.get_env("LLM_ENABLE_LOGGING") != "false",
     cache_ttl: 86400 # 24 hours cache for successful extractions
