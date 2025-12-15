@@ -102,7 +102,7 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
       job_url: params["url"] || socket.assigns.url,
       location: params["location"] || "",
       work_model: params["work_model"] || "remote",
-      status: "interested",
+      status: "researching",
       priority: "medium"
     }
 
@@ -677,19 +677,13 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
 
   defp get_estimated_provider_time(provider) do
     case provider do
-      "ollama" -> 120_000  # ~2 minutes for Ollama
+      "ollama" -> 120_000   # ~2 minutes for Ollama
       :ollama -> 120_000
-      "openai" -> 10_000   # ~10 seconds
-      :openai -> 10_000
-      "anthropic" -> 15_000 # ~15 seconds
-      :anthropic -> 15_000
-      "mistral" -> 12_000   # ~12 seconds
-      :mistral -> 12_000
-      "gemini" -> 20_000    # ~20 seconds for Gemini
-      :gemini -> 20_000
-      "google" -> 20_000    # ~20 seconds for Google
-      :google -> 20_000
-      _ -> 15_000           # Default to 15 seconds
+      "gemini" -> 45_000    # ~45 seconds for Gemini
+      :gemini -> 45_000
+      "google" -> 45_000    # ~45 seconds for Google
+      :google -> 45_000
+      _ -> 45_000           # Default to 45 seconds
     end
   end
 
