@@ -9,7 +9,7 @@ defmodule Clientats.Jobs.GenericJobWorker do
   - Notifications
   """
 
-  use Oban.Worker, queue: :default, max_attempts: 3, timeout: 300_000
+  use Oban.Worker, queue: :default, max_attempts: 3
 
   require Logger
 
@@ -33,6 +33,7 @@ defmodule Clientats.Jobs.GenericJobWorker do
     end
   rescue
     e ->
+      job_type = args["type"]
       Logger.error("Error in #{job_type}: #{inspect(e)}")
       {:error, Exception.message(e)}
   end

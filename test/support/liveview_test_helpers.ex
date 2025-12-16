@@ -11,6 +11,7 @@ defmodule ClientatsWeb.LiveViewTestHelpers do
 
   import Phoenix.LiveViewTest
   import Phoenix.ConnTest
+  import ExUnit.Assertions
 
   alias Clientats.Accounts
   alias Clientats.Jobs
@@ -110,7 +111,7 @@ defmodule ClientatsWeb.LiveViewTestHelpers do
     end)
   end
 
-  def submit_form(lv, form_id) do
+  def submit_form_helper(lv, form_id) do
     render_submit(lv, "form", %{"#{form_id}" => %{}})
   end
 
@@ -261,7 +262,7 @@ defmodule ClientatsWeb.LiveViewTestHelpers do
   def fill_and_submit(lv, form_id, fields) do
     lv
     |> fill_form(form_id, fields)
-    |> submit_form(form_id)
+    |> submit_form_helper(form_id)
   end
 
   # Table and list helpers

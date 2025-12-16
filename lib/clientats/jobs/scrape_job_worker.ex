@@ -6,7 +6,7 @@ defmodule Clientats.Jobs.ScrapeJobWorker do
   Supports retries and dead-letter queue for failed jobs.
   """
 
-  use Oban.Worker, queue: :scrape, max_attempts: 3, timeout: 600_000
+  use Oban.Worker, queue: :scrape, max_attempts: 3
 
   require Logger
 
@@ -35,6 +35,8 @@ defmodule Clientats.Jobs.ScrapeJobWorker do
     end
   rescue
     e ->
+      url = args["url"]
+      user_id = args["user_id"]
       Logger.error("Error scraping job: #{inspect(e)}")
       Audit.log_action(%{
         user_id: user_id,

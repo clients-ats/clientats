@@ -16,6 +16,8 @@ defmodule Clientats.Jobs.Scheduler do
 
   require Logger
 
+  import Ecto.Query
+
   alias Oban.Job
   alias Clientats.Repo
 

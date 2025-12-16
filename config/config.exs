@@ -19,7 +19,7 @@ config :clientats, Oban,
     {Oban.Plugins.Pruner, interval: :timer.hours(12)}
   ],
   queues: [
-    scrape: [limit: 10, rate_limit: [allowed: 100, period: 60]],
+    scrape: [limit: 10],
     default: [limit: 50],
     low: [limit: 20]
   ]
