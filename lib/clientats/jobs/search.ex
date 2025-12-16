@@ -142,12 +142,9 @@ defmodule Clientats.Jobs.Search do
     |> where([j], j.user_id == ^user_id)
     |> select([j], %{
       total: count(j.id),
-      by_status: fragment("jsonb_object_agg(status, count)"),
-      by_priority: fragment("jsonb_object_agg(priority, count)"),
       avg_salary_min: avg(j.salary_min),
       avg_salary_max: avg(j.salary_max)
     })
-    |> group_by([j], [j.status, j.priority])
     |> Repo.one()
   rescue
     _e -> %{total: 0}
@@ -161,11 +158,9 @@ defmodule Clientats.Jobs.Search do
     |> where([a], a.user_id == ^user_id)
     |> select([a], %{
       total: count(a.id),
-      by_status: fragment("jsonb_object_agg(status, count)"),
       oldest_application: min(a.application_date),
       newest_application: max(a.application_date)
     })
-    |> group_by([a], a.status)
     |> Repo.one()
   rescue
     _e -> %{total: 0}
