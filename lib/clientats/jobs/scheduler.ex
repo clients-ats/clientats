@@ -184,10 +184,22 @@ defmodule Clientats.Jobs.Scheduler do
   """
   def get_job_stats do
     %{
-      pending: Repo.aggregate(Job.where(state: ["scheduled", "available"]), :count),
-      processing: Repo.aggregate(Job.where(state: ["executing"]), :count),
-      completed: Repo.aggregate(Job.where(state: ["completed"]), :count),
-      failed: Repo.aggregate(Job.where(state: ["discarded"]), :count)
+      pending:
+        Job
+        |> where([j], j.state in ["scheduled", "available"])
+        |> Repo.aggregate(:count),
+      processing:
+        Job
+        |> where([j], j.state == "executing")
+        |> Repo.aggregate(:count),
+      completed:
+        Job
+        |> where([j], j.state == "completed")
+        |> Repo.aggregate(:count),
+      failed:
+        Job
+        |> where([j], j.state == "discarded")
+        |> Repo.aggregate(:count)
     }
   rescue
     _e ->
@@ -195,7 +207,10 @@ defmodule Clientats.Jobs.Scheduler do
   end
 
   defp maybe_schedule_in(job, nil), do: job
-  defp maybe_schedule_in(job, seconds) when is_integer(seconds) do
-    Job.set_schedule(job, :timer.seconds(seconds))
+  defp maybe_schedule_in(%Ecto.Changeset{} = changeset, seconds) when is_integer(seconds) do
+    # Add scheduled_at to the changeset to schedule for later
+    Ecto.Changeset.change(changeset, %{
+      scheduled_at: DateTime.add(DateTime.utc_now(), seconds, :second)
+    })
   end
 end
