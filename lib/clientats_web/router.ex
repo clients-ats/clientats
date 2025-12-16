@@ -71,6 +71,14 @@ defmodule ClientatsWeb.Router do
     get "/llm/config", JobScraperController, :config
   end
 
+  # API Documentation endpoints
+  scope "/api-docs", ClientatsWeb do
+    get "/", APIDocsController, :index
+    get "/swagger-ui", APIDocsController, :swagger_ui
+    get "/redoc", APIDocsController, :redoc_ui
+    get "/openapi.json", APIDocsController, :openapi
+  end
+
   # Prometheus metrics endpoint (no auth pipeline)
   scope "/", ClientatsWeb do
     get "/metrics", MetricsController, :index
