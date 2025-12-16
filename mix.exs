@@ -69,6 +69,7 @@ defmodule Clientats.MixProject do
       {:bandit, "~> 1.5"},
       {:bcrypt_elixir, "~> 3.0"},
       {:req_llm, "~> 1.0"},
+      {:oban, "~> 2.17"},
       {:wallaby, "~> 0.30", runtime: false, only: :test}
     ]
   end
