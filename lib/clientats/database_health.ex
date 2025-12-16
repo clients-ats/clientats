@@ -104,7 +104,8 @@ defmodule Clientats.DatabaseHealth do
       """,
       []
     ) do
-      {:ok, %{rows: [[total, active, idle, longest]] | _]} ->
+      {:ok, %{rows: rows}} when is_list(rows) and length(rows) > 0 ->
+        [total, active, idle, longest] = List.first(rows)
         %{
           total_connections: total,
           active_connections: active,
