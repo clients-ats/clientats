@@ -71,6 +71,11 @@ defmodule ClientatsWeb.Router do
     get "/llm/config", JobScraperController, :config
   end
 
+  # Prometheus metrics endpoint (no auth pipeline)
+  scope "/", ClientatsWeb do
+    get "/metrics", MetricsController, :index
+  end
+
   # Other scopes may use custom stacks.
   # scope "/api", ClientatsWeb do
   #   pipe_through :api

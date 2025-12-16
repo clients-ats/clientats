@@ -7,6 +7,10 @@ defmodule Clientats.Application do
 
   @impl true
   def start(_type, _args) do
+    # Initialize Prometheus metrics
+    Clientats.LLM.Metrics.setup()
+    ClientatsWeb.PrometheusHandler.attach_handlers()
+
     children = [
       ClientatsWeb.Telemetry,
       Clientats.Repo,
