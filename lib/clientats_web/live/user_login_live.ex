@@ -18,6 +18,12 @@ defmodule ClientatsWeb.UserLoginLive do
         </div>
 
         <div class="bg-white py-8 px-6 shadow-xl rounded-lg">
+          <%= if @error_message do %>
+            <div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p class="text-sm text-red-700"><%= @error_message %></p>
+            </div>
+          <% end %>
+
           <.form for={@form} id="login_form" action={~p"/login"} phx-update="ignore">
             <div class="space-y-4">
               <.input
@@ -50,7 +56,8 @@ defmodule ClientatsWeb.UserLoginLive do
 
   def mount(_params, _session, socket) do
     email = Phoenix.Flash.get(socket.assigns.flash, :email)
+    error_message = Phoenix.Flash.get(socket.assigns.flash, :error)
     form = to_form(%{"email" => email}, as: "user")
-    {:ok, assign(socket, form: form), temporary_assigns: [form: form]}
+    {:ok, assign(socket, form: form, error_message: error_message), temporary_assigns: [form: form]}
   end
 end
