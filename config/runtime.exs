@@ -31,11 +31,12 @@ if config_env() == :prod do
   maybe_ipv6 = if System.get_env("ECTO_IPV6") in ~w(true 1), do: [:inet6], else: []
 
   config :clientats, Clientats.Repo,
-    # ssl: true,
     url: database_url,
+    ssl: System.get_env("DATABASE_SSL") in ~w(true 1),
     pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
-    # For machines with several cores, consider starting multiple pools of `pool_size`
-    # pool_count: 4,
+    pool_count: String.to_integer(System.get_env("POOL_COUNT") || "1"),
+    max_overflow: String.to_integer(System.get_env("MAX_OVERFLOW") || "0"),
+    timeout: String.to_integer(System.get_env("POOL_TIMEOUT") || "5000"),
     socket_options: maybe_ipv6
 
   # The secret key base is used to sign/encrypt cookies and other secrets.
