@@ -79,8 +79,11 @@ defmodule ClientatsWeb.Router do
     get "/openapi.json", APIDocsController, :openapi
   end
 
-  # Prometheus metrics endpoint (no auth pipeline)
+  # Health check and metrics endpoints (no auth pipeline)
   scope "/", ClientatsWeb do
+    get "/health", HealthController, :simple
+    get "/health/ready", HealthController, :detailed
+    get "/health/diagnostics", HealthController, :diagnostics
     get "/metrics", MetricsController, :index
   end
 
