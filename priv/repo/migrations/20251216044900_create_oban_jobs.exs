@@ -8,6 +8,7 @@ defmodule Clientats.Repo.Migrations.CreateObanJobs do
       add :queue, :string, null: false, default: "default"
       add :worker, :string, null: false
       add :args, :jsonb, null: false, default: "{}"
+      add :meta, :jsonb, null: false, default: "{}"
       add :errors, {:array, :jsonb}, null: false, default: []
       add :attempt, :integer, null: false, default: 0
       add :max_attempts, :integer, null: false, default: 20
@@ -16,8 +17,8 @@ defmodule Clientats.Repo.Migrations.CreateObanJobs do
       add :scheduled_at, :utc_datetime_usec
       add :attempted_at, :utc_datetime_usec
       add :completed_at, :utc_datetime_usec
-
-      timestamps(type: :utc_datetime_usec, updated_at: false)
+      add :inserted_at, :utc_datetime_usec, null: false, default: fragment("now()")
+      add :updated_at, :utc_datetime_usec, null: false, default: fragment("now()")
     end
 
     create index(:oban_jobs, [:state, :queue, :priority, :scheduled_at])
