@@ -1,27 +1,25 @@
 defmodule ClientatsWeb.MetricsController do
   @moduledoc """
-  Prometheus metrics endpoint for monitoring LLM performance.
+  Metrics endpoint for monitoring LLM performance.
 
-  Exposes metrics at GET /metrics
+  Exposes metrics at GET /metrics in JSON format.
   """
 
   use ClientatsWeb, :controller
   require Logger
 
-  # Basic metrics endpoint authentication via environment variable
-  @metrics_token System.get_env("PROMETHEUS_METRICS_TOKEN", "")
+  @metrics_token System.get_env("METRICS_TOKEN", "")
 
   @doc """
-  Expose Prometheus metrics in text format.
+  Expose metrics in JSON format.
 
-  Requires PROMETHEUS_METRICS_TOKEN header if configured.
+  Requires METRICS_TOKEN header if configured.
   """
   def index(conn, _params) do
     # Authentication check
     if @metrics_token != "" do
       case get_req_header(conn, "authorization") do
         [bearer_token] ->
-          # Extract token from "Bearer TOKEN" format
           token =
             bearer_token
             |> String.replace("Bearer ", "")
@@ -42,24 +40,19 @@ defmodule ClientatsWeb.MetricsController do
   end
 
   defp serve_metrics(conn) do
-    metrics_text = get_prometheus_metrics()
-
-    conn
-    |> put_resp_header("content-type", "text/plain; version=0.0.4; charset=utf-8")
-    |> send_resp(200, metrics_text)
-  rescue
-    e ->
-      Logger.error("Failed to generate Prometheus metrics: #{inspect(e)}")
+    try do
+      metrics = Clientats.LLM.Metrics.get_metrics()
 
       conn
-      |> put_resp_header("content-type", "text/plain; charset=utf-8")
-      |> send_resp(500, "Error generating metrics")
-  end
+      |> put_resp_header("content-type", "application/json; charset=utf-8")
+      |> json(metrics)
+    rescue
+      e ->
+        Logger.error("Failed to generate metrics: #{inspect(e)}")
 
-  defp get_prometheus_metrics do
-    case :prometheus_text_format.format(:default) do
-      {:ok, metrics} -> metrics
-      :error -> "# Error generating metrics\n"
+        conn
+        |> put_status(500)
+        |> json(%{error: "Failed to generate metrics"})
     end
   end
 end

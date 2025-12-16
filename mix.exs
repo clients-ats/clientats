@@ -69,9 +69,6 @@ defmodule Clientats.MixProject do
       {:bandit, "~> 1.5"},
       {:bcrypt_elixir, "~> 3.0"},
       {:req_llm, "~> 1.0"},
-      {:prometheus, "~> 4.13"},
-      {:prometheus_phoenix, "~> 1.3"},
-      {:prometheus_plugs, "~> 1.3"},
       {:wallaby, "~> 0.30", runtime: false, only: :test}
     ]
   end

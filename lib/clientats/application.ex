@@ -7,10 +7,6 @@ defmodule Clientats.Application do
 
   @impl true
   def start(_type, _args) do
-    # Initialize Prometheus metrics
-    Clientats.LLM.Metrics.setup()
-    ClientatsWeb.PrometheusHandler.attach_handlers()
-
     children = [
       ClientatsWeb.Telemetry,
       Clientats.Repo,
@@ -18,11 +14,16 @@ defmodule Clientats.Application do
       {Phoenix.PubSub, name: Clientats.PubSub},
       # LLM Cache for job scraping
       Clientats.LLM.Cache,
+      # Metrics collector
+      Clientats.LLM.Metrics,
       # Start a worker by calling: Clientats.Worker.start_link(arg)
       # {Clientats.Worker, arg},
       # Start to serve requests, typically the last entry
       ClientatsWeb.Endpoint
     ]
+
+    # Attach metrics telemetry handlers after startup
+    ClientatsWeb.MetricsHandler.attach_handlers()
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
