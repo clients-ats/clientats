@@ -16,6 +16,7 @@ defmodule ClientatsWeb.UserSessionController do
       {:error, :invalid_credentials} ->
         conn
         |> put_flash(:error, "Invalid email or password")
+        |> put_flash(:email, email)
         |> redirect(to: ~p"/login")
     end
   end
