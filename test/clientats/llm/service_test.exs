@@ -71,7 +71,7 @@ defmodule Clientats.LLM.ServiceTest do
       Enum.each(test_urls, fn url ->
         result = Service.extract_job_data_from_url(url, :generic)
         # Just verify we get a consistent result (error or ok)
-        assert match?({:ok, _} | {:error, _}, result)
+        assert match?({:ok, _}, result) or match?({:error, _}, result)
       end)
     end
 
@@ -80,7 +80,7 @@ defmodule Clientats.LLM.ServiceTest do
 
       Enum.each(modes, fn mode ->
         result = Service.extract_job_data_from_url("https://example.com/job", mode)
-        assert match?({:ok, _} | {:error, _}, result)
+        assert (match?({:ok, _}, result) or match?({:error, _}, result))
       end)
     end
   end
@@ -308,12 +308,12 @@ defmodule Clientats.LLM.ServiceTest do
   describe "mode parameter handling" do
     test "supports generic mode extraction" do
       result = Service.extract_job_data("job content", "https://example.com/job", :generic)
-      assert match?({:ok, _} | {:error, _}, result)
+      assert (match?({:ok, _}, result) or match?({:error, _}, result))
     end
 
     test "supports specific mode extraction" do
       result = Service.extract_job_data("job content", "https://www.linkedin.com/jobs/view/123", :specific)
-      assert match?({:ok, _} | {:error, _}, result)
+      assert (match?({:ok, _}, result) or match?({:error, _}, result))
     end
   end
 end
