@@ -129,20 +129,91 @@ defmodule Clientats.LLMConfig do
   end
 
   @doc """
-  Get status of all providers for a user.
+  Get status of all providers for a user, ordered by sort_order.
 
   ## Parameters
     - user_id: User ID
 
   ## Returns
-    - List of provider statuses
+    - List of provider statuses ordered by sort_order
   """
   def get_provider_status(user_id) do
     Setting
     |> where(user_id: ^user_id)
-    |> order_by([s], s.provider)
+    |> order_by([s], [asc: s.sort_order, asc: s.provider])
     |> Repo.all()
     |> Enum.map(&format_provider_status/1)
+  end
+
+  @doc """
+  List all providers for a user, ordered by sort_order.
+
+  ## Parameters
+    - user_id: User ID
+
+  ## Returns
+    - List of provider settings ordered by sort_order
+  """
+  def list_providers(user_id) do
+    Setting
+    |> where(user_id: ^user_id)
+    |> order_by([s], [asc: s.sort_order, asc: s.provider])
+    |> Repo.all()
+  end
+
+  @doc """
+  Reorder providers for a user.
+
+  Takes a list of provider names in the desired order and updates the sort_order field.
+
+  ## Parameters
+    - user_id: User ID
+    - provider_order: List of provider names in desired order
+
+  ## Returns
+    - {:ok, updated_count} on success
+    - {:error, reason} on failure
+  """
+  def reorder_providers(user_id, provider_order) when is_list(provider_order) do
+    Repo.transaction(fn ->
+      provider_order
+      |> Enum.with_index()
+      |> Enum.each(fn {provider, index} ->
+        provider_str = if is_atom(provider), do: Atom.to_string(provider), else: provider
+
+        Setting
+        |> where(user_id: ^user_id, provider: ^provider_str)
+        |> Repo.update_all(set: [sort_order: index])
+      end)
+
+      length(provider_order)
+    end)
+  end
+
+  @doc """
+  Delete a provider configuration for a user.
+
+  ## Parameters
+    - user_id: User ID
+    - provider: Provider name (atom or string)
+
+  ## Returns
+    - {:ok, deleted_setting} on success
+    - {:error, :not_found} if provider not configured
+    - {:error, changeset} on database error
+  """
+  def delete_provider(user_id, provider) when is_binary(provider) do
+    provider_atom = String.to_atom(provider)
+    delete_provider(user_id, provider_atom)
+  end
+
+  def delete_provider(user_id, provider) when is_atom(provider) do
+    provider_str = Atom.to_string(provider)
+
+    case Repo.get_by(Setting, user_id: user_id, provider: provider_str) do
+      nil -> {:error, :not_found}
+      setting -> Repo.delete(setting)
+    end
   end
 
   @doc """
