@@ -8,6 +8,7 @@ defmodule Clientats.Accounts.User do
     field :first_name, :string
     field :last_name, :string
     field :resume_path, :string
+    field :primary_llm_provider, :string, default: "gemini"
     field :password, :string, virtual: true, redact: true
     field :password_confirmation, :string, virtual: true, redact: true
 

@@ -13,6 +13,7 @@ defmodule ClientatsWeb.LLMConfigLive do
     user_id = socket.assigns.current_user.id
     providers = Setting.providers()
     provider_statuses = LLMConfig.get_provider_status(user_id)
+    primary_provider = LLMConfig.get_primary_provider(user_id)
     active_provider = Enum.at(providers, 0)
 
     socket =
@@ -20,6 +21,7 @@ defmodule ClientatsWeb.LLMConfigLive do
       |> assign(:user_id, user_id)
       |> assign(:providers, providers)
       |> assign(:provider_statuses, provider_statuses)
+      |> assign(:primary_provider, primary_provider)
       |> assign(:active_provider, active_provider)
       |> assign(:testing, false)
       |> assign(:test_result, nil)
@@ -91,7 +93,57 @@ defmodule ClientatsWeb.LLMConfigLive do
           </div>
         <% end %>
 
+        <!-- Quick Start Guide -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <!-- Cloud Provider Card -->
+          <div class="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
+            <div class="flex items-start gap-3">
+              <div class="text-2xl">☁️</div>
+              <div class="flex-1">
+                <h3 class="font-semibold text-gray-900 mb-2">Quick Start (Cloud)</h3>
+                <p class="text-sm text-gray-600 mb-3">Best for getting started quickly:</p>
+                <ul class="text-sm text-gray-600 space-y-1 mb-3">
+                  <li>✓ Get API key from Google AI Studio</li>
+                  <li>✓ No installation required</li>
+                  <li>✓ Free tier available</li>
+                  <li>✓ Works immediately</li>
+                </ul>
+                <.link navigate={~p"/dashboard/llm-config"} class="text-sm text-blue-600 hover:text-blue-800 font-semibold">
+                  → Set up Gemini
+                </.link>
+              </div>
+            </div>
+          </div>
+
+          <!-- Local Provider Card -->
+          <div class="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
+            <div class="flex items-start gap-3">
+              <div class="text-2xl">🖥️</div>
+              <div class="flex-1">
+                <h3 class="font-semibold text-gray-900 mb-2">Advanced (Local)</h3>
+                <p class="text-sm text-gray-600 mb-3">Maximum privacy and control:</p>
+                <ul class="text-sm text-gray-600 space-y-1 mb-3">
+                  <li>✓ Run models locally</li>
+                  <li>✓ No API costs</li>
+                  <li>✓ Complete privacy</li>
+                  <li>✓ Requires setup</li>
+                </ul>
+                <.link navigate={~p"/dashboard/llm-config"} class="text-sm text-green-600 hover:text-green-800 font-semibold">
+                  → Set up Ollama
+                </.link>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="bg-white rounded-lg shadow p-6">
+          <div class="flex items-center justify-between mb-6">
+            <div>
+              <h2 class="text-xl font-semibold text-gray-900 mb-1">Configure Your Provider</h2>
+              <p class="text-sm text-gray-600">Start with just one provider to get started. You can add more later.</p>
+            </div>
+          </div>
+
           <div class="tabs tabs-bordered">
             <%= for provider <- @providers do %>
               <button
@@ -130,8 +182,15 @@ defmodule ClientatsWeb.LLMConfigLive do
           <h2 class="text-xl font-semibold text-gray-900 mb-4">Provider Status</h2>
           <div class="space-y-4">
             <%= for status <- @provider_statuses do %>
-              <div class="flex items-center justify-between border rounded-lg p-4">
-                <div class="flex items-center gap-3">
+              <div class={
+                "flex items-center justify-between border rounded-lg p-4 " <>
+                  if status.provider == @primary_provider do
+                    "border-primary border-2"
+                  else
+                    ""
+                  end
+              }>
+                <div class="flex items-center gap-3 flex-1">
                   <div class={
                     "w-3 h-3 rounded-full " <>
                       if status.status == "connected" do
@@ -141,9 +200,14 @@ defmodule ClientatsWeb.LLMConfigLive do
                       end
                   }></div>
                   <div>
-                    <p class="font-semibold text-gray-900">
-                      <%= String.capitalize(status.provider) %>
-                    </p>
+                    <div class="flex items-center gap-2">
+                      <p class="font-semibold text-gray-900">
+                        <%= String.capitalize(status.provider) %>
+                      </p>
+                      <%= if status.provider == @primary_provider do %>
+                        <span class="badge badge-sm badge-primary">Primary</span>
+                      <% end %>
+                    </div>
                     <%= if status.configured do %>
                       <p class="text-sm text-gray-600">
                         Model: <%= status.model || "Not configured" %>
@@ -158,6 +222,16 @@ defmodule ClientatsWeb.LLMConfigLive do
                     <span class="badge badge-success">Enabled</span>
                   <% else %>
                     <span class="badge badge-outline">Disabled</span>
+                  <% end %>
+                  <%= if status.provider != @primary_provider do %>
+                    <button
+                      type="button"
+                      phx-click="set_primary_provider"
+                      phx-value-provider={status.provider}
+                      class="btn btn-sm btn-outline"
+                    >
+                      Set as Primary
+                    </button>
                   <% end %>
                 </div>
               </div>
@@ -188,6 +262,21 @@ defmodule ClientatsWeb.LLMConfigLive do
 
       {:error, :not_found} ->
         {:noreply, assign(socket, test_result: {:error, "Provider not configured"})}
+    end
+  end
+
+  def handle_event("set_primary_provider", %{"provider" => provider}, socket) do
+    user_id = socket.assigns.user_id
+
+    case LLMConfig.set_primary_provider(user_id, provider) do
+      {:ok, _user} ->
+        {:noreply,
+         socket
+         |> assign(:primary_provider, provider)
+         |> assign(:save_success, "#{String.capitalize(provider)} is now your primary LLM provider")}
+
+      {:error, _} ->
+        {:noreply, assign(socket, test_result: {:error, "Failed to set primary provider"})}
     end
   end
 
