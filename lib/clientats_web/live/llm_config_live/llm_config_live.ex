@@ -4,7 +4,7 @@ defmodule ClientatsWeb.LLMConfigLive do
   alias Clientats.LLMConfig
   alias Clientats.LLM.Setting
   alias Clientats.LLM.Providers.Ollama
-  alias ClientatsWeb.LLMConfigLive.Components.{OpenAIForm, AnthropicForm, MistralForm, GeminiForm, OllamaForm}
+  alias ClientatsWeb.LLMConfigLive.Components.{GeminiForm, OllamaForm}
 
   on_mount {ClientatsWeb.UserAuth, :ensure_authenticated}
 
@@ -320,12 +320,6 @@ defmodule ClientatsWeb.LLMConfigLive do
         <div class="border-t pt-6">
           <h3 class="font-semibold text-gray-900 mb-4">Configuration</h3>
           <%= case @provider do %>
-            <% "openai" -> %>
-              <OpenAIForm.render provider_config={@provider_config} form_errors={@form_errors} />
-            <% "anthropic" -> %>
-              <AnthropicForm.render provider_config={@provider_config} form_errors={@form_errors} />
-            <% "mistral" -> %>
-              <MistralForm.render provider_config={@provider_config} form_errors={@form_errors} />
             <% "gemini" -> %>
               <GeminiForm.render provider_config={@provider_config} form_errors={@form_errors} />
             <% "ollama" -> %>
