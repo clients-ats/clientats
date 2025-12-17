@@ -180,19 +180,33 @@ defmodule ClientatsWeb.LLMConfigLive do
 
         <div class="mt-8 bg-white rounded-lg shadow p-6">
           <h2 class="text-xl font-semibold text-gray-900 mb-4">Provider Status</h2>
-          <div class="space-y-4">
+          <div
+            id="provider-list"
+            phx-hook="ProviderReorder"
+            class="space-y-4"
+          >
             <%= for status <- @provider_statuses do %>
-              <div class={
-                "border rounded-lg p-4 " <>
-                  if status.provider == @primary_provider do
-                    "border-primary border-2 bg-blue-50"
-                  else
-                    "border-gray-300"
-                  end
+              <div
+                data-provider={status.provider}
+                data-primary={status.provider == @primary_provider}
+                class={
+                  "border rounded-lg p-4 transition-shadow cursor-move " <>
+                    if status.provider == @primary_provider do
+                      "border-primary border-2 bg-blue-50"
+                    else
+                      "border-gray-300"
+                    end
               }>
                 <!-- Header Row -->
                 <div class="flex items-center justify-between mb-3">
                   <div class="flex items-center gap-3">
+                    <!-- Drag Handle -->
+                    <div class="drag-handle cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z"/>
+                      </svg>
+                    </div>
+
                     <div class="text-2xl">
                       <%= provider_icon(status.provider) %>
                     </div>
@@ -372,7 +386,25 @@ defmodule ClientatsWeb.LLMConfigLive do
          |> assign(:save_success, "#{String.capitalize(provider)} has been #{if updated_status.enabled do "enabled" else "disabled" end}")}
 
       {:error, _} ->
-        {:noreply, assign(socket, test_result: {:error, "Failed to toggle provider"})}
+        {:noreply, assign(socket, :test_result, {:error, "Failed to toggle provider"})}
+    end
+  end
+
+  def handle_event("reorder_providers", %{"provider_order" => provider_order}, socket) do
+    user_id = socket.assigns.user_id
+
+    case LLMConfig.reorder_providers(user_id, provider_order) do
+      {:ok, _count} ->
+        # Reload provider statuses to reflect new order
+        provider_statuses = LLMConfig.get_provider_status(user_id)
+
+        {:noreply,
+         socket
+         |> assign(:provider_statuses, provider_statuses)
+         |> assign(:save_success, "Provider order updated successfully")}
+
+      {:error, _reason} ->
+        {:noreply, assign(socket, test_result: {:error, "Failed to update provider order"})}
     end
   end
 
