@@ -103,3 +103,22 @@
 [data-phx-session], [data-phx-teleported-src] { display: contents }
 
 /* This file is for your main application CSS */
+
+/* SortableJS Drag States */
+.sortable-ghost {
+  opacity: 0.4;
+  background-color: rgb(243 244 246); /* gray-100 */
+}
+
+.sortable-chosen {
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); /* shadow-lg */
+}
+
+.sortable-drag {
+  opacity: 1;
+  cursor: grabbing;
+}
+
+.drag-handle {
+  flex-shrink: 0;
+}
