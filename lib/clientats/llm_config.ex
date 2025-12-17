@@ -255,7 +255,10 @@ defmodule Clientats.LLMConfig do
       enabled: setting.enabled,
       status: setting.provider_status || "unconfigured",
       model: setting.default_model,
-      configured: configured
+      configured: configured,
+      last_tested_at: setting.last_tested_at,
+      last_error: setting.last_error,
+      updated_at: setting.updated_at
     }
   end
 
@@ -392,6 +395,75 @@ defmodule Clientats.LLMConfig do
         user
         |> Ecto.Changeset.change(%{primary_llm_provider: provider_str})
         |> Repo.update()
+    end
+  end
+
+  @doc """
+  Save test connection results for a provider.
+
+  ## Parameters
+    - user_id: User ID
+    - provider: Provider name (string)
+    - test_result: {:ok, _} or {:error, error_msg}
+  """
+  def save_test_result(user_id, provider, test_result) when is_binary(provider) do
+    case get_provider_config(user_id, provider) do
+      {:ok, setting} ->
+        attrs =
+          case test_result do
+            {:ok, _} ->
+              %{
+                provider_status: "connected",
+                last_tested_at: NaiveDateTime.utc_now(),
+                last_error: nil
+              }
+
+            {:error, error_msg} ->
+              %{
+                provider_status: "error",
+                last_tested_at: NaiveDateTime.utc_now(),
+                last_error: error_msg
+              }
+          end
+
+        setting
+        |> Setting.changeset(attrs)
+        |> Repo.update()
+
+      {:error, _} ->
+        {:error, :provider_not_configured}
+    end
+  end
+
+  @doc """
+  Toggle the enabled state of a provider.
+
+  ## Parameters
+    - user_id: User ID
+    - provider: Provider name (string)
+
+  ## Returns
+    - {:ok, updated_status_map} on success
+    - {:error, reason} on failure
+  """
+  def toggle_provider_enabled(user_id, provider) when is_binary(provider) do
+    case get_provider_config(user_id, provider) do
+      {:ok, setting} ->
+        new_enabled = !setting.enabled
+
+        setting
+        |> Setting.changeset(%{enabled: new_enabled})
+        |> Repo.update()
+        |> case do
+          {:ok, updated_setting} ->
+            {:ok, format_provider_status(updated_setting)}
+
+          {:error, changeset} ->
+            {:error, changeset}
+        end
+
+      {:error, _} ->
+        {:error, :provider_not_configured}
     end
   end
 

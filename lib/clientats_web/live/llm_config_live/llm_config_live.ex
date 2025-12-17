@@ -183,52 +183,107 @@ defmodule ClientatsWeb.LLMConfigLive do
           <div class="space-y-4">
             <%= for status <- @provider_statuses do %>
               <div class={
-                "flex items-center justify-between border rounded-lg p-4 " <>
+                "border rounded-lg p-4 " <>
                   if status.provider == @primary_provider do
-                    "border-primary border-2"
+                    "border-primary border-2 bg-blue-50"
                   else
-                    ""
+                    "border-gray-300"
                   end
               }>
-                <div class="flex items-center gap-3 flex-1">
-                  <div class={
-                    "w-3 h-3 rounded-full " <>
-                      if status.status == "connected" do
-                        "bg-green-500"
-                      else
-                        "bg-red-500"
-                      end
-                  }></div>
-                  <div>
-                    <div class="flex items-center gap-2">
-                      <p class="font-semibold text-gray-900">
-                        <%= String.capitalize(status.provider) %>
-                      </p>
-                      <%= if status.provider == @primary_provider do %>
-                        <span class="badge badge-sm badge-primary">Primary</span>
-                      <% end %>
+                <!-- Header Row -->
+                <div class="flex items-center justify-between mb-3">
+                  <div class="flex items-center gap-3">
+                    <div class="text-2xl">
+                      <%= provider_icon(status.provider) %>
                     </div>
-                    <%= if status.configured do %>
-                      <p class="text-sm text-gray-600">
-                        Model: <%= status.model || "Not configured" %>
-                      </p>
+                    <div>
+                      <div class="flex items-center gap-2">
+                        <p class="font-semibold text-gray-900">
+                          <%= String.capitalize(status.provider) %>
+                        </p>
+                        <%= if status.provider == @primary_provider do %>
+                          <span class="badge badge-sm badge-primary">Primary</span>
+                        <% end %>
+                      </div>
+                    </div>
+                  </div>
+                  <span class={status_badge_class(status.status)}>
+                    <%= status_label(status.status) %>
+                  </span>
+                </div>
+
+                <!-- Status Info Row -->
+                <div class="space-y-2 mb-3">
+                  <!-- Last Tested -->
+                  <div class="text-sm text-gray-600">
+                    <%= if status.last_tested_at do %>
+                      Last tested: <span class="font-medium"><%= format_relative_time(status.last_tested_at) %></span>
                     <% else %>
-                      <p class="text-sm text-gray-500">Not configured</p>
+                      <span class="text-gray-500">Not tested yet</span>
                     <% end %>
                   </div>
-                </div>
-                <div class="flex gap-2">
-                  <%= if status.enabled do %>
-                    <span class="badge badge-success">Enabled</span>
-                  <% else %>
-                    <span class="badge badge-outline">Disabled</span>
+
+                  <!-- Model Info -->
+                  <%= if status.model do %>
+                    <div class="text-sm text-gray-600">
+                      Model: <span class="font-medium"><%= status.model %></span>
+                    </div>
                   <% end %>
+
+                  <!-- Error Message -->
+                  <%= if status.last_error do %>
+                    <div class="alert alert-error alert-sm py-2">
+                      <span class="text-sm"><%= status.last_error %></span>
+                    </div>
+                  <% end %>
+                </div>
+
+                <!-- Action Buttons Row -->
+                <div class="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    phx-click="edit_provider"
+                    phx-value-provider={status.provider}
+                    class="btn btn-sm btn-outline"
+                    title="Go to provider configuration"
+                  >
+                    Edit
+                  </button>
+
+                  <button
+                    type="button"
+                    phx-click="test_provider_from_status"
+                    phx-value-provider={status.provider}
+                    class="btn btn-sm btn-outline"
+                    title="Test connection for this provider"
+                  >
+                    Test
+                  </button>
+
+                  <button
+                    type="button"
+                    phx-click="toggle_provider_enabled"
+                    phx-value-provider={status.provider}
+                    class={
+                      "btn btn-sm " <>
+                        if status.enabled do
+                          "btn-warning"
+                        else
+                          "btn-outline"
+                        end
+                    }
+                    title={if status.enabled do "Disable this provider" else "Enable this provider" end}
+                  >
+                    <%= if status.enabled do "Disable" else "Enable" end %>
+                  </button>
+
                   <%= if status.provider != @primary_provider do %>
                     <button
                       type="button"
                       phx-click="set_primary_provider"
                       phx-value-provider={status.provider}
                       class="btn btn-sm btn-outline"
+                      title="Set as primary provider"
                     >
                       Set as Primary
                     </button>
@@ -270,13 +325,54 @@ defmodule ClientatsWeb.LLMConfigLive do
 
     case LLMConfig.set_primary_provider(user_id, provider) do
       {:ok, _user} ->
+        provider_statuses = LLMConfig.get_provider_status(user_id)
+
         {:noreply,
          socket
          |> assign(:primary_provider, provider)
+         |> assign(:provider_statuses, provider_statuses)
          |> assign(:save_success, "#{String.capitalize(provider)} is now your primary LLM provider")}
 
       {:error, _} ->
         {:noreply, assign(socket, test_result: {:error, "Failed to set primary provider"})}
+    end
+  end
+
+  def handle_event("edit_provider", %{"provider" => provider}, socket) do
+    {:noreply,
+     socket
+     |> assign(:active_provider, provider)
+     |> assign(:test_result, nil)
+     |> load_provider_data(socket.assigns.user_id, provider)}
+  end
+
+  def handle_event("test_provider_from_status", %{"provider" => provider}, socket) do
+    user_id = socket.assigns.user_id
+
+    case LLMConfig.get_provider_config(user_id, provider) do
+      {:ok, config} ->
+        send(self(), {:test_connection_from_status, provider, config})
+        {:noreply, socket}
+
+      {:error, :not_found} ->
+        {:noreply, assign(socket, test_result: {:error, "Provider not configured"})}
+    end
+  end
+
+  def handle_event("toggle_provider_enabled", %{"provider" => provider}, socket) do
+    user_id = socket.assigns.user_id
+
+    case LLMConfig.toggle_provider_enabled(user_id, provider) do
+      {:ok, updated_status} ->
+        provider_statuses = LLMConfig.get_provider_status(user_id)
+
+        {:noreply,
+         socket
+         |> assign(:provider_statuses, provider_statuses)
+         |> assign(:save_success, "#{String.capitalize(provider)} has been #{if updated_status.enabled do "enabled" else "disabled" end}")}
+
+      {:error, _} ->
+        {:noreply, assign(socket, test_result: {:error, "Failed to toggle provider"})}
     end
   end
 
@@ -341,17 +437,51 @@ defmodule ClientatsWeb.LLMConfigLive do
 
   @impl true
   def handle_info({:test_connection, provider, config}, socket) do
+    user_id = socket.assigns.user_id
+
     case LLMConfig.test_connection(provider, config) do
       {:ok, status} ->
+        LLMConfig.save_test_result(user_id, provider, {:ok, status})
+        provider_statuses = LLMConfig.get_provider_status(user_id)
+
         {:noreply,
          socket
          |> assign(:testing, false)
-         |> assign(:test_result, {:ok, status})}
+         |> assign(:test_result, {:ok, status})
+         |> assign(:provider_statuses, provider_statuses)}
 
       {:error, msg} ->
+        LLMConfig.save_test_result(user_id, provider, {:error, msg})
+        provider_statuses = LLMConfig.get_provider_status(user_id)
+
         {:noreply,
          socket
          |> assign(:testing, false)
+         |> assign(:test_result, {:error, msg})
+         |> assign(:provider_statuses, provider_statuses)}
+    end
+  end
+
+  def handle_info({:test_connection_from_status, provider, config}, socket) do
+    user_id = socket.assigns.user_id
+
+    case LLMConfig.test_connection(provider, config) do
+      {:ok, status} ->
+        LLMConfig.save_test_result(user_id, provider, {:ok, status})
+        provider_statuses = LLMConfig.get_provider_status(user_id)
+
+        {:noreply,
+         socket
+         |> assign(:provider_statuses, provider_statuses)
+         |> assign(:save_success, "#{String.capitalize(provider)} connection test successful!")}
+
+      {:error, msg} ->
+        LLMConfig.save_test_result(user_id, provider, {:error, msg})
+        provider_statuses = LLMConfig.get_provider_status(user_id)
+
+        {:noreply,
+         socket
+         |> assign(:provider_statuses, provider_statuses)
          |> assign(:test_result, {:error, msg})}
     end
   end
@@ -472,4 +602,59 @@ defmodule ClientatsWeb.LLMConfigLive do
     String.downcase(model_name)
     |> (fn name -> Enum.any?(vision_indicators, &String.contains?(name, &1)) end).()
   end
+
+  # Helper functions for Provider Status section
+  defp provider_icon(provider) do
+    case provider do
+      "gemini" -> "☁️"
+      "ollama" -> "🖥️"
+      _ -> "⚙️"
+    end
+  end
+
+  defp status_label(status) do
+    case status do
+      "connected" -> "Connected"
+      "configured" -> "Configured"
+      "error" -> "Error"
+      "unconfigured" -> "Not Configured"
+      _ -> "Unknown"
+    end
+  end
+
+  defp status_badge_class(status) do
+    case status do
+      "connected" ->
+        "badge badge-success badge-lg"
+
+      "configured" ->
+        "badge badge-warning badge-lg"
+
+      "error" ->
+        "badge badge-error badge-lg"
+
+      "unconfigured" ->
+        "badge badge-ghost badge-lg"
+
+      _ ->
+        "badge badge-ghost badge-lg"
+    end
+  end
+
+  defp format_relative_time(nil), do: "Never"
+
+  defp format_relative_time(%NaiveDateTime{} = datetime) do
+    now = NaiveDateTime.utc_now()
+    seconds_ago = NaiveDateTime.diff(now, datetime)
+
+    cond do
+      seconds_ago < 60 -> "Just now"
+      seconds_ago < 3600 -> "#{div(seconds_ago, 60)} minutes ago"
+      seconds_ago < 86400 -> "#{div(seconds_ago, 3600)} hours ago"
+      seconds_ago < 604800 -> "#{div(seconds_ago, 86400)} days ago"
+      true -> "#{div(seconds_ago, 604800)} weeks ago"
+    end
+  end
+
+  defp format_relative_time(_), do: "Unknown"
 end
