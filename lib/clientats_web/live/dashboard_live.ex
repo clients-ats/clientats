@@ -2,6 +2,7 @@ defmodule ClientatsWeb.DashboardLive do
   use ClientatsWeb, :live_view
 
   alias Clientats.Jobs
+  alias Clientats.LLMConfig
 
   on_mount {ClientatsWeb.UserAuth, :ensure_authenticated}
 
@@ -27,6 +28,24 @@ defmodule ClientatsWeb.DashboardLive do
       </div>
 
       <div class="container mx-auto px-4 py-8">
+        <!-- LLM Setup Banner -->
+        <%= if !@has_configured_providers do %>
+          <div class="alert alert-info mb-8">
+            <div>
+              <h3 class="font-semibold">Get started with AI features</h3>
+              <p class="text-sm">Configure an LLM provider to unlock AI-powered features like job analysis and auto-fill.</p>
+            </div>
+            <div class="flex gap-2">
+              <.link navigate={~p"/dashboard/llm-setup"} class="btn btn-sm btn-primary">
+                Get Started →
+              </.link>
+              <.link navigate={~p"/dashboard/llm-config"} class="btn btn-sm btn-ghost">
+                Advanced Setup
+              </.link>
+            </div>
+          </div>
+        <% end %>
+
         <div class="mb-8 flex gap-4">
           <.link navigate={~p"/dashboard/resumes"} class="btn btn-outline">
             <.icon name="hero-document-text" class="w-5 h-5" /> Manage Resumes
@@ -133,9 +152,15 @@ defmodule ClientatsWeb.DashboardLive do
   end
 
   def mount(_params, _session, socket) do
-    job_interests = Jobs.list_job_interests(socket.assigns.current_user.id)
-    all_applications = Jobs.list_job_applications(socket.assigns.current_user.id)
+    user_id = socket.assigns.current_user.id
+    job_interests = Jobs.list_job_interests(user_id)
+    all_applications = Jobs.list_job_applications(user_id)
     filtered_applications = filter_applications(all_applications, false)
+
+    # Check if user has configured any LLM providers
+    has_configured_providers =
+      LLMConfig.get_provider_status(user_id)
+      |> Enum.any?(fn status -> status.status != "unconfigured" end)
 
     {:ok,
      socket
@@ -143,6 +168,7 @@ defmodule ClientatsWeb.DashboardLive do
      |> assign(:show_closed, false)
      |> assign(:all_applications, all_applications)
      |> assign(:job_applications, filtered_applications)
+     |> assign(:has_configured_providers, has_configured_providers)
      |> stream(:job_interests, job_interests)
      |> stream(:job_applications, filtered_applications)}
   end

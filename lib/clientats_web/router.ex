@@ -37,6 +37,7 @@ defmodule ClientatsWeb.Router do
     live "/dashboard/applications/new", JobApplicationLive.New
     live "/dashboard/applications/:id", JobApplicationLive.Show, :show
     live "/dashboard/llm-config", LLMConfigLive
+    live "/dashboard/llm-setup", LLMWizardLive
     post "/login", UserSessionController, :create
     post "/login-after-registration", UserSessionController, :create_after_registration
     delete "/logout", UserSessionController, :delete
