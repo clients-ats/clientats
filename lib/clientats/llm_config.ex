@@ -192,9 +192,9 @@ defmodule Clientats.LLMConfig do
     %{
       gemini: %{
         api_key: System.get_env("GEMINI_API_KEY"),
-        default_model: System.get_env("GEMINI_MODEL") || "gemini-2.0-flash",
-        vision_model: System.get_env("GEMINI_VISION_MODEL") || "gemini-2.0-flash",
-        text_model: System.get_env("GEMINI_TEXT_MODEL") || "gemini-2.0-flash",
+        default_model: System.get_env("GEMINI_MODEL") || "gemini-2.5-flash",
+        vision_model: System.get_env("GEMINI_VISION_MODEL") || "gemini-2.5-flash",
+        text_model: System.get_env("GEMINI_TEXT_MODEL") || "gemini-2.5-flash",
         enabled: System.get_env("GEMINI_API_KEY") != nil
       },
       ollama: %{
@@ -347,6 +347,52 @@ defmodule Clientats.LLMConfig do
     error_detail = extract_gemini_error_message(body)
     Logger.error("Gemini connection failed (#{status}): #{error_detail}", provider: "gemini", status: status)
     {:error, "Connection failed with status #{status}: #{error_detail}"}
+  end
+
+  @doc """
+  Get the primary LLM provider for a user.
+
+  ## Parameters
+    - user_id: User ID
+
+  ## Returns
+    - Provider name as string (e.g., "gemini", "ollama")
+  """
+  def get_primary_provider(user_id) do
+    case Repo.get(Clientats.Accounts.User, user_id) do
+      nil -> "gemini"
+      user -> user.primary_llm_provider || "gemini"
+    end
+  end
+
+  @doc """
+  Set the primary LLM provider for a user.
+
+  ## Parameters
+    - user_id: User ID
+    - provider: Provider name (atom or string)
+
+  ## Returns
+    - {:ok, user} on success
+    - {:error, reason} on failure
+  """
+  def set_primary_provider(user_id, provider) when is_binary(provider) do
+    provider_atom = String.to_atom(provider)
+    set_primary_provider(user_id, provider_atom)
+  end
+
+  def set_primary_provider(user_id, provider) when is_atom(provider) do
+    provider_str = Atom.to_string(provider)
+
+    case Repo.get(Clientats.Accounts.User, user_id) do
+      nil ->
+        {:error, :user_not_found}
+
+      user ->
+        user
+        |> Ecto.Changeset.change(%{primary_llm_provider: provider_str})
+        |> Repo.update()
+    end
   end
 
   defp extract_gemini_error_message(body) when is_binary(body) do
