@@ -12,11 +12,8 @@ A Phoenix-based web application for intelligent job posting scraping, data extra
 - **Cached results** - Avoids re-processing the same URLs
 
 ### LLM Provider Support
-- **Google Gemini** - Multi-modal support with vision capabilities (gemini-2.0-flash, gemini-1.5-pro)
-- **Ollama** - Local, privacy-focused model execution
-- **OpenAI** - GPT-4 series support (requires API key)
-- **Anthropic** - Claude models support (requires API key)
-- **Mistral** - Open-source model support (requires API key)
+- **Google Gemini** - Cloud-based multi-modal support with free tier and fast inference
+- **Ollama** - Local, privacy-focused model execution (runs on your machine)
 
 ### Job Interest Management
 - **Track job opportunities** - Save and organize job postings you're interested in
@@ -91,12 +88,11 @@ Open your browser and navigate to `http://localhost:4000`
    - Enter your email, password, first name, and last name
    - Verify your account
 
-2. **Configure LLM providers**
+2. **Configure LLM provider**
    - Go to Dashboard → LLM Configuration
-   - Select your preferred provider (Gemini, Ollama, OpenAI, etc.)
-   - Enter API key (if required)
-   - Set your preferred models
-   - Click "Test Connection" to verify
+   - Choose **Gemini** (easiest, free tier available) OR **Ollama** (local, completely free)
+   - See the [LLM Provider Setup Guide](#-llm-provider-setup-guide) below for detailed steps
+   - After setup, click "Test Connection" to verify
    - Click "Save Configuration"
 
 3. **Start importing jobs**
@@ -125,43 +121,127 @@ PHX_PORT=4000
 LLM_ENCRYPTION_KEY=<your-encryption-key>
 ```
 
-### LLM Provider Configuration
+### 🚀 LLM Provider Setup Guide
+
+Clientats supports two powerful LLM providers. Choose one or configure both for enhanced flexibility!
+
+#### Option 1: Google Gemini (Recommended for Getting Started)
+
+**Why choose Gemini?**
+- ✅ Free tier available (no credit card required)
+- ✅ Fast inference
+- ✅ Great multi-modal capabilities
+- ✅ Easiest to set up
+
+**Setup Steps:**
+
+1. **Get API Key**
+   - Visit https://aistudio.google.com/apikey
+   - Click "Create API Key"
+   - Copy your API key
+
+2. **Configure in Clientats**
+   - Go to Dashboard → LLM Configuration
+   - Click the **Gemini** tab
+   - Enable the provider with the checkbox
+   - Paste your API key
+   - Keep the default models:
+     - Default Model: `gemini-2.0-flash`
+     - Vision Model: `gemini-2.0-flash`
+     - Text Model: `gemini-2.0-flash`
+
+3. **Test Connection**
+   - Click "Test Connection" button
+   - You should see a success message
+   - Click "Save Configuration"
+
+**Screenshot:**
+![Gemini Setup](docs/screenshots/gemini-setup.png)
+
+**Video Demo:**
+[Watch the LLM Setup Demo](docs/llm-setup-demo.mp4)
+
+---
+
+#### Option 2: Ollama (Local & Private)
+
+**Why choose Ollama?**
+- 🔒 Runs locally - complete privacy, no internet required
+- 💰 Completely free
+- ⚡ Fast for inference
+- 🎮 Great for development and testing
+- ⚙️ Full control over models
+
+**Prerequisites:**
+- Install Ollama from https://ollama.ai
+
+**Setup Steps:**
+
+1. **Install and Run Ollama**
+   ```bash
+   # On macOS/Linux/Windows, install from https://ollama.ai
+   # Start Ollama (it runs in background)
+   ollama serve
+   ```
+
+2. **Pull a Model**
+   In another terminal:
+   ```bash
+   # Pull a model (one-time download)
+   ollama pull mistral
+   ```
+
+3. **Configure in Clientats**
+   - Go to Dashboard → LLM Configuration
+   - Click the **Ollama** tab
+   - Enable the provider with the checkbox
+   - Base URL should be: `http://localhost:11434` (default)
+   - Click "Discover Models" button
+   - Select models from the dropdowns that appear
+   - Click "Save Configuration"
+
+4. **Test Connection**
+   - Click "Test Connection" button
+   - You should see a success message
+
+**Screenshot:**
+![Ollama Setup](docs/screenshots/ollama-setup.png)
+
+---
+
+#### Using Both Providers
+
+You can configure both Gemini and Ollama! The system will:
+- Use the first enabled provider
+- Automatically fall back to another if the first one fails
+- Give you maximum flexibility
+
+**Recommended Setup for Production:**
+```
+Primary: Gemini (fast, reliable)
+Fallback: Ollama (local backup if Gemini is down)
+```
+
+---
+
+### LLM Provider Configuration Reference
 
 #### Google Gemini
 ```
-Provider: gemini
-API Key: Available from https://aistudio.google.com/apikey
+API Key: From https://aistudio.google.com/apikey
 Default Model: gemini-2.0-flash
-Vision Model: gemini-2.0-flash
+Vision Model: gemini-2.0-flash (for image analysis)
+Text Model: gemini-2.0-flash (for text-only tasks)
+Cost: Free tier available, paid tiers for higher usage
 ```
 
 #### Ollama (Local)
 ```
-Provider: ollama
 Base URL: http://localhost:11434
-Default Model: mistral (or your preferred model)
-Note: No API key required
-```
-
-#### OpenAI
-```
-Provider: openai
-API Key: From https://platform.openai.com/account/api-keys
-Default Model: gpt-4o or gpt-4-turbo
-```
-
-#### Anthropic
-```
-Provider: anthropic
-API Key: From https://console.anthropic.com/
-Default Model: claude-3-5-sonnet
-```
-
-#### Mistral
-```
-Provider: mistral
-API Key: From https://console.mistral.ai/
-Default Model: mistral-large
+Models: mistral, llama2, neural-chat, etc.
+Default Model: Select after running "Discover Models"
+Cost: Completely free
+Privacy: 100% local, no data sent anywhere
 ```
 
 ## 📦 Backup & Restore
@@ -439,6 +519,7 @@ The application can be deployed to:
 
 ---
 
-**Last Updated:** December 15, 2024
-**Version:** 1.0.0
+**Last Updated:** December 17, 2024
+**Version:** 1.1.0
 **Status:** Production Ready
+**LLM Providers:** Gemini, Ollama
