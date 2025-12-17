@@ -302,6 +302,17 @@ defmodule ClientatsWeb.LLMConfigLive do
                       Set as Primary
                     </button>
                   <% end %>
+
+                  <button
+                    type="button"
+                    phx-click="delete_provider"
+                    phx-value-provider={status.provider}
+                    data-confirm={delete_provider_message(status.provider, @primary_provider)}
+                    class="btn btn-sm btn-error"
+                    title="Delete this provider configuration"
+                  >
+                    Delete
+                  </button>
                 </div>
               </div>
             <% end %>
@@ -405,6 +416,46 @@ defmodule ClientatsWeb.LLMConfigLive do
 
       {:error, _reason} ->
         {:noreply, assign(socket, test_result: {:error, "Failed to update provider order"})}
+    end
+  end
+
+  def handle_event("delete_provider", %{"provider" => provider}, socket) do
+    user_id = socket.assigns.user_id
+    primary_provider = socket.assigns.primary_provider
+
+    case LLMConfig.delete_provider(user_id, provider) do
+      {:ok, _deleted_setting} ->
+        # If we deleted the primary provider, promote another or reset to default
+        new_primary = if provider == primary_provider do
+          promote_next_provider(user_id)
+        else
+          primary_provider
+        end
+
+        # Update primary provider if it changed
+        :ok = if new_primary != primary_provider do
+          case LLMConfig.set_primary_provider(user_id, new_primary) do
+            {:ok, _} -> :ok
+            {:error, _} -> :ok
+          end
+        else
+          :ok
+        end
+
+        # Reload provider statuses
+        provider_statuses = LLMConfig.get_provider_status(user_id)
+
+        {:noreply,
+         socket
+         |> assign(:provider_statuses, provider_statuses)
+         |> assign(:primary_provider, new_primary)
+         |> assign(:save_success, "#{String.capitalize(provider)} provider deleted successfully")}
+
+      {:error, :not_found} ->
+        {:noreply, assign(socket, test_result: {:error, "Provider not found"})}
+
+      {:error, _reason} ->
+        {:noreply, assign(socket, test_result: {:error, "Failed to delete provider"})}
     end
   end
 
@@ -689,4 +740,34 @@ defmodule ClientatsWeb.LLMConfigLive do
   end
 
   defp format_relative_time(_), do: "Unknown"
+
+  defp promote_next_provider(user_id) do
+    # Get all enabled providers, sorted by sort_order
+    providers = LLMConfig.list_providers(user_id)
+
+    # Find the first enabled provider (in sort order)
+    next_provider = Enum.find(providers, fn p -> p.enabled end)
+
+    if next_provider do
+      next_provider.provider
+    else
+      # No other enabled providers, default to gemini
+      "gemini"
+    end
+  end
+
+  defp delete_provider_message(provider_name, primary_provider) do
+    if provider_name == primary_provider do
+      """
+      You are about to delete your PRIMARY provider (#{String.capitalize(provider_name)}).
+
+      Your next enabled provider will automatically be promoted to primary.
+      If no other providers are available, Gemini will be set as default.
+
+      Are you sure?
+      """
+    else
+      "Are you sure you want to delete the #{String.capitalize(provider_name)} provider configuration?"
+    end
+  end
 end
