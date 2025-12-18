@@ -222,7 +222,6 @@ defmodule ClientatsWeb.LiveViewTestHelpers do
 
   # Assertion helpers
   def assert_flash(html, type, message) do
-    selector = ".alert-#{type}"
     assert html =~ ~r/<div[^>]*class="[^"]*#{type}[^"]*"[^>]*>/i,
            "Expected flash of type #{type}"
 
@@ -233,7 +232,7 @@ defmodule ClientatsWeb.LiveViewTestHelpers do
     assert redirected_to(conn) == path
   end
 
-  def assert_live_component(lv, component, props) do
+  def assert_live_component(lv, _component, _props) do
     # Verify component renders without errors
     html = render(lv)
     refute html =~ "error"
