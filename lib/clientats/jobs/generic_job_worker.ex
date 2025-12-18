@@ -74,14 +74,9 @@ defmodule Clientats.Jobs.GenericJobWorker do
 
     Logger.info("Cleaning up data older than #{retention_days} days")
 
-    case Clientats.Audit.cleanup_old_logs(div(retention_days, 365)) do
-      {:ok, count} ->
-        Logger.info("Cleaned up #{count} audit logs")
-        :ok
-
-      {:error, reason} ->
-        {:error, reason}
-    end
+    {:ok, count} = Clientats.Audit.cleanup_old_logs(div(retention_days, 365))
+    Logger.info("Cleaned up #{count} audit logs")
+    :ok
   end
 
   defp execute_job("send_notification", args) do

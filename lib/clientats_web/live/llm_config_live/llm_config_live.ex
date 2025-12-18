@@ -4,7 +4,6 @@ defmodule ClientatsWeb.LLMConfigLive do
   alias Clientats.LLMConfig
   alias Clientats.LLM.Setting
   alias Clientats.LLM.Providers.Ollama
-  alias ClientatsWeb.LLMConfigLive.Components.{GeminiForm, OllamaForm}
 
   on_mount {ClientatsWeb.UserAuth, :ensure_authenticated}
 

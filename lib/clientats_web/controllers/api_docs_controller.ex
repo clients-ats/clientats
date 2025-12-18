@@ -287,13 +287,13 @@ defmodule ClientatsWeb.APIDocsController do
           <h3>Example Request</h3>
           <p>Extract job data from a URL:</p>
           <pre><code>curl -X POST https://api.clientats.example.com/api/v1/scrape_job \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "url": "https://linkedin.com/jobs/view/123456",
-    "mode": "generic",
-    "save": false
-  }'</code></pre>
+            -H "Authorization: Bearer YOUR_TOKEN" \\
+            -H "Content-Type: application/json" \\
+            -d '{
+              "url": "https://linkedin.com/jobs/view/123456",
+              "mode": "generic",
+              "save": false
+            }'</code></pre>
 
           <h2>📡 Available Endpoints</h2>
 
@@ -329,14 +329,14 @@ defmodule ClientatsWeb.APIDocsController do
           <h3>Response Format</h3>
           <p>All responses are in JSON format with the following structure:</p>
           <pre><code>{
-  "success": true,
-  "data": { /* Response data */ },
-  "message": "Human-readable message",
-  "_api": {
-    "version": "1.0.0",
-    "supported_versions": ["1.0.0", "2.0.0-beta"]
-  }
-}</code></pre>
+            "success": true,
+            "data": { /* Response data */ },
+            "message": "Human-readable message",
+            "_api": {
+              "version": "1.0.0",
+              "supported_versions": ["1.0.0", "2.0.0-beta"]
+            }
+          }</code></pre>
 
           <h3>Error Handling</h3>
           <p>Errors include appropriate HTTP status codes and detailed error messages:</p>

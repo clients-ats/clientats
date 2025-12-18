@@ -1,15 +1,14 @@
 defmodule ClientatsWeb.LLMConfigLive.Components.GeminiForm do
   use Phoenix.Component
 
-  @gemini_models [
-    {"gemini-2.5-pro - Powerful, most capable (recommended)", "gemini-2.5-pro"},
-    {"gemini-2.5-flash - Fast, efficient, most balanced", "gemini-2.5-flash"},
-    {"gemini-2.0-flash - Previous generation flash", "gemini-2.0-flash"},
-    {"gemini-1.5-pro - Previous generation pro", "gemini-1.5-pro"},
-    {"gemini-1.5-flash - Previous generation flash", "gemini-1.5-flash"}
-  ]
-
   def render(assigns) do
+    assigns = assign(assigns, :gemini_models, [
+      {"gemini-2.5-pro - Powerful, most capable (recommended)", "gemini-2.5-pro"},
+      {"gemini-2.5-flash - Fast, efficient, most balanced", "gemini-2.5-flash"},
+      {"gemini-2.0-flash - Previous generation flash", "gemini-2.0-flash"},
+      {"gemini-1.5-pro - Previous generation pro", "gemini-1.5-pro"},
+      {"gemini-1.5-flash - Previous generation flash", "gemini-1.5-flash"}
+    ])
     ~H"""
     <div class="space-y-4">
       <div class="form-control">
