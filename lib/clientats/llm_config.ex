@@ -367,7 +367,8 @@ defmodule Clientats.LLMConfig do
     rescue
       e ->
         error_msg = Exception.message(e)
-        Logger.error("Ollama test: Exception raised", error: error_msg, type: Exception.type(e))
+        error_type = e.__struct__
+        Logger.error("Ollama test: Exception raised", error: error_msg, type: error_type)
         {:error, "Failed to connect: #{error_msg}"}
     end
   end
@@ -409,7 +410,8 @@ defmodule Clientats.LLMConfig do
         handle_gemini_response(response)
       rescue
         e ->
-          Logger.error("Gemini test: Exception raised", error: Exception.message(e), type: Exception.type(e))
+          error_type = e.__struct__
+          Logger.error("Gemini test: Exception raised", error: Exception.message(e), type: error_type)
           handle_gemini_connection_error(e)
       end
     end
