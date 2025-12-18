@@ -178,25 +178,6 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
     end
   end
 
-  def handle_info(:update_eta, socket) do
-    # Periodic update to refresh ETA display during scraping
-    if socket.assigns[:scraping] do
-      # Calculate remaining time
-      start_time = socket.assigns[:scraping_start_time]
-      initial_estimate = socket.assigns[:estimated_llm_time_ms]
-      elapsed = System.monotonic_time(:millisecond) - start_time
-      remaining = max(0, initial_estimate - elapsed)
-
-      # Schedule next update in 500ms
-      Process.send_after(self(), :update_eta, 500)
-
-      # Update the remaining time estimate
-      {:noreply, assign(socket, :remaining_llm_time_ms, remaining)}
-    else
-      {:noreply, socket}
-    end
-  end
-
   def handle_info({:phase_update, phase_id}, socket) do
     # Update the phase status to in_progress
     updated_phases =
@@ -886,19 +867,5 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
     end
   end
 
-  defp format_duration(milliseconds) when is_integer(milliseconds) do
-    total_seconds = div(milliseconds, 1000)
-    minutes = div(total_seconds, 60)
-    seconds = rem(total_seconds, 60)
-
-    case {minutes, seconds} do
-      {0, 0} -> "done"
-      {0, s} -> "#{s}s"
-      {m, 0} -> "#{m}m"
-      {m, s} -> "#{m}m #{s}s"
-    end
-  end
-
-  defp format_duration(_), do: "calculating..."
 
 end
