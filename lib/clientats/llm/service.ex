@@ -87,12 +87,18 @@ defmodule Clientats.LLM.Service do
     # Determine provider
     provider = Keyword.get(options, :provider) || Application.get_env(:req_llm, :primary_provider, :openai)
     _user_id = Keyword.get(options, :user_id)
+    progress_callback = Keyword.get(options, :progress_callback)
+
+    # Send loading phase update
+    if progress_callback, do: progress_callback.(:loading)
 
     # Try to use browser screenshot first (better for multimodal extraction)
     case capture_page_screenshot(url) do
       {:ok, screenshot_path} ->
         IO.puts("[Service] Using screenshot-based extraction")
-        extract_with_screenshot(screenshot_path, url, mode, provider, options)
+        # Send screenshot phase update
+        if progress_callback, do: progress_callback.(:screenshot)
+        extract_with_screenshot(screenshot_path, url, mode, provider, options, progress_callback)
 
       {:error, reason} ->
         IO.puts("[Service] Screenshot failed (#{inspect(reason)}), falling back to HTML extraction")
@@ -115,11 +121,17 @@ defmodule Clientats.LLM.Service do
     - mode: :specific or :generic extraction mode
     - provider: LLM provider to use
     - options: Additional options
+    - progress_callback: Optional callback function to report progress phases
   """
-  def extract_with_screenshot(screenshot_path, url, mode, provider, options) do
+  def extract_with_screenshot(screenshot_path, url, mode, provider, options, progress_callback \\ nil) do
     with {:ok, provider} <- determine_provider(provider) do
+      # Send sending phase update
+      if progress_callback, do: progress_callback.(:sending)
+
       case attempt_screenshot_extraction(screenshot_path, url, mode, provider, options) do
         {:ok, result} ->
+          # Send processing phase update
+          if progress_callback, do: progress_callback.(:processing)
           {:ok, Map.put(result, :source_url, url)}
 
         {:error, reason} ->
