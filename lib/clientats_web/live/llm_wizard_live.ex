@@ -3,6 +3,8 @@ defmodule ClientatsWeb.LLMWizardLive do
 
   alias Clientats.LLMConfig
 
+  on_mount {ClientatsWeb.UserAuth, :ensure_authenticated}
+
   @impl true
   def mount(_params, _session, socket) do
     user_id = socket.assigns.current_user.id
