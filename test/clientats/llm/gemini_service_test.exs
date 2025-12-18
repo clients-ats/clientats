@@ -152,8 +152,8 @@ defmodule Clientats.LLM.GeminiServiceTest do
     test "Gemini env defaults are properly configured" do
       defaults = LLMConfig.get_env_defaults()
       assert is_map(defaults[:gemini])
-      assert defaults[:gemini][:default_model] == "gemini-2.0-flash"
-      assert defaults[:gemini][:vision_model] == "gemini-2.0-flash"
+      assert defaults[:gemini][:default_model] == "gemini-2.5-flash"
+      assert defaults[:gemini][:vision_model] == "gemini-2.5-flash"
     end
   end
 
