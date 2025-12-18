@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  # Web application
+  web:
+    image: clientats:1.0.0-alpha2
+    container_name: clientats_web
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      PHX_HOST: localhost
+      PHX_PORT: 4000
+      DATABASE_URL: ecto://postgres:${DB_PASSWORD:-postgres}@postgres:5432/clientats_prod
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 5s
+      retries: 3
+    networks:
+      - clientats_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # PostgreSQL database
+  postgres:
+    image: postgres:15-alpine
+    container_name: clientats_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: clientats_prod
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - clientats_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Ollama LLM service (optional)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: clientats_ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0:11434
+    profiles:
+      - llm
+    networks:
+      - clientats_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  postgres_data:
+    driver: local
+  ollama_data:
+    driver: local
+
+networks:
+  clientats_network:
+    driver: bridge
