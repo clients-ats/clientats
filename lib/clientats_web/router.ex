@@ -37,18 +37,55 @@ defmodule ClientatsWeb.Router do
     live "/dashboard/applications/new", JobApplicationLive.New
     live "/dashboard/applications/:id", JobApplicationLive.Show, :show
     live "/dashboard/llm-config", LLMConfigLive
+    live "/dashboard/llm-setup", LLMWizardLive
     post "/login", UserSessionController, :create
     post "/login-after-registration", UserSessionController, :create_after_registration
     delete "/logout", UserSessionController, :delete
   end
 
-  # API Routes
-  scope "/api", ClientatsWeb do
+  # API Routes - Version 1 (Current)
+  scope "/api/v1", ClientatsWeb do
     pipe_through :api
-    
+
     post "/scrape_job", JobScraperController, :scrape
     get "/llm/providers", JobScraperController, :providers
     get "/llm/config", JobScraperController, :config
+  end
+
+  # API Routes - Version 2 (Future - Beta)
+  # Planned for future enhancements like enhanced response formats,
+  # additional metadata, and improved error handling
+  scope "/api/v2", ClientatsWeb do
+    pipe_through :api
+
+    post "/scrape_job", JobScraperController, :scrape
+    get "/llm/providers", JobScraperController, :providers
+    get "/llm/config", JobScraperController, :config
+  end
+
+  # Legacy: Support /api without version (redirects to v1 for backward compatibility)
+  scope "/api", ClientatsWeb do
+    pipe_through :api
+
+    post "/scrape_job", JobScraperController, :scrape
+    get "/llm/providers", JobScraperController, :providers
+    get "/llm/config", JobScraperController, :config
+  end
+
+  # API Documentation endpoints
+  scope "/api-docs", ClientatsWeb do
+    get "/", APIDocsController, :index
+    get "/swagger-ui", APIDocsController, :swagger_ui
+    get "/redoc", APIDocsController, :redoc_ui
+    get "/openapi.json", APIDocsController, :openapi
+  end
+
+  # Health check and metrics endpoints (no auth pipeline)
+  scope "/", ClientatsWeb do
+    get "/health", HealthController, :simple
+    get "/health/ready", HealthController, :detailed
+    get "/health/diagnostics", HealthController, :diagnostics
+    get "/metrics", MetricsController, :index
   end
 
   # Other scopes may use custom stacks.

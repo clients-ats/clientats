@@ -12,18 +12,27 @@ defmodule Clientats.Application do
       Clientats.Repo,
       {DNSCluster, query: Application.get_env(:clientats, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Clientats.PubSub},
+      # Background job queue
+      {Oban, oban_config()},
       # LLM Cache for job scraping
       Clientats.LLM.Cache,
-      # Start a worker by calling: Clientats.Worker.start_link(arg)
-      # {Clientats.Worker, arg},
+      # Metrics collector
+      Clientats.LLM.Metrics,
       # Start to serve requests, typically the last entry
       ClientatsWeb.Endpoint
     ]
+
+    # Attach metrics telemetry handlers after startup
+    ClientatsWeb.MetricsHandler.attach_handlers()
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Clientats.Supervisor]
     Supervisor.start_link(children, opts)
+  end
+
+  defp oban_config do
+    Application.get_env(:clientats, Oban)
   end
 
   # Tell Phoenix to update the endpoint configuration

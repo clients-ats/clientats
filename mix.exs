@@ -4,7 +4,7 @@ defmodule Clientats.MixProject do
   def project do
     [
       app: :clientats,
-      version: "0.1.0",
+      version: "1.0.0-alpha2",
       elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
@@ -69,6 +69,7 @@ defmodule Clientats.MixProject do
       {:bandit, "~> 1.5"},
       {:bcrypt_elixir, "~> 3.0"},
       {:req_llm, "~> 1.0"},
+      {:oban, "~> 2.17"},
       {:wallaby, "~> 0.30", runtime: false, only: :test}
     ]
   end

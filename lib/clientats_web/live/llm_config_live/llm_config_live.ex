@@ -12,25 +12,32 @@ defmodule ClientatsWeb.LLMConfigLive do
     user_id = socket.assigns.current_user.id
     providers = Setting.providers()
     provider_statuses = LLMConfig.get_provider_status(user_id)
+    primary_provider = LLMConfig.get_primary_provider(user_id)
     active_provider = Enum.at(providers, 0)
 
-    socket =
-      socket
-      |> assign(:user_id, user_id)
-      |> assign(:providers, providers)
-      |> assign(:provider_statuses, provider_statuses)
-      |> assign(:active_provider, active_provider)
-      |> assign(:testing, false)
-      |> assign(:test_result, nil)
-      |> assign(:save_success, nil)
-      |> assign(:form_errors, %{})
-      |> assign(:ollama_models, [])
-      |> assign(:discovering_models, false)
-      |> assign(:provider_config, nil)
+    # If no providers configured, redirect to wizard
+    if Enum.empty?(provider_statuses) do
+      {:ok, redirect(socket, to: ~p"/dashboard/llm-setup")}
+    else
+      socket =
+        socket
+        |> assign(:user_id, user_id)
+        |> assign(:providers, providers)
+        |> assign(:provider_statuses, provider_statuses)
+        |> assign(:primary_provider, primary_provider)
+        |> assign(:active_provider, active_provider)
+        |> assign(:testing, false)
+        |> assign(:test_result, nil)
+        |> assign(:save_success, nil)
+        |> assign(:form_errors, %{})
+        |> assign(:ollama_models, [])
+        |> assign(:discovering_models, false)
+        |> assign(:provider_config, nil)
 
-    socket = load_provider_data(socket, user_id, active_provider)
+      socket = load_provider_data(socket, user_id, active_provider)
 
-    {:ok, socket}
+      {:ok, socket}
+    end
   end
 
   defp load_provider_data(socket, user_id, provider) do
@@ -90,77 +97,168 @@ defmodule ClientatsWeb.LLMConfigLive do
           </div>
         <% end %>
 
-        <div class="bg-white rounded-lg shadow p-6">
-          <div class="tabs tabs-bordered">
-            <%= for provider <- @providers do %>
-              <button
-                phx-click="select_provider"
-                phx-value-provider={provider}
-                class={
-                  "tab tab-bordered " <>
-                    if provider == @active_provider do
-                      "tab-active"
-                    else
-                      ""
-                    end
-                }
+        <!-- Provider List Section (List-First) -->
+        <div class="mb-8">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="text-2xl font-bold text-gray-900">Your Providers</h2>
+              <p class="text-sm text-gray-600">Manage your LLM providers. Drag to reorder, click Edit to modify.</p>
+            </div>
+            <.link navigate={~p"/dashboard/llm-setup"} class="btn btn-primary btn-sm">
+              + Add Provider
+            </.link>
+          </div>
+
+          <div class="bg-white rounded-lg shadow p-6">
+            <div class="mt-8 bg-white rounded-lg shadow p-6">
+              <h2 class="text-xl font-semibold text-gray-900 mb-4">Provider Status</h2>
+              <div
+                id="provider-list"
+                phx-hook="ProviderReorder"
+                class="space-y-4"
               >
-                <%= String.capitalize(provider) %>
-              </button>
-            <% end %>
-          </div>
+                <%= for status <- @provider_statuses do %>
+                  <div
+                    data-provider={status.provider}
+                    data-primary={status.provider == @primary_provider}
+                    class={
+                      "border rounded-lg p-4 transition-shadow cursor-move " <>
+                        if status.provider == @primary_provider do
+                          "border-primary border-2 bg-blue-50"
+                        else
+                          "border-gray-300"
+                        end
+                    }>
+                    <!-- Header Row -->
+                    <div class="flex items-center justify-between mb-3">
+                      <div class="flex items-center gap-3">
+                        <!-- Drag Handle -->
+                        <div class="drag-handle cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z"/>
+                          </svg>
+                        </div>
 
-          <div class="mt-6">
-            <.provider_form
-              provider={@active_provider}
-              user_id={@user_id}
-              testing={@testing}
-              test_result={@test_result}
-              save_success={@save_success}
-              form_errors={@form_errors}
-              provider_config={@provider_config}
-              ollama_models={@ollama_models}
-              discovering_models={@discovering_models}
-            />
-          </div>
-        </div>
+                        <div class="text-2xl">
+                          <%= provider_icon(status.provider) %>
+                        </div>
+                        <div>
+                          <div class="flex items-center gap-2">
+                            <p class="font-semibold text-gray-900">
+                              <%= String.capitalize(status.provider) %>
+                            </p>
+                            <%= if status.provider == @primary_provider do %>
+                              <span class="badge badge-sm badge-primary">Primary</span>
+                            <% end %>
+                          </div>
+                        </div>
+                      </div>
+                      <span class={status_badge_class(status)}>
+                        <%= status_label(status) %>
+                      </span>
+                    </div>
 
-        <div class="mt-8 bg-white rounded-lg shadow p-6">
-          <h2 class="text-xl font-semibold text-gray-900 mb-4">Provider Status</h2>
-          <div class="space-y-4">
-            <%= for status <- @provider_statuses do %>
-              <div class="flex items-center justify-between border rounded-lg p-4">
-                <div class="flex items-center gap-3">
-                  <div class={
-                    "w-3 h-3 rounded-full " <>
-                      if status.status == "connected" do
-                        "bg-green-500"
-                      else
-                        "bg-red-500"
-                      end
-                  }></div>
-                  <div>
-                    <p class="font-semibold text-gray-900">
-                      <%= String.capitalize(status.provider) %>
-                    </p>
-                    <%= if status.configured do %>
-                      <p class="text-sm text-gray-600">
-                        Model: <%= status.model || "Not configured" %>
-                      </p>
-                    <% else %>
-                      <p class="text-sm text-gray-500">Not configured</p>
-                    <% end %>
+                    <!-- Status Info Row -->
+                    <div class="space-y-2 mb-3">
+                      <!-- Last Tested -->
+                      <div class="text-sm text-gray-600">
+                        <%= if status.last_tested_at do %>
+                          Last tested: <span class="font-medium"><%= format_relative_time(status.last_tested_at) %></span>
+                        <% else %>
+                          <span class="text-gray-500">Not tested yet</span>
+                        <% end %>
+                      </div>
+
+                      <!-- Model Info -->
+                      <%= if status.model do %>
+                        <div class="text-sm text-gray-600">
+                          Model: <span class="font-medium"><%= status.model %></span>
+                        </div>
+                      <% end %>
+
+                      <!-- Error Message -->
+                      <%= if status.last_error do %>
+                        <div class="alert alert-error alert-sm py-2">
+                          <span class="text-sm"><%= status.last_error %></span>
+                        </div>
+                      <% end %>
+                    </div>
+
+                    <!-- Action Buttons Row -->
+                    <div class="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        phx-click="edit_provider"
+                        phx-value-provider={status.provider}
+                        class="btn btn-sm btn-outline"
+                        title="Go to provider configuration"
+                      >
+                        Edit
+                      </button>
+
+                      <button
+                        type="button"
+                        phx-click="test_provider_from_status"
+                        phx-value-provider={status.provider}
+                        class="btn btn-sm btn-outline"
+                        title="Test connection for this provider"
+                      >
+                        Test
+                      </button>
+
+                      <button
+                        type="button"
+                        phx-click="toggle_provider_enabled"
+                        phx-value-provider={status.provider}
+                        class={
+                          "btn btn-sm " <>
+                            if status.enabled do
+                              "btn-warning"
+                            else
+                              "btn-outline"
+                            end
+                        }
+                        title={if status.enabled do "Disable this provider" else "Enable this provider" end}
+                      >
+                        <%= if status.enabled do "Disable" else "Enable" end %>
+                      </button>
+
+                      <%= if status.provider != @primary_provider do %>
+                        <button
+                          type="button"
+                          phx-click="set_primary_provider"
+                          phx-value-provider={status.provider}
+                          class="btn btn-sm btn-outline"
+                          title="Set as primary provider"
+                        >
+                          Set as Primary
+                        </button>
+                      <% end %>
+
+                      <button
+                        type="button"
+                        phx-click="delete_provider"
+                        phx-value-provider={status.provider}
+                        data-confirm={delete_provider_message(status.provider, @primary_provider)}
+                        class="btn btn-sm btn-error"
+                        title="Delete this provider configuration"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
-                </div>
-                <div class="flex gap-2">
-                  <%= if status.enabled do %>
-                    <span class="badge badge-success">Enabled</span>
-                  <% else %>
-                    <span class="badge badge-outline">Disabled</span>
-                  <% end %>
-                </div>
+                <% end %>
               </div>
-            <% end %>
+
+              <%= if Enum.empty?(@provider_statuses) do %>
+                <div class="text-center py-8 text-gray-500">
+                  <p class="mb-4">No providers configured yet.</p>
+                  <.link navigate={~p"/dashboard/llm-setup"} class="btn btn-primary btn-sm">
+                    Get Started with Wizard
+                  </.link>
+                </div>
+              <% end %>
+            </div>
           </div>
         </div>
       </div>
@@ -169,7 +267,25 @@ defmodule ClientatsWeb.LLMConfigLive do
   end
 
   @impl true
-  def handle_event("select_provider", %{"provider" => provider}, socket) do
+  def handle_event("set_primary_provider", %{"provider" => provider}, socket) do
+    user_id = socket.assigns.user_id
+
+    case LLMConfig.set_primary_provider(user_id, provider) do
+      {:ok, _user} ->
+        provider_statuses = LLMConfig.get_provider_status(user_id)
+
+        {:noreply,
+         socket
+         |> assign(:primary_provider, provider)
+         |> assign(:provider_statuses, provider_statuses)
+         |> assign(:save_success, "#{String.capitalize(provider)} is now your primary LLM provider")}
+
+      {:error, _} ->
+        {:noreply, assign(socket, test_result: {:error, "Failed to set primary provider"})}
+    end
+  end
+
+  def handle_event("edit_provider", %{"provider" => provider}, socket) do
     {:noreply,
      socket
      |> assign(:active_provider, provider)
@@ -177,91 +293,141 @@ defmodule ClientatsWeb.LLMConfigLive do
      |> load_provider_data(socket.assigns.user_id, provider)}
   end
 
-  def handle_event("test_connection", %{"provider" => provider}, socket) do
+  def handle_event("test_provider_from_status", %{"provider" => provider}, socket) do
     user_id = socket.assigns.user_id
 
     case LLMConfig.get_provider_config(user_id, provider) do
       {:ok, config} ->
-        send(self(), {:test_connection, provider, config})
-        {:noreply, assign(socket, :testing, true)}
+        send(self(), {:test_connection_from_status, provider, config})
+        {:noreply, socket}
 
       {:error, :not_found} ->
         {:noreply, assign(socket, test_result: {:error, "Provider not configured"})}
     end
   end
 
-  def handle_event("discover_ollama_models", params, socket) do
-    # Try to get base_url from phx-value or form params
-    base_url =
-      case params do
-        %{"base_url" => url} when url != "" -> url
-        _ -> nil
-      end
+  def handle_event("toggle_provider_enabled", %{"provider" => provider}, socket) do
+    user_id = socket.assigns.user_id
 
-    # If not in params, try to get from provider_config
-    base_url = base_url || (socket.assigns.provider_config && socket.assigns.provider_config.base_url)
+    case LLMConfig.toggle_provider_enabled(user_id, provider) do
+      {:ok, updated_status} ->
+        provider_statuses = LLMConfig.get_provider_status(user_id)
 
-    # Filter out empty base_url
-    if base_url && base_url != "" do
-      send(self(), {:discover_ollama_models, base_url})
-      {:noreply, assign(socket, :discovering_models, true)}
-    else
-      {:noreply, assign(socket, :discovering_models, false)}
+        {:noreply,
+         socket
+         |> assign(:provider_statuses, provider_statuses)
+         |> assign(:save_success, "#{String.capitalize(provider)} has been #{if updated_status.enabled do "enabled" else "disabled" end}")}
+
+      {:error, _} ->
+        {:noreply, assign(socket, :test_result, {:error, "Failed to toggle provider"})}
     end
   end
 
-  def handle_event("save_config", %{"setting" => params}, socket) do
+  def handle_event("reorder_providers", %{"provider_order" => provider_order}, socket) do
     user_id = socket.assigns.user_id
-    provider = params["provider"]
 
-    config_params = %{
-      "provider" => provider,
-      "api_key" => params["api_key"],
-      "base_url" => params["base_url"],
-      "default_model" => params["default_model"],
-      "vision_model" => params["vision_model"],
-      "text_model" => params["text_model"],
-      "enabled" => params["enabled"] == "true",
-      "provider_status" => "configured"
-    }
+    case LLMConfig.reorder_providers(user_id, provider_order) do
+      {:ok, _count} ->
+        # Reload provider statuses to reflect new order
+        provider_statuses = LLMConfig.get_provider_status(user_id)
 
-    # Validate API key if provided
-    case LLMConfig.validate_api_key(provider, config_params["api_key"]) do
-      :ok ->
-        case LLMConfig.save_provider_config(user_id, provider, config_params) do
-          {:ok, _setting} ->
-            provider_statuses = LLMConfig.get_provider_status(user_id)
+        {:noreply,
+         socket
+         |> assign(:provider_statuses, provider_statuses)
+         |> assign(:save_success, "Provider order updated successfully")}
 
-            {:noreply,
-             socket
-             |> assign(:provider_statuses, provider_statuses)
-             |> assign(:save_success, "Configuration saved successfully for #{String.capitalize(provider)}")
-             |> assign(:form_errors, %{})}
+      {:error, _reason} ->
+        {:noreply, assign(socket, test_result: {:error, "Failed to update provider order"})}
+    end
+  end
 
-          {:error, changeset} ->
-            form_errors = Enum.into(changeset.errors, %{}, fn {key, {msg, _}} -> {key, msg} end)
+  def handle_event("delete_provider", %{"provider" => provider}, socket) do
+    user_id = socket.assigns.user_id
+    primary_provider = socket.assigns.primary_provider
 
-            {:noreply, assign(socket, form_errors: form_errors)}
+    case LLMConfig.delete_provider(user_id, provider) do
+      {:ok, _deleted_setting} ->
+        # If we deleted the primary provider, promote another or reset to default
+        new_primary = if provider == primary_provider do
+          promote_next_provider(user_id)
+        else
+          primary_provider
         end
 
-      {:error, msg} ->
-        {:noreply, assign(socket, form_errors: %{api_key: msg})}
+        # Update primary provider if it changed
+        :ok = if new_primary != primary_provider do
+          case LLMConfig.set_primary_provider(user_id, new_primary) do
+            {:ok, _} -> :ok
+            {:error, _} -> :ok
+          end
+        else
+          :ok
+        end
+
+        # Reload provider statuses
+        provider_statuses = LLMConfig.get_provider_status(user_id)
+
+        {:noreply,
+         socket
+         |> assign(:provider_statuses, provider_statuses)
+         |> assign(:primary_provider, new_primary)
+         |> assign(:save_success, "#{String.capitalize(provider)} provider deleted successfully")}
+
+      {:error, :not_found} ->
+        {:noreply, assign(socket, test_result: {:error, "Provider not found"})}
+
+      {:error, _reason} ->
+        {:noreply, assign(socket, test_result: {:error, "Failed to delete provider"})}
     end
   end
 
   @impl true
   def handle_info({:test_connection, provider, config}, socket) do
+    user_id = socket.assigns.user_id
+
     case LLMConfig.test_connection(provider, config) do
       {:ok, status} ->
+        LLMConfig.save_test_result(user_id, provider, {:ok, status})
+        provider_statuses = LLMConfig.get_provider_status(user_id)
+
         {:noreply,
          socket
          |> assign(:testing, false)
-         |> assign(:test_result, {:ok, status})}
+         |> assign(:test_result, {:ok, status})
+         |> assign(:provider_statuses, provider_statuses)}
 
       {:error, msg} ->
+        LLMConfig.save_test_result(user_id, provider, {:error, msg})
+        provider_statuses = LLMConfig.get_provider_status(user_id)
+
         {:noreply,
          socket
          |> assign(:testing, false)
+         |> assign(:test_result, {:error, msg})
+         |> assign(:provider_statuses, provider_statuses)}
+    end
+  end
+
+  def handle_info({:test_connection_from_status, provider, config}, socket) do
+    user_id = socket.assigns.user_id
+
+    case LLMConfig.test_connection(provider, config) do
+      {:ok, status} ->
+        LLMConfig.save_test_result(user_id, provider, {:ok, status})
+        provider_statuses = LLMConfig.get_provider_status(user_id)
+
+        {:noreply,
+         socket
+         |> assign(:provider_statuses, provider_statuses)
+         |> assign(:save_success, "#{String.capitalize(provider)} connection test successful!")}
+
+      {:error, msg} ->
+        LLMConfig.save_test_result(user_id, provider, {:error, msg})
+        provider_statuses = LLMConfig.get_provider_status(user_id)
+
+        {:noreply,
+         socket
+         |> assign(:provider_statuses, provider_statuses)
          |> assign(:test_result, {:error, msg})}
     end
   end
@@ -290,519 +456,92 @@ defmodule ClientatsWeb.LLMConfigLive do
     end
   end
 
-  defp provider_form(assigns) do
-    ~H"""
-    <.form :let={_f} for={%{}} as={:setting} phx-submit="save_config">
-      <input type="hidden" name="setting[provider]" value={@provider} />
 
-      <div class="space-y-6">
-        <!-- Enable/Disable Toggle -->
-        <div class="flex items-center gap-4">
-          <label class="label cursor-pointer flex items-center gap-2 flex-1">
-            <span class="label-text font-semibold">Enable this provider</span>
-            <input
-              type="checkbox"
-              name="setting[enabled]"
-              value="true"
-              checked={@provider_config && @provider_config.enabled}
-              class="checkbox"
-            />
-          </label>
-          <%= if @provider_config && @provider_config.enabled do %>
-            <span class="badge badge-success">Enabled</span>
-          <% else %>
-            <span class="badge badge-outline">Disabled</span>
-          <% end %>
-        </div>
-
-        <!-- Provider-specific fields -->
-        <div class="border-t pt-6">
-          <h3 class="font-semibold text-gray-900 mb-4">Configuration</h3>
-          <%= case @provider do %>
-            <% "openai" -> %>
-              <.openai_form provider={@provider} provider_config={@provider_config} form_errors={@form_errors} />
-            <% "anthropic" -> %>
-              <.anthropic_form provider={@provider} provider_config={@provider_config} form_errors={@form_errors} />
-            <% "mistral" -> %>
-              <.mistral_form provider={@provider} provider_config={@provider_config} form_errors={@form_errors} />
-            <% "gemini" -> %>
-              <.gemini_form provider={@provider} provider_config={@provider_config} form_errors={@form_errors} />
-            <% "ollama" -> %>
-              <.ollama_form provider={@provider} provider_config={@provider_config} form_errors={@form_errors} ollama_models={@ollama_models} discovering_models={@discovering_models} />
-          <% end %>
-        </div>
-
-        <!-- Test Connection Section -->
-        <div class="border-t pt-6">
-          <h3 class="font-semibold text-gray-900 mb-4">Connection Test</h3>
-          <div class="space-y-3">
-            <button
-              type="button"
-              phx-click="test_connection"
-              phx-value-provider={@provider}
-              disabled={@testing}
-              class="btn btn-outline w-full"
-            >
-              <%= if @testing do %>
-                <span class="loading loading-spinner loading-sm"></span>
-                Testing connection...
-              <% else %>
-                Test Connection
-              <% end %>
-            </button>
-
-            <!-- Test Result -->
-            <%= if @test_result do %>
-              <%= case @test_result do %>
-                <% {:ok, _} -> %>
-                  <div class="alert alert-success">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    <span>Connection successful!</span>
-                  </div>
-                <% {:error, msg} -> %>
-                  <div class="alert alert-error">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l-2-2m0 0l-2-2m2 2l2-2m-2 2l-2 2m2-2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    <span><%= msg %></span>
-                  </div>
-              <% end %>
-            <% end %>
-          </div>
-        </div>
-
-        <!-- Action Buttons -->
-        <div class="flex gap-2 pt-6 border-t">
-          <button type="submit" class="btn btn-primary">
-            Save Configuration
-          </button>
-          <.link navigate={~p"/dashboard"} class="btn btn-outline">
-            Cancel
-          </.link>
-        </div>
-      </div>
-    </.form>
-    """
-  end
-
-  defp openai_form(assigns) do
-    ~H"""
-    <div class="space-y-4">
-      <div class="form-control">
-        <label class="label">
-          <span class="label-text font-semibold">API Key</span>
-          <span class="label-text-alt text-gray-500">Get from https://platform.openai.com/api-keys</span>
-        </label>
-        <input
-          type="password"
-          name="setting[api_key]"
-          placeholder="sk-..."
-          value={@provider_config && @provider_config.api_key}
-          class="input input-bordered"
-        />
-        <%= if @form_errors[:api_key] do %>
-          <label class="label">
-            <span class="label-text-alt text-error"><%= @form_errors[:api_key] %></span>
-          </label>
-        <% end %>
-      </div>
-
-      <div class="form-control">
-        <label class="label">
-          <span class="label-text font-semibold">Default Model</span>
-          <span class="label-text-alt text-gray-500">e.g., gpt-4o</span>
-        </label>
-        <input
-          type="text"
-          name="setting[default_model]"
-          placeholder="gpt-4o"
-          value={@provider_config && @provider_config.default_model}
-          class="input input-bordered"
-        />
-      </div>
-
-      <div class="form-control">
-        <label class="label">
-          <span class="label-text font-semibold">Vision Model</span>
-          <span class="label-text-alt text-gray-500">e.g., gpt-4-vision</span>
-        </label>
-        <input
-          type="text"
-          name="setting[vision_model]"
-          placeholder="gpt-4-vision"
-          value={@provider_config && @provider_config.vision_model}
-          class="input input-bordered"
-        />
-      </div>
-
-      <div class="form-control">
-        <label class="label">
-          <span class="label-text font-semibold">Text Model</span>
-          <span class="label-text-alt text-gray-500">e.g., gpt-4o</span>
-        </label>
-        <input
-          type="text"
-          name="setting[text_model]"
-          placeholder="gpt-4o"
-          value={@provider_config && @provider_config.text_model}
-          class="input input-bordered"
-        />
-      </div>
-    </div>
-    """
-  end
-
-  defp anthropic_form(assigns) do
-    ~H"""
-    <div class="space-y-4">
-      <div class="form-control">
-        <label class="label">
-          <span class="label-text font-semibold">API Key</span>
-          <span class="label-text-alt text-gray-500">Get from https://console.anthropic.com/account/keys</span>
-        </label>
-        <input
-          type="password"
-          name="setting[api_key]"
-          placeholder="sk-ant-..."
-          value={@provider_config && @provider_config.api_key}
-          class="input input-bordered"
-        />
-        <%= if @form_errors[:api_key] do %>
-          <label class="label">
-            <span class="label-text-alt text-error"><%= @form_errors[:api_key] %></span>
-          </label>
-        <% end %>
-      </div>
-
-      <div class="form-control">
-        <label class="label">
-          <span class="label-text font-semibold">Default Model</span>
-          <span class="label-text-alt text-gray-500">e.g., claude-opus-4-20250514</span>
-        </label>
-        <input
-          type="text"
-          name="setting[default_model]"
-          placeholder="claude-opus-4-20250514"
-          value={@provider_config && @provider_config.default_model}
-          class="input input-bordered"
-        />
-      </div>
-
-      <div class="form-control">
-        <label class="label">
-          <span class="label-text font-semibold">Vision Model</span>
-          <span class="label-text-alt text-gray-500">e.g., claude-opus-4-20250514</span>
-        </label>
-        <input
-          type="text"
-          name="setting[vision_model]"
-          placeholder="claude-opus-4-20250514"
-          value={@provider_config && @provider_config.vision_model}
-          class="input input-bordered"
-        />
-      </div>
-
-      <div class="form-control">
-        <label class="label">
-          <span class="label-text font-semibold">Text Model</span>
-          <span class="label-text-alt text-gray-500">e.g., claude-opus-4-20250514</span>
-        </label>
-        <input
-          type="text"
-          name="setting[text_model]"
-          placeholder="claude-opus-4-20250514"
-          value={@provider_config && @provider_config.text_model}
-          class="input input-bordered"
-        />
-      </div>
-    </div>
-    """
-  end
-
-  defp mistral_form(assigns) do
-    ~H"""
-    <div class="space-y-4">
-      <div class="form-control">
-        <label class="label">
-          <span class="label-text font-semibold">API Key</span>
-          <span class="label-text-alt text-gray-500">Get from https://console.mistral.ai/api-keys</span>
-        </label>
-        <input
-          type="password"
-          name="setting[api_key]"
-          placeholder="Your Mistral API key"
-          value={@provider_config && @provider_config.api_key}
-          class="input input-bordered"
-        />
-        <%= if @form_errors[:api_key] do %>
-          <label class="label">
-            <span class="label-text-alt text-error"><%= @form_errors[:api_key] %></span>
-          </label>
-        <% end %>
-      </div>
-
-      <div class="form-control">
-        <label class="label">
-          <span class="label-text font-semibold">Default Model</span>
-          <span class="label-text-alt text-gray-500">e.g., mistral-large-latest</span>
-        </label>
-        <input
-          type="text"
-          name="setting[default_model]"
-          placeholder="mistral-large-latest"
-          value={@provider_config && @provider_config.default_model}
-          class="input input-bordered"
-        />
-      </div>
-
-      <div class="form-control">
-        <label class="label">
-          <span class="label-text font-semibold">Vision Model</span>
-          <span class="label-text-alt text-gray-500">e.g., mistral-vision-latest</span>
-        </label>
-        <input
-          type="text"
-          name="setting[vision_model]"
-          placeholder="mistral-vision-latest"
-          value={@provider_config && @provider_config.vision_model}
-          class="input input-bordered"
-        />
-      </div>
-
-      <div class="form-control">
-        <label class="label">
-          <span class="label-text font-semibold">Text Model</span>
-          <span class="label-text-alt text-gray-500">e.g., mistral-large-latest</span>
-        </label>
-        <input
-          type="text"
-          name="setting[text_model]"
-          placeholder="mistral-large-latest"
-          value={@provider_config && @provider_config.text_model}
-          class="input input-bordered"
-        />
-      </div>
-    </div>
-    """
-  end
-
-  defp gemini_form(assigns) do
-    ~H"""
-    <div class="space-y-4">
-      <div class="form-control">
-        <label class="label">
-          <span class="label-text font-semibold">API Key</span>
-          <span class="label-text-alt text-gray-500">Get from https://aistudio.google.com/apikey</span>
-        </label>
-        <input
-          type="password"
-          name="setting[api_key]"
-          placeholder="Your Google Gemini API key"
-          value={@provider_config && @provider_config.api_key}
-          class="input input-bordered"
-        />
-        <%= if @form_errors[:api_key] do %>
-          <label class="label">
-            <span class="label-text-alt text-error"><%= @form_errors[:api_key] %></span>
-          </label>
-        <% end %>
-      </div>
-
-      <div class="form-control">
-        <label class="label">
-          <span class="label-text font-semibold">Default Model</span>
-          <span class="label-text-alt text-gray-500">e.g., gemini-2.0-flash, gemini-1.5-pro</span>
-        </label>
-        <input
-          type="text"
-          name="setting[default_model]"
-          placeholder="gemini-2.0-flash"
-          value={@provider_config && @provider_config.default_model}
-          class="input input-bordered"
-        />
-        <span class="label-text-alt text-gray-600">Used for general text processing</span>
-      </div>
-
-      <div class="form-control">
-        <label class="label">
-          <span class="label-text font-semibold">Vision Model</span>
-          <span class="label-text-alt text-gray-500">e.g., gemini-2.0-flash, gemini-1.5-pro</span>
-        </label>
-        <input
-          type="text"
-          name="setting[vision_model]"
-          placeholder="gemini-2.0-flash"
-          value={@provider_config && @provider_config.vision_model}
-          class="input input-bordered"
-        />
-        <span class="label-text-alt text-gray-600">Model with vision capabilities for image processing</span>
-      </div>
-
-      <div class="form-control">
-        <label class="label">
-          <span class="label-text font-semibold">Text Model</span>
-          <span class="label-text-alt text-gray-500">e.g., gemini-2.0-flash, gemini-1.5-pro</span>
-        </label>
-        <input
-          type="text"
-          name="setting[text_model]"
-          placeholder="gemini-2.0-flash"
-          value={@provider_config && @provider_config.text_model}
-          class="input input-bordered"
-        />
-        <span class="label-text-alt text-gray-600">Model for text-only tasks</span>
-      </div>
-
-      <div class="alert alert-info">
-        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-        <div>
-          <p class="font-semibold mb-1">Getting Started with Google Gemini</p>
-          <ul class="text-sm list-disc list-inside space-y-1">
-            <li>Get your API key from <a href="https://aistudio.google.com/apikey" target="_blank" class="link link-primary">Google AI Studio</a></li>
-            <li>Enable the Gemini API in your Google Cloud Console</li>
-            <li>Use the "Test Connection" button to verify your API key</li>
-            <li>Most Gemini models support both text and vision capabilities</li>
-          </ul>
-        </div>
-      </div>
-    </div>
-    """
-  end
-
-  defp ollama_form(assigns) do
-    assigns = assign(
-      assigns,
-      :text_models,
-      Enum.filter(assigns[:ollama_models] || [], fn m -> !m.vision end)
-    )
-
-    assigns = assign(
-      assigns,
-      :vision_models,
-      Enum.filter(assigns[:ollama_models] || [], fn m -> m.vision end)
-    )
-
-    ~H"""
-    <div class="space-y-4">
-      <div class="form-control">
-        <label class="label">
-          <span class="label-text font-semibold">Base URL</span>
-          <span class="label-text-alt text-gray-500">e.g., http://localhost:11434</span>
-        </label>
-        <div class="flex gap-2">
-          <input
-            type="text"
-            id="ollama_base_url"
-            name="setting[base_url]"
-            placeholder="http://localhost:11434"
-            class="input input-bordered flex-1"
-            value={@provider_config && @provider_config.base_url}
-          />
-          <button
-            type="button"
-            phx-click="discover_ollama_models"
-            phx-value-base_url={@provider_config && @provider_config.base_url}
-            disabled={@discovering_models}
-            class="btn btn-primary"
-            onclick="this.setAttribute('phx-value-base_url', document.getElementById('ollama_base_url').value)"
-          >
-            <%= if @discovering_models, do: "Discovering...", else: "Discover Models" %>
-          </button>
-        </div>
-        <span class="label-text-alt text-gray-600">The URL where Ollama is running</span>
-      </div>
-
-      <%= if length(@ollama_models) > 0 do %>
-        <div class="form-control">
-          <label class="label">
-            <span class="label-text font-semibold">Default Model (Text)</span>
-            <span class="label-text-alt text-gray-500">General text processing</span>
-          </label>
-          <select
-            name="setting[default_model]"
-            class="select select-bordered"
-          >
-            <option value="">Select a text model...</option>
-            <%= for model <- @text_models do %>
-              <option
-                value={model.name}
-                selected={@provider_config && @provider_config.default_model == model.name}
-              >
-                <%= model.name %>
-              </option>
-            <% end %>
-          </select>
-          <span class="label-text-alt text-gray-600">Used for general text processing</span>
-        </div>
-
-        <div class="form-control">
-          <label class="label">
-            <span class="label-text font-semibold">Text Model</span>
-            <span class="label-text-alt text-gray-500">Explicit text-only tasks</span>
-          </label>
-          <select
-            name="setting[text_model]"
-            class="select select-bordered"
-          >
-            <option value="">Select a text model...</option>
-            <%= for model <- @text_models do %>
-              <option
-                value={model.name}
-                selected={@provider_config && @provider_config.text_model == model.name}
-              >
-                <%= model.name %>
-              </option>
-            <% end %>
-          </select>
-          <span class="label-text-alt text-gray-600">Explicit model for text-only tasks</span>
-        </div>
-
-        <div class="form-control">
-          <label class="label">
-            <span class="label-text font-semibold">Vision Model</span>
-            <span class="label-text-alt text-gray-500">Image processing</span>
-          </label>
-          <select
-            name="setting[vision_model]"
-            class="select select-bordered"
-          >
-            <option value="">Select a vision model...</option>
-            <%= for model <- @vision_models do %>
-              <option
-                value={model.name}
-                selected={@provider_config && @provider_config.vision_model == model.name}
-              >
-                <%= model.name %>
-              </option>
-            <% end %>
-          </select>
-          <span class="label-text-alt text-gray-600">Model with vision capabilities for image processing</span>
-        </div>
-      <% else %>
-        <div class="alert alert-warning">
-          <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4v.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-          <span>Click "Discover Models" to fetch available models from your Ollama instance</span>
-        </div>
-      <% end %>
-
-      <div class="alert alert-info">
-        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-        <div>
-          <p class="font-semibold mb-1">Getting Started with Ollama</p>
-          <ul class="text-sm list-disc list-inside space-y-1">
-            <li>Ensure Ollama is running at the Base URL</li>
-            <li>Models must be installed locally (e.g., <code class="text-xs bg-gray-100 px-1 rounded">ollama pull mistral</code>)</li>
-            <li>Click "Discover Models" to automatically populate available models</li>
-            <li>Use the "Test Connection" button to verify your setup</li>
-          </ul>
-        </div>
-      </div>
-    </div>
-    """
-  end
-
-  # Helper function to detect if a model has vision capabilities
   defp has_vision_capability(model_name) do
     vision_indicators = ["vision", "llava", "qwen", "vl", "multimodal", "image", "gpt-4v"]
     String.downcase(model_name)
     |> (fn name -> Enum.any?(vision_indicators, &String.contains?(name, &1)) end).()
+  end
+
+  # Helper functions for Provider Status section
+  defp provider_icon(provider) do
+    case provider do
+      "gemini" -> "☁️"
+      "ollama" -> "🖥️"
+      _ -> "⚙️"
+    end
+  end
+
+  defp status_label(status_info) when is_map(status_info) do
+    cond do
+      status_info.enabled && status_info.last_tested_at ->
+        "Connected"
+      status_info.enabled ->
+        "Configured"
+      status_info.last_error ->
+        "Error"
+      true ->
+        "Disabled"
+    end
+  end
+
+  defp status_badge_class(status_info) when is_map(status_info) do
+    cond do
+      status_info.enabled && status_info.last_tested_at ->
+        "badge badge-success badge-lg"
+      status_info.enabled ->
+        "badge badge-warning badge-lg"
+      status_info.last_error ->
+        "badge badge-error badge-lg"
+      true ->
+        "badge badge-ghost badge-lg"
+    end
+  end
+
+  defp format_relative_time(nil), do: "Never"
+
+  defp format_relative_time(%NaiveDateTime{} = datetime) do
+    now = NaiveDateTime.utc_now()
+    seconds_ago = NaiveDateTime.diff(now, datetime)
+
+    cond do
+      seconds_ago < 60 -> "Just now"
+      seconds_ago < 3600 -> "#{div(seconds_ago, 60)} minutes ago"
+      seconds_ago < 86400 -> "#{div(seconds_ago, 3600)} hours ago"
+      seconds_ago < 604800 -> "#{div(seconds_ago, 86400)} days ago"
+      true -> "#{div(seconds_ago, 604800)} weeks ago"
+    end
+  end
+
+  defp format_relative_time(_), do: "Unknown"
+
+  defp promote_next_provider(user_id) do
+    # Get all enabled providers, sorted by sort_order
+    providers = LLMConfig.list_providers(user_id)
+
+    # Find the first enabled provider (in sort order)
+    next_provider = Enum.find(providers, fn p -> p.enabled end)
+
+    if next_provider do
+      next_provider.provider
+    else
+      # No other enabled providers, default to gemini
+      "gemini"
+    end
+  end
+
+  defp delete_provider_message(provider_name, primary_provider) do
+    if provider_name == primary_provider do
+      """
+      You are about to delete your PRIMARY provider (#{String.capitalize(provider_name)}).
+
+      Your next enabled provider will automatically be promoted to primary.
+      If no other providers are available, Gemini will be set as default.
+
+      Are you sure?
+      """
+    else
+      "Are you sure you want to delete the #{String.capitalize(provider_name)} provider configuration?"
+    end
   end
 end

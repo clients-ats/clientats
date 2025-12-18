@@ -86,7 +86,7 @@ defmodule ClientatsWeb.JobInterestLive.New do
                     <span class="text-gray-400">Import from URL (disabled)</span>
                   </p>
                   <p class="text-xs text-gray-400 mt-1">
-                    <.link navigate={~p"/dashboard/llm-config"} class="text-blue-600 hover:text-blue-800">
+                    <.link navigate={~p"/dashboard/llm-setup"} class="text-blue-600 hover:text-blue-800">
                       Configure an LLM provider
                     </.link>
                   </p>

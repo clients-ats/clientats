@@ -12,6 +12,18 @@ config :clientats,
   generators: [timestamp_type: :utc_datetime],
   llm_encryption_key: "default-dev-key-for-local-development-only"
 
+# Configure Oban background job queue
+config :clientats, Oban,
+  repo: Clientats.Repo,
+  plugins: [
+    {Oban.Plugins.Pruner, interval: :timer.hours(12)}
+  ],
+  queues: [
+    scrape: [limit: 10],
+    default: [limit: 50],
+    low: [limit: 20]
+  ]
+
 # Configures the endpoint
 config :clientats, ClientatsWeb.Endpoint,
   url: [host: "localhost"],
