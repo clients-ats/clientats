@@ -72,7 +72,9 @@ defmodule Clientats.Validation do
     - {:error, reason} if validation fails
   """
   @spec validate_text(String.t(), opts :: keyword()) :: {:ok, String.t()} | {:error, atom()}
-  def validate_text(text, opts \\ []) when is_binary(text) do
+  def validate_text(text, opts \\ [])
+
+  def validate_text(text, opts) when is_binary(text) do
     max_length = Keyword.get(opts, :max_length, 50_000)
     min_length = Keyword.get(opts, :min_length, 1)
 
@@ -180,6 +182,8 @@ defmodule Clientats.Validation do
           allowed_types :: [String.t()]
         ) :: {:ok, String.t()} | {:error, atom()}
   def validate_file_upload(filename, size, allowed_types \\ ["pdf", "doc", "docx"])
+
+  def validate_file_upload(filename, size, allowed_types)
       when is_binary(filename) and is_integer(size) and is_list(allowed_types) do
     max_size = 10 * 1024 * 1024  # 10MB
 
