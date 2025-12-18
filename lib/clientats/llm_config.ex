@@ -393,8 +393,10 @@ defmodule Clientats.LLMConfig do
         headers = [{"x-goog-api-key", api_key}]
         body = %{"contents" => [%{"parts" => [%{"text" => "Test"}]}]}
 
-        Logger.info("Gemini test: Sending request", url: url, headers: inspect(headers))
-        Logger.debug("Gemini test: Request body", body: inspect(body))
+        Logger.info("=== GEMINI CONNECTION TEST ===")
+        Logger.info("URL: #{url}")
+        Logger.info("Headers: #{inspect(headers, pretty: true)}")
+        Logger.info("Request Body: #{inspect(body, pretty: true)}")
 
         response = Req.post!(
           url,
@@ -403,15 +405,18 @@ defmodule Clientats.LLMConfig do
           receive_timeout: 5000
         )
 
-        Logger.info("Gemini test: Response received", status: response.status)
-        Logger.debug("Gemini test: Response headers", headers: inspect(response.headers))
-        Logger.debug("Gemini test: Response body", body: inspect(response.body))
+        Logger.info("=== GEMINI RESPONSE ===")
+        Logger.info("Status: #{response.status}")
+        Logger.info("Headers: #{inspect(response.headers, pretty: true)}")
+        Logger.info("Body: #{inspect(response.body, pretty: true)}")
 
         handle_gemini_response(response)
       rescue
         e ->
           error_type = e.__struct__
-          Logger.error("Gemini test: Exception raised", error: Exception.message(e), type: error_type)
+          Logger.error("=== GEMINI ERROR ===")
+          Logger.error("Exception Type: #{error_type}")
+          Logger.error("Exception Message: #{Exception.message(e)}")
           handle_gemini_connection_error(e)
       end
     end
