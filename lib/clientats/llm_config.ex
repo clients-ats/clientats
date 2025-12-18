@@ -334,6 +334,7 @@ defmodule Clientats.LLMConfig do
   end
 
   defp test_ollama_connection(config) do
+    require Logger
     # Handle both maps (from wizard) and structs (from configuration page)
     base_url =
       cond do
@@ -345,21 +346,34 @@ defmodule Clientats.LLMConfig do
     base_url = base_url || "http://localhost:11434"
 
     try do
-      case Req.get!("#{base_url}/api/tags", receive_timeout: 5000) do
+      url = "#{base_url}/api/tags"
+      Logger.info("Ollama test: Sending request", url: url)
+
+      response = Req.get!(url, receive_timeout: 5000)
+
+      Logger.info("Ollama test: Response received", status: response.status)
+      Logger.debug("Ollama test: Response headers", headers: inspect(response.headers))
+      Logger.debug("Ollama test: Response body", body: inspect(response.body))
+
+      case response do
         %{status: 200} ->
+          Logger.info("Ollama test: Connection successful")
           {:ok, "connected"}
 
         %{status: status} ->
+          Logger.warning("Ollama test: Connection failed", status: status, body: inspect(response.body))
           {:error, "Connection failed with status #{status}"}
       end
     rescue
       e ->
         error_msg = Exception.message(e)
+        Logger.error("Ollama test: Exception raised", error: error_msg, type: Exception.type(e))
         {:error, "Failed to connect: #{error_msg}"}
     end
   end
 
   defp test_gemini_connection(config) do
+    require Logger
     # Handle both maps (from wizard) and structs (from configuration page)
     api_key =
       cond do
@@ -370,21 +384,32 @@ defmodule Clientats.LLMConfig do
       end
 
     if is_nil(api_key) or api_key == "" do
+      Logger.warning("Gemini test: No API key provided")
       {:error, "API key is required"}
     else
       try do
+        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+        headers = [{"x-goog-api-key", api_key}]
+        body = %{"contents" => [%{"parts" => [%{"text" => "Test"}]}]}
+
+        Logger.info("Gemini test: Sending request", url: url, headers: inspect(headers))
+        Logger.debug("Gemini test: Request body", body: inspect(body))
+
         response = Req.post!(
-          "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
-          headers: [{"x-goog-api-key", api_key}],
-          json: %{
-            "contents" => [%{"parts" => [%{"text" => "Test"}]}]
-          },
+          url,
+          headers: headers,
+          json: body,
           receive_timeout: 5000
         )
+
+        Logger.info("Gemini test: Response received", status: response.status)
+        Logger.debug("Gemini test: Response headers", headers: inspect(response.headers))
+        Logger.debug("Gemini test: Response body", body: inspect(response.body))
 
         handle_gemini_response(response)
       rescue
         e ->
+          Logger.error("Gemini test: Exception raised", error: Exception.message(e), type: Exception.type(e))
           handle_gemini_connection_error(e)
       end
     end
@@ -420,8 +445,8 @@ defmodule Clientats.LLMConfig do
   defp handle_gemini_response(%{status: 429, body: body}) do
     require Logger
     error_detail = extract_gemini_error_message(body)
-    Logger.warning("Gemini rate limited: #{error_detail}", provider: "gemini", status: 429)
-    {:error, "Rate limited: Too many requests. Please wait before trying again."}
+    Logger.warning("Gemini rate limited", provider: "gemini", status: 429, error_detail: error_detail, full_body: inspect(body))
+    {:error, "Rate limited: Too many requests. Please wait before trying again. Details: #{error_detail}"}
   end
 
   defp handle_gemini_response(%{status: 500, body: body}) do
