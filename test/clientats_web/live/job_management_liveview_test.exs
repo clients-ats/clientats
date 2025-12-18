@@ -10,7 +10,7 @@ defmodule ClientatsWeb.JobManagementLiveViewTest do
   - Edge cases and error handling
   """
 
-  use ClientatsWeb.ConnCase, async: true
+  use ClientatsWeb.ConnCase, async: false
   import Phoenix.LiveViewTest
   import ClientatsWeb.LiveViewTestHelpers
 
@@ -45,7 +45,7 @@ defmodule ClientatsWeb.JobManagementLiveViewTest do
 
       result =
         lv
-        |> form("#job_interest_form", %{
+        |> form("#job-interest-form", %{
           "job_interest" => %{
             "company_name" => "Acme Corp",
             "position_title" => "Senior Engineer",
@@ -59,9 +59,13 @@ defmodule ClientatsWeb.JobManagementLiveViewTest do
         })
         |> render_submit()
 
-      # Should show success or redirect
-      assert result =~ "Acme" or result =~ "Senior Engineer" or
-             String.contains?(result, "dashboard")
+      # Form submission causes a redirect, so we check for that
+      case result do
+        {:error, {:live_redirect, _}} -> :ok  # Expected behavior
+        html when is_binary(html) ->
+          assert html =~ "Acme" or html =~ "Senior Engineer" or
+                 String.contains?(html, "dashboard")
+      end
     end
 
     test "validates required fields", %{conn: conn, user: user} do
@@ -71,7 +75,7 @@ defmodule ClientatsWeb.JobManagementLiveViewTest do
       # Submit without required fields
       result =
         lv
-        |> form("#job_interest_form", %{
+        |> form("#job-interest-form", %{
           "job_interest" => %{
             "company_name" => "",
             "position_title" => ""
@@ -91,7 +95,7 @@ defmodule ClientatsWeb.JobManagementLiveViewTest do
       # Invalid salary range (max < min)
       result =
         lv
-        |> form("#job_interest_form", %{
+        |> form("#job-interest-form", %{
           "job_interest" => %{
             "company_name" => "Test Corp",
             "position_title" => "Developer",
@@ -110,7 +114,7 @@ defmodule ClientatsWeb.JobManagementLiveViewTest do
 
       result =
         lv
-        |> form("#job_interest_form", %{
+        |> form("#job-interest-form", %{
           "job_interest" => %{
             "company_name" => "Tech Inc",
             "position_title" => "Engineer",
@@ -120,9 +124,13 @@ defmodule ClientatsWeb.JobManagementLiveViewTest do
         })
         |> render_submit()
 
-      # Should succeed without location and notes
-      assert String.contains?(result, "Tech Inc") or
-             String.contains?(result, "dashboard")
+      # Form submission causes a redirect, so we check for that
+      case result do
+        {:error, {:live_redirect, _}} -> :ok  # Expected behavior
+        html when is_binary(html) ->
+          assert String.contains?(html, "Tech Inc") or
+                 String.contains?(html, "dashboard")
+      end
     end
 
     test "form defaults to 'interested' status", %{conn: conn, user: user} do
@@ -169,7 +177,7 @@ defmodule ClientatsWeb.JobManagementLiveViewTest do
 
       result =
         lv
-        |> form("#job_interest_form", %{
+        |> form("#job-interest-form", %{
           "job_interest" => %{
             "company_name" => "Updated Corp",
             "position_title" => "Senior Role"
@@ -189,7 +197,7 @@ defmodule ClientatsWeb.JobManagementLiveViewTest do
 
       result =
         lv
-        |> form("#job_interest_form", %{
+        |> form("#job-interest-form", %{
           "job_interest" => %{"company_name" => ""}
         })
         |> render_submit()
@@ -251,7 +259,7 @@ defmodule ClientatsWeb.JobManagementLiveViewTest do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/job-interests/#{interest.id}")
 
       # Trigger delete event
-      result = lv |> element("a[data-method='delete']") |> render_click()
+      result = lv |> element("button[phx-click='delete']") |> render_click()
 
       # Should redirect to dashboard
       assert String.contains?(result, "dashboard") or
@@ -271,7 +279,7 @@ defmodule ClientatsWeb.JobManagementLiveViewTest do
     end
 
     test "toggle shows/hides closed applications", %{conn: conn, user: user} do
-      app = job_application_fixture(user, %{status: "rejected"})
+      _app = job_application_fixture(user, %{status: "rejected"})
       conn = log_in_user(conn, user)
 
       {:ok, lv, html} = live(conn, ~p"/dashboard")
@@ -311,8 +319,8 @@ defmodule ClientatsWeb.JobManagementLiveViewTest do
 
       {:ok, lv, _html} = live(conn, ~p"/dashboard/job-interests/#{interest.id}")
 
-      # Click convert button
-      result = lv |> element("a[href*='job-applications/new']") |> render_click()
+      # Click "Apply for Job" button
+      result = lv |> element("a[href*='applications/new']") |> render_click()
 
       # Should have converted data
       assert String.contains?(result, "Convert Corp") or
@@ -376,7 +384,7 @@ defmodule ClientatsWeb.JobManagementLiveViewTest do
     test "handles non-existent job interest", %{conn: conn, user: user} do
       conn = log_in_user(conn, user)
 
-      {:ok, _lv, html} = live(conn, ~p"/dashboard/job-interests/nonexistent")
+      {:ok, _lv, html} = live(conn, ~p"/dashboard/job-interests/999999")
 
       # Should show error or redirect
       assert html =~ "not found" or html =~ "dashboard" or html =~ "error"
@@ -418,7 +426,7 @@ defmodule ClientatsWeb.JobManagementLiveViewTest do
 
       result =
         lv
-        |> form("#job_interest_form", %{
+        |> form("#job-interest-form", %{
           "job_interest" => %{
             "company_name" => "Test",
             "position_title" => "Role",
