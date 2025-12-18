@@ -540,7 +540,10 @@ defmodule ClientatsWeb.LLMWizardLive do
     provider = socket.assigns.provider_choice
     config = if provider == "gemini", do: socket.assigns.gemini_config, else: socket.assigns.ollama_config
 
-    case LLMConfig.save_provider_config(user_id, provider, config) do
+    # Enable the provider by default when creating from wizard
+    config_with_enabled = Map.put(config, "enabled", true)
+
+    case LLMConfig.save_provider_config(user_id, provider, config_with_enabled) do
       {:ok, _setting} ->
         # Set as primary provider
         LLMConfig.set_primary_provider(user_id, provider)
