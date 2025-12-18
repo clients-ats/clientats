@@ -154,8 +154,8 @@ defmodule ClientatsWeb.LLMConfigLive do
                           </div>
                         </div>
                       </div>
-                      <span class={status_badge_class(status.status)}>
-                        <%= status_label(status.status) %>
+                      <span class={status_badge_class(status)}>
+                        <%= status_label(status) %>
                       </span>
                     </div>
 
@@ -262,76 +262,12 @@ defmodule ClientatsWeb.LLMConfigLive do
             </div>
           </div>
         </div>
-
-        <!-- Configuration Section (Below List) -->
-        <div class="bg-white rounded-lg shadow p-6">
-          <div class="flex items-center justify-between mb-6">
-            <div>
-              <h2 class="text-xl font-semibold text-gray-900 mb-1">Configure Provider</h2>
-              <p class="text-sm text-gray-600">Add a new provider or edit existing configuration.</p>
-            </div>
-          </div>
-
-          <div class="tabs tabs-bordered">
-            <%= for provider <- @providers do %>
-              <button
-                phx-click="select_provider"
-                phx-value-provider={provider}
-                class={
-                  "tab tab-bordered " <>
-                    if provider == @active_provider do
-                      "tab-active"
-                    else
-                      ""
-                    end
-                }
-              >
-                <%= String.capitalize(provider) %>
-              </button>
-            <% end %>
-          </div>
-
-          <div class="mt-6">
-            <.provider_form
-              provider={@active_provider}
-              user_id={@user_id}
-              testing={@testing}
-              test_result={@test_result}
-              save_success={@save_success}
-              form_errors={@form_errors}
-              provider_config={@provider_config}
-              ollama_models={@ollama_models}
-              discovering_models={@discovering_models}
-            />
-          </div>
-        </div>
       </div>
     </div>
     """
   end
 
   @impl true
-  def handle_event("select_provider", %{"provider" => provider}, socket) do
-    {:noreply,
-     socket
-     |> assign(:active_provider, provider)
-     |> assign(:test_result, nil)
-     |> load_provider_data(socket.assigns.user_id, provider)}
-  end
-
-  def handle_event("test_connection", %{"provider" => provider}, socket) do
-    user_id = socket.assigns.user_id
-
-    case LLMConfig.get_provider_config(user_id, provider) do
-      {:ok, config} ->
-        send(self(), {:test_connection, provider, config})
-        {:noreply, assign(socket, :testing, true)}
-
-      {:error, :not_found} ->
-        {:noreply, assign(socket, test_result: {:error, "Provider not configured"})}
-    end
-  end
-
   def handle_event("set_primary_provider", %{"provider" => provider}, socket) do
     user_id = socket.assigns.user_id
 
@@ -446,65 +382,6 @@ defmodule ClientatsWeb.LLMConfigLive do
     end
   end
 
-  def handle_event("discover_ollama_models", params, socket) do
-    # Try to get base_url from phx-value or form params
-    base_url =
-      case params do
-        %{"base_url" => url} when url != "" -> url
-        _ -> nil
-      end
-
-    # If not in params, try to get from provider_config
-    base_url = base_url || (socket.assigns.provider_config && socket.assigns.provider_config.base_url)
-
-    # Filter out empty base_url
-    if base_url && base_url != "" do
-      send(self(), {:discover_ollama_models, base_url})
-      {:noreply, assign(socket, :discovering_models, true)}
-    else
-      {:noreply, assign(socket, :discovering_models, false)}
-    end
-  end
-
-  def handle_event("save_config", %{"setting" => params}, socket) do
-    user_id = socket.assigns.user_id
-    provider = params["provider"]
-
-    config_params = %{
-      "provider" => provider,
-      "api_key" => params["api_key"],
-      "base_url" => params["base_url"],
-      "default_model" => params["default_model"],
-      "vision_model" => params["vision_model"],
-      "text_model" => params["text_model"],
-      "enabled" => params["enabled"] == "true",
-      "provider_status" => "configured"
-    }
-
-    # Validate API key if provided
-    case LLMConfig.validate_api_key(provider, config_params["api_key"]) do
-      :ok ->
-        case LLMConfig.save_provider_config(user_id, provider, config_params) do
-          {:ok, _setting} ->
-            provider_statuses = LLMConfig.get_provider_status(user_id)
-
-            {:noreply,
-             socket
-             |> assign(:provider_statuses, provider_statuses)
-             |> assign(:save_success, "Configuration saved successfully for #{String.capitalize(provider)}")
-             |> assign(:form_errors, %{})}
-
-          {:error, changeset} ->
-            form_errors = Enum.into(changeset.errors, %{}, fn {key, {msg, _}} -> {key, msg} end)
-
-            {:noreply, assign(socket, form_errors: form_errors)}
-        end
-
-      {:error, msg} ->
-        {:noreply, assign(socket, form_errors: %{api_key: msg})}
-    end
-  end
-
   @impl true
   def handle_info({:test_connection, provider, config}, socket) do
     user_id = socket.assigns.user_id
@@ -580,92 +457,6 @@ defmodule ClientatsWeb.LLMConfigLive do
     end
   end
 
-  defp provider_form(assigns) do
-    ~H"""
-    <.form :let={_f} for={%{}} as={:setting} phx-submit="save_config">
-      <input type="hidden" name="setting[provider]" value={@provider} />
-
-      <div class="space-y-6">
-        <!-- Enable/Disable Toggle -->
-        <div class="flex items-center gap-4">
-          <label class="label cursor-pointer flex items-center gap-2 flex-1">
-            <span class="label-text font-semibold">Enable this provider</span>
-            <input
-              type="checkbox"
-              name="setting[enabled]"
-              value="true"
-              checked={@provider_config && @provider_config.enabled}
-              class="checkbox"
-            />
-          </label>
-          <%= if @provider_config && @provider_config.enabled do %>
-            <span class="badge badge-success">Enabled</span>
-          <% else %>
-            <span class="badge badge-outline">Disabled</span>
-          <% end %>
-        </div>
-
-        <!-- Provider-specific fields -->
-        <div class="border-t pt-6">
-          <h3 class="font-semibold text-gray-900 mb-4">Configuration</h3>
-          <%= case @provider do %>
-            <% "gemini" -> %>
-              <GeminiForm.render provider_config={@provider_config} form_errors={@form_errors} />
-            <% "ollama" -> %>
-              <OllamaForm.render provider_config={@provider_config} form_errors={@form_errors} ollama_models={@ollama_models} discovering_models={@discovering_models} />
-          <% end %>
-        </div>
-
-        <!-- Test Connection Section -->
-        <div class="border-t pt-6">
-          <h3 class="font-semibold text-gray-900 mb-4">Connection Test</h3>
-          <div class="space-y-3">
-            <button
-              type="button"
-              phx-click="test_connection"
-              phx-value-provider={@provider}
-              disabled={@testing}
-              class="btn btn-outline w-full"
-            >
-              <%= if @testing do %>
-                <span class="loading loading-spinner loading-sm"></span>
-                Testing connection...
-              <% else %>
-                Test Connection
-              <% end %>
-            </button>
-
-            <!-- Test Result -->
-            <%= if @test_result do %>
-              <%= case @test_result do %>
-                <% {:ok, _} -> %>
-                  <div class="alert alert-success">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    <span>Connection successful!</span>
-                  </div>
-                <% {:error, msg} -> %>
-                  <div class="alert alert-error">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l-2-2m0 0l-2-2m2 2l2-2m-2 2l-2 2m2-2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    <span><%= msg %></span>
-                  </div>
-              <% end %>
-            <% end %>
-          </div>
-        </div>
-
-        <!-- Action Buttons -->
-        <div class="flex gap-2 pt-6 border-t">
-          <button type="submit" class="btn btn-primary">
-            Save Configuration
-          </button>
-          <.link navigate={~p"/dashboard"} class="btn btn-outline">
-            Cancel
-          </.link>
-        </div>
-      </div>
-    </.form>
-    """
-  end
 
   defp has_vision_capability(model_name) do
     vision_indicators = ["vision", "llava", "qwen", "vl", "multimodal", "image", "gpt-4v"]
@@ -682,31 +473,28 @@ defmodule ClientatsWeb.LLMConfigLive do
     end
   end
 
-  defp status_label(status) do
-    case status do
-      "connected" -> "Connected"
-      "configured" -> "Configured"
-      "error" -> "Error"
-      "unconfigured" -> "Not Configured"
-      _ -> "Unknown"
+  defp status_label(status_info) when is_map(status_info) do
+    cond do
+      status_info.enabled && status_info.last_tested_at ->
+        "Connected"
+      status_info.enabled ->
+        "Configured"
+      status_info.last_error ->
+        "Error"
+      true ->
+        "Disabled"
     end
   end
 
-  defp status_badge_class(status) do
-    case status do
-      "connected" ->
+  defp status_badge_class(status_info) when is_map(status_info) do
+    cond do
+      status_info.enabled && status_info.last_tested_at ->
         "badge badge-success badge-lg"
-
-      "configured" ->
+      status_info.enabled ->
         "badge badge-warning badge-lg"
-
-      "error" ->
+      status_info.last_error ->
         "badge badge-error badge-lg"
-
-      "unconfigured" ->
-        "badge badge-ghost badge-lg"
-
-      _ ->
+      true ->
         "badge badge-ghost badge-lg"
     end
   end
