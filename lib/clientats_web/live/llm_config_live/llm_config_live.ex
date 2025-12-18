@@ -16,24 +16,29 @@ defmodule ClientatsWeb.LLMConfigLive do
     primary_provider = LLMConfig.get_primary_provider(user_id)
     active_provider = Enum.at(providers, 0)
 
-    socket =
-      socket
-      |> assign(:user_id, user_id)
-      |> assign(:providers, providers)
-      |> assign(:provider_statuses, provider_statuses)
-      |> assign(:primary_provider, primary_provider)
-      |> assign(:active_provider, active_provider)
-      |> assign(:testing, false)
-      |> assign(:test_result, nil)
-      |> assign(:save_success, nil)
-      |> assign(:form_errors, %{})
-      |> assign(:ollama_models, [])
-      |> assign(:discovering_models, false)
-      |> assign(:provider_config, nil)
+    # If no providers configured, redirect to wizard
+    if Enum.empty?(provider_statuses) do
+      {:ok, redirect(socket, to: ~p"/dashboard/llm-setup")}
+    else
+      socket =
+        socket
+        |> assign(:user_id, user_id)
+        |> assign(:providers, providers)
+        |> assign(:provider_statuses, provider_statuses)
+        |> assign(:primary_provider, primary_provider)
+        |> assign(:active_provider, active_provider)
+        |> assign(:testing, false)
+        |> assign(:test_result, nil)
+        |> assign(:save_success, nil)
+        |> assign(:form_errors, %{})
+        |> assign(:ollama_models, [])
+        |> assign(:discovering_models, false)
+        |> assign(:provider_config, nil)
 
-    socket = load_provider_data(socket, user_id, active_provider)
+      socket = load_provider_data(socket, user_id, active_provider)
 
-    {:ok, socket}
+      {:ok, socket}
+    end
   end
 
   defp load_provider_data(socket, user_id, provider) do
