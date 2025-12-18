@@ -45,6 +45,14 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
        |> assign(:llm_status, nil)
        |> assign(:estimated_llm_time_ms, estimated_time_ms)
        |> assign(:remaining_llm_time_ms, estimated_time_ms)
+       |> assign(:current_phase, nil)
+       |> assign(:phases, [
+         %{id: :loading, label: "Loading page", status: :pending},
+         %{id: :screenshot, label: "Taking screenshot", status: :pending},
+         %{id: :sending, label: "Sending to AI", status: :pending},
+         %{id: :processing, label: "Processing response", status: :pending},
+         %{id: :complete, label: "Complete", status: :pending}
+       ])
        |> assign(:supported_sites, [
          "linkedin.com",
          "indeed.com",
@@ -189,14 +197,35 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
     end
   end
 
+  def handle_info({:phase_update, phase_id}, socket) do
+    # Update the phase status to in_progress
+    updated_phases =
+      Enum.map(socket.assigns.phases, fn phase ->
+        if phase.id == phase_id do
+          %{phase | status: :in_progress}
+        else
+          phase
+        end
+      end)
+
+    {:noreply,
+     socket
+     |> assign(:current_phase, phase_id)
+     |> assign(:phases, updated_phases)}
+  end
+
   def handle_info({:scrape_result, %{result: result}}, socket) do
     case result do
       {:ok, data} ->
+        # Mark all phases as complete
+        completed_phases = Enum.map(socket.assigns.phases, &Map.put(&1, :status, :complete))
+
         {:noreply,
          socket
          |> assign(:scraping, false)
          |> assign(:scraped_data, data)
          |> assign(:step, 2)
+         |> assign(:phases, completed_phases)
          |> assign(:error, nil)
          |> assign(:error_details, nil)
          |> assign(:llm_status, "success")}
@@ -314,17 +343,25 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
       result =
         case llm_provider do
           :ollama ->
-            Service.extract_job_data_from_url(url, :generic, provider: :ollama, user_id: user_id)
+            Service.extract_job_data_from_url(url, :generic,
+              provider: :ollama,
+              user_id: user_id,
+              progress_callback: fn phase -> send(liveview_pid, {:phase_update, phase}) end
+            )
 
           _ ->
-            Service.extract_job_data_from_url(url, :generic, provider: llm_provider, user_id: user_id)
+            Service.extract_job_data_from_url(url, :generic,
+              provider: llm_provider,
+              user_id: user_id,
+              progress_callback: fn phase -> send(liveview_pid, {:phase_update, phase}) end
+            )
         end
 
       send(liveview_pid, {:scrape_result, %{result: result}})
     end)
 
-    # Schedule periodic updates to refresh ETA countdown
-    Process.send_after(self(), :update_eta, 500)
+    # Reset phases
+    reset_phases = Enum.map(socket.assigns.phases, &Map.put(&1, :status, :pending))
 
     {:noreply,
      socket
@@ -332,6 +369,8 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
      |> assign(:scraping_start_time, System.monotonic_time(:millisecond))
      |> assign(:estimated_llm_time_ms, estimated_time_ms)
      |> assign(:remaining_llm_time_ms, estimated_time_ms)
+     |> assign(:current_phase, nil)
+     |> assign(:phases, reset_phases)
      |> assign(:error, nil)
      |> assign(:llm_status, "processing")}
   end
@@ -570,22 +609,35 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
                 <!-- ETA Display during scraping -->
                 <%= if @scraping do %>
                   <div class="mt-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
-                    <div class="flex items-center gap-4">
+                    <div class="flex items-start gap-4">
                       <div class="flex-shrink-0">
                         <div class="flex items-center justify-center h-12 w-12 rounded-md bg-blue-100">
-                          <.icon name="hero-clock" class="h-6 w-6 text-blue-600 animate-spin" />
+                          <.icon name="hero-arrow-path" class="h-6 w-6 text-blue-600 animate-spin" />
                         </div>
                       </div>
                       <div class="flex-1">
-                        <p class="text-sm font-medium text-gray-900">Processing job posting...</p>
-                        <div class="mt-2 flex items-baseline gap-2">
-                          <p class="text-3xl font-bold text-blue-600"><%= format_duration(@remaining_llm_time_ms) %></p>
-                          <p class="text-sm text-gray-600">remaining (estimated)</p>
+                        <p class="text-sm font-medium text-gray-900 mb-4">Processing job posting...</p>
+
+                        <!-- Phase Progress List -->
+                        <div class="space-y-2">
+                          <%= for phase <- @phases do %>
+                            <div class="flex items-center gap-3">
+                              <div class="flex-shrink-0">
+                                <%= case phase.status do %>
+                                  <% :complete -> %>
+                                    <.icon name="hero-check-circle" class="w-5 h-5 text-green-600" />
+                                  <% :in_progress -> %>
+                                    <.icon name="hero-arrow-path" class="w-5 h-5 text-blue-600 animate-spin" />
+                                  <% :pending -> %>
+                                    <div class="w-5 h-5 rounded-full border-2 border-gray-300"></div>
+                                <% end %>
+                              </div>
+                              <span class="text-xs font-medium text-gray-700"><%= phase.label %></span>
+                            </div>
+                          <% end %>
                         </div>
-                        <div class="mt-3 w-full bg-gray-200 rounded-full h-1.5">
-                          <div class="bg-gradient-to-r from-blue-500 to-indigo-500 h-1.5 rounded-full transition-all duration-300 animate-pulse"></div>
-                        </div>
-                        <p class="mt-2 text-xs text-gray-500">Using <%= @llm_provider %> provider</p>
+
+                        <p class="mt-4 text-xs text-gray-500">Using <%= @llm_provider %> provider</p>
                       </div>
                     </div>
                   </div>
