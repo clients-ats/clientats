@@ -4,6 +4,12 @@ defmodule Clientats.LLM.CircuitBreakerTest do
 
   alias Clientats.LLM.CircuitBreaker
 
+  setup do
+    # Start the CircuitBreaker GenServer for tests
+    {:ok, _pid} = CircuitBreaker.start_link([])
+    :ok
+  end
+
   describe "provider registration" do
     test "registers a provider with health check function" do
       result = CircuitBreaker.register_provider(
@@ -162,14 +168,14 @@ defmodule Clientats.LLM.CircuitBreakerTest do
 
     test "recording success for unregistered provider" do
       result = CircuitBreaker.record_success(:nonexistent_provider)
-      # Should handle gracefully
-      assert is_atom(result) or result == :ok
+      # Should handle gracefully - returns error tuple for unregistered provider
+      assert match?({:error, :provider_not_registered}, result) or result == :ok
     end
 
     test "recording failure for unregistered provider" do
       result = CircuitBreaker.record_failure(:nonexistent_provider)
-      # Should handle gracefully
-      assert is_atom(result) or result == :ok
+      # Should handle gracefully - returns error tuple for unregistered provider
+      assert match?({:error, :provider_not_registered}, result) or result == :ok
     end
   end
 
