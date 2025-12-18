@@ -334,7 +334,15 @@ defmodule Clientats.LLMConfig do
   end
 
   defp test_ollama_connection(config) do
-    base_url = config.base_url || "http://localhost:11434"
+    # Handle both maps (from wizard) and structs (from configuration page)
+    base_url =
+      cond do
+        is_struct(config) -> config.base_url
+        is_map(config) and Map.has_key?(config, "base_url") -> config["base_url"]
+        is_map(config) and Map.has_key?(config, :base_url) -> config[:base_url]
+        true -> nil
+      end
+    base_url = base_url || "http://localhost:11434"
 
     try do
       case Req.get!("#{base_url}/api/tags", receive_timeout: 5000) do
@@ -352,7 +360,14 @@ defmodule Clientats.LLMConfig do
   end
 
   defp test_gemini_connection(config) do
-    api_key = config.api_key
+    # Handle both maps (from wizard) and structs (from configuration page)
+    api_key =
+      cond do
+        is_struct(config) -> config.api_key
+        is_map(config) and Map.has_key?(config, "api_key") -> config["api_key"]
+        is_map(config) and Map.has_key?(config, :api_key) -> config[:api_key]
+        true -> nil
+      end
 
     if is_nil(api_key) or api_key == "" do
       {:error, "API key is required"}
