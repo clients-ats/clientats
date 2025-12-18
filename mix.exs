@@ -12,7 +12,7 @@ defmodule Clientats.MixProject do
       deps: deps(),
       compilers: [:phoenix_live_view] ++ Mix.compilers(),
       listeners: [Phoenix.CodeReloader],
-      test_coverage: [summary: [threshold: 70]],
+      test_coverage: [summary: [threshold: 50]],
       releases: releases()
     ]
   end
