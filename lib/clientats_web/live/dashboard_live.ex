@@ -39,9 +39,6 @@ defmodule ClientatsWeb.DashboardLive do
               <.link navigate={~p"/dashboard/llm-setup"} class="btn btn-sm btn-primary">
                 Get Started →
               </.link>
-              <.link navigate={~p"/dashboard/llm-config"} class="btn btn-sm btn-ghost">
-                Advanced Setup
-              </.link>
             </div>
           </div>
         <% end %>
