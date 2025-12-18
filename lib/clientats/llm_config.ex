@@ -384,12 +384,20 @@ defmodule Clientats.LLMConfig do
         true -> nil
       end
 
+    model =
+      cond do
+        is_struct(config) -> config.default_model || "gemini-2.5-flash"
+        is_map(config) and Map.has_key?(config, "default_model") -> config["default_model"] || "gemini-2.5-flash"
+        is_map(config) and Map.has_key?(config, :default_model) -> config[:default_model] || "gemini-2.5-flash"
+        true -> "gemini-2.5-flash"
+      end
+
     if is_nil(api_key) or api_key == "" do
       Logger.warning("Gemini test: No API key provided")
       {:error, "API key is required"}
     else
       try do
-        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+        url = "https://generativelanguage.googleapis.com/v1beta/models/#{model}:generateContent"
         headers = [{"x-goog-api-key", api_key}]
         body = %{"contents" => [%{"parts" => [%{"text" => "Test"}]}]}
 
