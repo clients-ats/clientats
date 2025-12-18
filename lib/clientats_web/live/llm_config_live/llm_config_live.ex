@@ -93,54 +93,177 @@ defmodule ClientatsWeb.LLMConfigLive do
           </div>
         <% end %>
 
-        <!-- Quick Start Guide -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <!-- Cloud Provider Card -->
-          <div class="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
-            <div class="flex items-start gap-3">
-              <div class="text-2xl">☁️</div>
-              <div class="flex-1">
-                <h3 class="font-semibold text-gray-900 mb-2">Quick Start (Cloud)</h3>
-                <p class="text-sm text-gray-600 mb-3">Best for getting started quickly:</p>
-                <ul class="text-sm text-gray-600 space-y-1 mb-3">
-                  <li>✓ Get API key from Google AI Studio</li>
-                  <li>✓ No installation required</li>
-                  <li>✓ Free tier available</li>
-                  <li>✓ Works immediately</li>
-                </ul>
-                <.link navigate={~p"/dashboard/llm-config"} class="text-sm text-blue-600 hover:text-blue-800 font-semibold">
-                  → Set up Gemini
-                </.link>
-              </div>
+        <!-- Provider List Section (List-First) -->
+        <div class="mb-8">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="text-2xl font-bold text-gray-900">Your Providers</h2>
+              <p class="text-sm text-gray-600">Manage your LLM providers. Drag to reorder, click Edit to modify.</p>
             </div>
+            <.link navigate={~p"/dashboard/llm-setup"} class="btn btn-primary btn-sm">
+              + Add Provider
+            </.link>
           </div>
 
-          <!-- Local Provider Card -->
-          <div class="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
-            <div class="flex items-start gap-3">
-              <div class="text-2xl">🖥️</div>
-              <div class="flex-1">
-                <h3 class="font-semibold text-gray-900 mb-2">Advanced (Local)</h3>
-                <p class="text-sm text-gray-600 mb-3">Maximum privacy and control:</p>
-                <ul class="text-sm text-gray-600 space-y-1 mb-3">
-                  <li>✓ Run models locally</li>
-                  <li>✓ No API costs</li>
-                  <li>✓ Complete privacy</li>
-                  <li>✓ Requires setup</li>
-                </ul>
-                <.link navigate={~p"/dashboard/llm-config"} class="text-sm text-green-600 hover:text-green-800 font-semibold">
-                  → Set up Ollama
-                </.link>
+          <div class="bg-white rounded-lg shadow p-6">
+            <div class="mt-8 bg-white rounded-lg shadow p-6">
+              <h2 class="text-xl font-semibold text-gray-900 mb-4">Provider Status</h2>
+              <div
+                id="provider-list"
+                phx-hook="ProviderReorder"
+                class="space-y-4"
+              >
+                <%= for status <- @provider_statuses do %>
+                  <div
+                    data-provider={status.provider}
+                    data-primary={status.provider == @primary_provider}
+                    class={
+                      "border rounded-lg p-4 transition-shadow cursor-move " <>
+                        if status.provider == @primary_provider do
+                          "border-primary border-2 bg-blue-50"
+                        else
+                          "border-gray-300"
+                        end
+                    }>
+                    <!-- Header Row -->
+                    <div class="flex items-center justify-between mb-3">
+                      <div class="flex items-center gap-3">
+                        <!-- Drag Handle -->
+                        <div class="drag-handle cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z"/>
+                          </svg>
+                        </div>
+
+                        <div class="text-2xl">
+                          <%= provider_icon(status.provider) %>
+                        </div>
+                        <div>
+                          <div class="flex items-center gap-2">
+                            <p class="font-semibold text-gray-900">
+                              <%= String.capitalize(status.provider) %>
+                            </p>
+                            <%= if status.provider == @primary_provider do %>
+                              <span class="badge badge-sm badge-primary">Primary</span>
+                            <% end %>
+                          </div>
+                        </div>
+                      </div>
+                      <span class={status_badge_class(status.status)}>
+                        <%= status_label(status.status) %>
+                      </span>
+                    </div>
+
+                    <!-- Status Info Row -->
+                    <div class="space-y-2 mb-3">
+                      <!-- Last Tested -->
+                      <div class="text-sm text-gray-600">
+                        <%= if status.last_tested_at do %>
+                          Last tested: <span class="font-medium"><%= format_relative_time(status.last_tested_at) %></span>
+                        <% else %>
+                          <span class="text-gray-500">Not tested yet</span>
+                        <% end %>
+                      </div>
+
+                      <!-- Model Info -->
+                      <%= if status.model do %>
+                        <div class="text-sm text-gray-600">
+                          Model: <span class="font-medium"><%= status.model %></span>
+                        </div>
+                      <% end %>
+
+                      <!-- Error Message -->
+                      <%= if status.last_error do %>
+                        <div class="alert alert-error alert-sm py-2">
+                          <span class="text-sm"><%= status.last_error %></span>
+                        </div>
+                      <% end %>
+                    </div>
+
+                    <!-- Action Buttons Row -->
+                    <div class="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        phx-click="edit_provider"
+                        phx-value-provider={status.provider}
+                        class="btn btn-sm btn-outline"
+                        title="Go to provider configuration"
+                      >
+                        Edit
+                      </button>
+
+                      <button
+                        type="button"
+                        phx-click="test_provider_from_status"
+                        phx-value-provider={status.provider}
+                        class="btn btn-sm btn-outline"
+                        title="Test connection for this provider"
+                      >
+                        Test
+                      </button>
+
+                      <button
+                        type="button"
+                        phx-click="toggle_provider_enabled"
+                        phx-value-provider={status.provider}
+                        class={
+                          "btn btn-sm " <>
+                            if status.enabled do
+                              "btn-warning"
+                            else
+                              "btn-outline"
+                            end
+                        }
+                        title={if status.enabled do "Disable this provider" else "Enable this provider" end}
+                      >
+                        <%= if status.enabled do "Disable" else "Enable" end %>
+                      </button>
+
+                      <%= if status.provider != @primary_provider do %>
+                        <button
+                          type="button"
+                          phx-click="set_primary_provider"
+                          phx-value-provider={status.provider}
+                          class="btn btn-sm btn-outline"
+                          title="Set as primary provider"
+                        >
+                          Set as Primary
+                        </button>
+                      <% end %>
+
+                      <button
+                        type="button"
+                        phx-click="delete_provider"
+                        phx-value-provider={status.provider}
+                        data-confirm={delete_provider_message(status.provider, @primary_provider)}
+                        class="btn btn-sm btn-error"
+                        title="Delete this provider configuration"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                <% end %>
               </div>
+
+              <%= if Enum.empty?(@provider_statuses) do %>
+                <div class="text-center py-8 text-gray-500">
+                  <p class="mb-4">No providers configured yet.</p>
+                  <.link navigate={~p"/dashboard/llm-setup"} class="btn btn-primary btn-sm">
+                    Get Started with Wizard
+                  </.link>
+                </div>
+              <% end %>
             </div>
           </div>
         </div>
 
+        <!-- Configuration Section (Below List) -->
         <div class="bg-white rounded-lg shadow p-6">
           <div class="flex items-center justify-between mb-6">
             <div>
-              <h2 class="text-xl font-semibold text-gray-900 mb-1">Configure Your Provider</h2>
-              <p class="text-sm text-gray-600">Start with just one provider to get started. You can add more later.</p>
+              <h2 class="text-xl font-semibold text-gray-900 mb-1">Configure Provider</h2>
+              <p class="text-sm text-gray-600">Add a new provider or edit existing configuration.</p>
             </div>
           </div>
 
@@ -175,147 +298,6 @@ defmodule ClientatsWeb.LLMConfigLive do
               ollama_models={@ollama_models}
               discovering_models={@discovering_models}
             />
-          </div>
-        </div>
-
-        <div class="mt-8 bg-white rounded-lg shadow p-6">
-          <h2 class="text-xl font-semibold text-gray-900 mb-4">Provider Status</h2>
-          <div
-            id="provider-list"
-            phx-hook="ProviderReorder"
-            class="space-y-4"
-          >
-            <%= for status <- @provider_statuses do %>
-              <div
-                data-provider={status.provider}
-                data-primary={status.provider == @primary_provider}
-                class={
-                  "border rounded-lg p-4 transition-shadow cursor-move " <>
-                    if status.provider == @primary_provider do
-                      "border-primary border-2 bg-blue-50"
-                    else
-                      "border-gray-300"
-                    end
-              }>
-                <!-- Header Row -->
-                <div class="flex items-center justify-between mb-3">
-                  <div class="flex items-center gap-3">
-                    <!-- Drag Handle -->
-                    <div class="drag-handle cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z"/>
-                      </svg>
-                    </div>
-
-                    <div class="text-2xl">
-                      <%= provider_icon(status.provider) %>
-                    </div>
-                    <div>
-                      <div class="flex items-center gap-2">
-                        <p class="font-semibold text-gray-900">
-                          <%= String.capitalize(status.provider) %>
-                        </p>
-                        <%= if status.provider == @primary_provider do %>
-                          <span class="badge badge-sm badge-primary">Primary</span>
-                        <% end %>
-                      </div>
-                    </div>
-                  </div>
-                  <span class={status_badge_class(status.status)}>
-                    <%= status_label(status.status) %>
-                  </span>
-                </div>
-
-                <!-- Status Info Row -->
-                <div class="space-y-2 mb-3">
-                  <!-- Last Tested -->
-                  <div class="text-sm text-gray-600">
-                    <%= if status.last_tested_at do %>
-                      Last tested: <span class="font-medium"><%= format_relative_time(status.last_tested_at) %></span>
-                    <% else %>
-                      <span class="text-gray-500">Not tested yet</span>
-                    <% end %>
-                  </div>
-
-                  <!-- Model Info -->
-                  <%= if status.model do %>
-                    <div class="text-sm text-gray-600">
-                      Model: <span class="font-medium"><%= status.model %></span>
-                    </div>
-                  <% end %>
-
-                  <!-- Error Message -->
-                  <%= if status.last_error do %>
-                    <div class="alert alert-error alert-sm py-2">
-                      <span class="text-sm"><%= status.last_error %></span>
-                    </div>
-                  <% end %>
-                </div>
-
-                <!-- Action Buttons Row -->
-                <div class="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    phx-click="edit_provider"
-                    phx-value-provider={status.provider}
-                    class="btn btn-sm btn-outline"
-                    title="Go to provider configuration"
-                  >
-                    Edit
-                  </button>
-
-                  <button
-                    type="button"
-                    phx-click="test_provider_from_status"
-                    phx-value-provider={status.provider}
-                    class="btn btn-sm btn-outline"
-                    title="Test connection for this provider"
-                  >
-                    Test
-                  </button>
-
-                  <button
-                    type="button"
-                    phx-click="toggle_provider_enabled"
-                    phx-value-provider={status.provider}
-                    class={
-                      "btn btn-sm " <>
-                        if status.enabled do
-                          "btn-warning"
-                        else
-                          "btn-outline"
-                        end
-                    }
-                    title={if status.enabled do "Disable this provider" else "Enable this provider" end}
-                  >
-                    <%= if status.enabled do "Disable" else "Enable" end %>
-                  </button>
-
-                  <%= if status.provider != @primary_provider do %>
-                    <button
-                      type="button"
-                      phx-click="set_primary_provider"
-                      phx-value-provider={status.provider}
-                      class="btn btn-sm btn-outline"
-                      title="Set as primary provider"
-                    >
-                      Set as Primary
-                    </button>
-                  <% end %>
-
-                  <button
-                    type="button"
-                    phx-click="delete_provider"
-                    phx-value-provider={status.provider}
-                    data-confirm={delete_provider_message(status.provider, @primary_provider)}
-                    class="btn btn-sm btn-error"
-                    title="Delete this provider configuration"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            <% end %>
           </div>
         </div>
       </div>
