@@ -90,8 +90,9 @@ defmodule Clientats.LLM.PromptTemplates do
   Generic mode prompt for any job posting content.
   """
   def generic_mode_prompt(content, source) do
+    job_board = job_board_name(source)
     """
-    Extract job posting information from this content. The source is: #{source}
+    Extract job posting information from this content. The source is: #{job_board}
     
     Content:
     ```
