@@ -206,7 +206,7 @@ defmodule Clientats.DocumentsTest do
     user
   end
 
-  defp resume_fixture(attrs \\ %{}) do
+  defp resume_fixture(attrs) do
     default_attrs = %{
       name: "Test Resume",
       file_path: "/uploads/resumes/test-#{System.unique_integer([:positive])}.pdf",
@@ -219,7 +219,7 @@ defmodule Clientats.DocumentsTest do
     resume
   end
 
-  defp cover_letter_fixture(attrs \\ %{}) do
+  defp cover_letter_fixture(attrs) do
     default_attrs = %{
       name: "Test Template",
       content: "Dear Hiring Manager,\n\nI am writing to express my interest...",

@@ -39,10 +39,20 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
        |> assign(:saving, false)
        |> assign(:scraped_data, %{})
        |> assign(:error, nil)
+       |> assign(:error_details, nil)
+       |> assign(:manual_entry_mode, false)
        |> assign(:llm_provider, llm_provider)
        |> assign(:llm_status, nil)
        |> assign(:estimated_llm_time_ms, estimated_time_ms)
        |> assign(:remaining_llm_time_ms, estimated_time_ms)
+       |> assign(:current_phase, nil)
+       |> assign(:phases, [
+         %{id: :loading, label: "Loading page", status: :pending},
+         %{id: :screenshot, label: "Taking screenshot", status: :pending},
+         %{id: :sending, label: "Sending to AI", status: :pending},
+         %{id: :processing, label: "Processing response", status: :pending},
+         %{id: :complete, label: "Complete", status: :pending}
+       ])
        |> assign(:supported_sites, [
          "linkedin.com",
          "indeed.com",
@@ -102,7 +112,7 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
       job_url: params["url"] || socket.assigns.url,
       location: params["location"] || "",
       work_model: params["work_model"] || "remote",
-      status: "interested",
+      status: "researching",
       priority: "medium"
     }
 
@@ -122,7 +132,33 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
   end
 
   def handle_event("back_to_url", _params, socket) do
-    {:noreply, socket |> assign(:step, 1) |> assign(:error, nil)}
+    {:noreply, socket |> assign(:step, 1) |> assign(:error, nil) |> assign(:error_details, nil) |> assign(:manual_entry_mode, false)}
+  end
+
+  def handle_event("toggle_manual_entry", _params, socket) do
+    current_mode = socket.assigns.manual_entry_mode
+    {:noreply, socket |> assign(:manual_entry_mode, !current_mode)}
+  end
+
+  def handle_event("retry_scrape", _params, socket) do
+    # Clear error and try scraping the same URL again
+    url = String.trim(socket.assigns.url)
+
+    case validate_url(url) do
+      {:error, :invalid_url} ->
+        {:noreply,
+         socket
+         |> assign(:error, "Please enter a valid URL starting with http:// or https://")}
+
+      {:ok, _valid_url} ->
+        provider = socket.assigns.llm_provider
+
+        if provider == "ollama" do
+          check_ollama_status(socket)
+        else
+          start_scraping(url, provider, socket)
+        end
+    end
   end
 
   @impl true
@@ -142,43 +178,48 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
     end
   end
 
-  def handle_info(:update_eta, socket) do
-    # Periodic update to refresh ETA display during scraping
-    if socket.assigns[:scraping] do
-      # Calculate remaining time
-      start_time = socket.assigns[:scraping_start_time]
-      initial_estimate = socket.assigns[:estimated_llm_time_ms]
-      elapsed = System.monotonic_time(:millisecond) - start_time
-      remaining = max(0, initial_estimate - elapsed)
+  def handle_info({:phase_update, phase_id}, socket) do
+    # Update the phase status to in_progress
+    updated_phases =
+      Enum.map(socket.assigns.phases, fn phase ->
+        if phase.id == phase_id do
+          %{phase | status: :in_progress}
+        else
+          phase
+        end
+      end)
 
-      # Schedule next update in 500ms
-      Process.send_after(self(), :update_eta, 500)
-
-      # Update the remaining time estimate
-      {:noreply, assign(socket, :remaining_llm_time_ms, remaining)}
-    else
-      {:noreply, socket}
-    end
+    {:noreply,
+     socket
+     |> assign(:current_phase, phase_id)
+     |> assign(:phases, updated_phases)}
   end
 
   def handle_info({:scrape_result, %{result: result}}, socket) do
     case result do
       {:ok, data} ->
+        # Mark all phases as complete
+        completed_phases = Enum.map(socket.assigns.phases, &Map.put(&1, :status, :complete))
+
         {:noreply,
          socket
          |> assign(:scraping, false)
          |> assign(:scraped_data, data)
          |> assign(:step, 2)
+         |> assign(:phases, completed_phases)
+         |> assign(:error, nil)
+         |> assign(:error_details, nil)
          |> assign(:llm_status, "success")}
 
       {:error, reason} ->
-        # Format error message using ErrorHandler for user-friendly messages
-        error_msg = ErrorHandler.user_friendly_message(reason)
+        # Get comprehensive error details for fallback UI
+        error_details = ErrorHandler.error_details(reason)
 
         {:noreply,
          socket
          |> assign(:scraping, false)
-         |> assign(:error, error_msg)
+         |> assign(:error, error_details.user_message)
+         |> assign(:error_details, error_details)
          |> assign(:llm_status, "error")}
     end
   end
@@ -283,17 +324,25 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
       result =
         case llm_provider do
           :ollama ->
-            Service.extract_job_data_from_url(url, :generic, provider: :ollama, user_id: user_id)
+            Service.extract_job_data_from_url(url, :generic,
+              provider: :ollama,
+              user_id: user_id,
+              progress_callback: fn phase -> send(liveview_pid, {:phase_update, phase}) end
+            )
 
           _ ->
-            Service.extract_job_data_from_url(url, :generic, provider: llm_provider, user_id: user_id)
+            Service.extract_job_data_from_url(url, :generic,
+              provider: llm_provider,
+              user_id: user_id,
+              progress_callback: fn phase -> send(liveview_pid, {:phase_update, phase}) end
+            )
         end
 
       send(liveview_pid, {:scrape_result, %{result: result}})
     end)
 
-    # Schedule periodic updates to refresh ETA countdown
-    Process.send_after(self(), :update_eta, 500)
+    # Reset phases
+    reset_phases = Enum.map(socket.assigns.phases, &Map.put(&1, :status, :pending))
 
     {:noreply,
      socket
@@ -301,6 +350,8 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
      |> assign(:scraping_start_time, System.monotonic_time(:millisecond))
      |> assign(:estimated_llm_time_ms, estimated_time_ms)
      |> assign(:remaining_llm_time_ms, estimated_time_ms)
+     |> assign(:current_phase, nil)
+     |> assign(:phases, reset_phases)
      |> assign(:error, nil)
      |> assign(:llm_status, "processing")}
   end
@@ -416,29 +467,158 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
                     </button>
                   </div>
                 </form>
-                <%= if @error do %>
-                  <p class="mt-2 text-sm text-red-600"><%= @error %></p>
+
+                <!-- Error Recovery Panel with Fallback Options -->
+                <%= if @error_details do %>
+                  <div class="mt-4">
+                    <.error_recovery_panel
+                      error_details={@error_details}
+                      on_manual_entry="toggle_manual_entry"
+                      on_retry="retry_scrape"
+                      on_config={~p"/dashboard/llm-config"}
+                    />
+                  </div>
+                <% end %>
+
+                <!-- Manual Entry Form (appears when all LLM providers fail) -->
+                <%= if @manual_entry_mode && @error_details do %>
+                  <div class="mt-6 bg-white rounded-lg border border-gray-300 p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Enter Job Details Manually</h3>
+                    <p class="text-sm text-gray-600 mb-6">Fill in the job information below. You can always edit it later.</p>
+
+                    <form phx-submit="save_job_interest" class="space-y-4">
+                      <div class="grid md:grid-cols-2 gap-4">
+                        <div>
+                          <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Company Name <span class="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            name="company_name"
+                            placeholder="e.g., Acme Inc."
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Position Title <span class="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            name="position_title"
+                            placeholder="e.g., Senior Engineer"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                          Job URL
+                        </label>
+                        <input
+                          type="url"
+                          name="url"
+                          value={@url}
+                          placeholder="https://..."
+                          class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                          Job Description
+                        </label>
+                        <textarea
+                          name="job_description"
+                          rows="4"
+                          placeholder="Paste the job description here..."
+                          class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        ></textarea>
+                      </div>
+
+                      <div class="grid md:grid-cols-2 gap-4">
+                        <div>
+                          <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Location
+                          </label>
+                          <input
+                            type="text"
+                            name="location"
+                            placeholder="e.g., San Francisco, CA"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Work Model
+                          </label>
+                          <select
+                            name="work_model"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          >
+                            <option value="remote">Remote</option>
+                            <option value="hybrid">Hybrid</option>
+                            <option value="on_site">On-site</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div class="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                        <button
+                          type="button"
+                          phx-click="toggle_manual_entry"
+                          class="btn btn-ghost"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          class="btn btn-primary"
+                          phx-disable-with="Saving..."
+                        >
+                          <.icon name="hero-check" class="w-4 h-4 mr-2" />
+                          Save Job Interest
+                        </button>
+                      </div>
+                    </form>
+                  </div>
                 <% end %>
 
                 <!-- ETA Display during scraping -->
                 <%= if @scraping do %>
                   <div class="mt-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
-                    <div class="flex items-center gap-4">
+                    <div class="flex items-start gap-4">
                       <div class="flex-shrink-0">
                         <div class="flex items-center justify-center h-12 w-12 rounded-md bg-blue-100">
-                          <.icon name="hero-clock" class="h-6 w-6 text-blue-600 animate-spin" />
+                          <.icon name="hero-arrow-path" class="h-6 w-6 text-blue-600 animate-spin" />
                         </div>
                       </div>
                       <div class="flex-1">
-                        <p class="text-sm font-medium text-gray-900">Processing job posting...</p>
-                        <div class="mt-2 flex items-baseline gap-2">
-                          <p class="text-3xl font-bold text-blue-600"><%= format_duration(@remaining_llm_time_ms) %></p>
-                          <p class="text-sm text-gray-600">remaining (estimated)</p>
+                        <p class="text-sm font-medium text-gray-900 mb-4">Processing job posting...</p>
+
+                        <!-- Phase Progress List -->
+                        <div class="space-y-2">
+                          <%= for phase <- @phases do %>
+                            <div class="flex items-center gap-3">
+                              <div class="flex-shrink-0">
+                                <%= case phase.status do %>
+                                  <% :complete -> %>
+                                    <.icon name="hero-check-circle" class="w-5 h-5 text-green-600" />
+                                  <% :in_progress -> %>
+                                    <.icon name="hero-arrow-path" class="w-5 h-5 text-blue-600 animate-spin" />
+                                  <% :pending -> %>
+                                    <div class="w-5 h-5 rounded-full border-2 border-gray-300"></div>
+                                <% end %>
+                              </div>
+                              <span class="text-xs font-medium text-gray-700"><%= phase.label %></span>
+                            </div>
+                          <% end %>
                         </div>
-                        <div class="mt-3 w-full bg-gray-200 rounded-full h-1.5">
-                          <div class="bg-gradient-to-r from-blue-500 to-indigo-500 h-1.5 rounded-full transition-all duration-300 animate-pulse"></div>
-                        </div>
-                        <p class="mt-2 text-xs text-gray-500">Using <%= @llm_provider %> provider</p>
+
+                        <p class="mt-4 text-xs text-gray-500">Using <%= @llm_provider %> provider</p>
                       </div>
                     </div>
                   </div>
@@ -677,35 +857,15 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
 
   defp get_estimated_provider_time(provider) do
     case provider do
-      "ollama" -> 120_000  # ~2 minutes for Ollama
+      "ollama" -> 120_000   # ~2 minutes for Ollama
       :ollama -> 120_000
-      "openai" -> 10_000   # ~10 seconds
-      :openai -> 10_000
-      "anthropic" -> 15_000 # ~15 seconds
-      :anthropic -> 15_000
-      "mistral" -> 12_000   # ~12 seconds
-      :mistral -> 12_000
-      "gemini" -> 20_000    # ~20 seconds for Gemini
-      :gemini -> 20_000
-      "google" -> 20_000    # ~20 seconds for Google
-      :google -> 20_000
-      _ -> 15_000           # Default to 15 seconds
+      "gemini" -> 45_000    # ~45 seconds for Gemini
+      :gemini -> 45_000
+      "google" -> 45_000    # ~45 seconds for Google
+      :google -> 45_000
+      _ -> 45_000           # Default to 45 seconds
     end
   end
 
-  defp format_duration(milliseconds) when is_integer(milliseconds) do
-    total_seconds = div(milliseconds, 1000)
-    minutes = div(total_seconds, 60)
-    seconds = rem(total_seconds, 60)
-
-    case {minutes, seconds} do
-      {0, 0} -> "done"
-      {0, s} -> "#{s}s"
-      {m, 0} -> "#{m}m"
-      {m, s} -> "#{m}m #{s}s"
-    end
-  end
-
-  defp format_duration(_), do: "calculating..."
 
 end

@@ -8,7 +8,9 @@ config :clientats, Clientats.Repo,
   database: "clientats_dev",
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,
-  pool_size: 10
+  pool_size: 10,
+  max_overflow: 2,
+  timeout: 5000
 
 # For development, we disable any cache and enable
 # debugging and code reloading.

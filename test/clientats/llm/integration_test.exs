@@ -3,7 +3,6 @@ defmodule Clientats.LLM.IntegrationTest do
 
   alias Clientats.LLM.Service
   alias Clientats.LLM.PromptTemplates
-  alias Clientats.Jobs
   alias Clientats.Accounts
 
   setup do
