@@ -126,17 +126,24 @@ defmodule ClientatsWeb.LLMWizardLive do
 
         <!-- Navigation -->
         <div class="mt-8 flex justify-between">
-          <%= if @current_step > 1 do %>
+          <div class="flex gap-2">
+            <%= if @current_step > 1 do %>
+              <button
+                type="button"
+                phx-click="back"
+                class="btn btn-outline"
+              >
+                ← Back
+              </button>
+            <% end %>
             <button
               type="button"
-              phx-click="back"
-              class="btn btn-outline"
+              phx-click="cancel"
+              class="btn btn-ghost"
             >
-              ← Back
+              Cancel
             </button>
-          <% else %>
-            <div></div>
-          <% end %>
+          </div>
 
           <%= if @current_step < 3 do %>
             <button
@@ -163,13 +170,6 @@ defmodule ClientatsWeb.LLMWizardLive do
               Complete Setup
             </button>
           <% end %>
-        </div>
-
-        <!-- Links -->
-        <div class="mt-6 text-center">
-          <.link navigate={~p"/dashboard/llm-config"} class="text-sm text-gray-600 hover:text-gray-900">
-            Go to advanced configuration →
-          </.link>
         </div>
       </div>
     </div>
@@ -273,6 +273,8 @@ defmodule ClientatsWeb.LLMWizardLive do
           <select name="default_model" class="select select-bordered w-full">
             <option value="gemini-2.5-flash" selected>gemini-2.5-flash (Recommended)</option>
             <option value="gemini-2.5-pro">gemini-2.5-pro</option>
+            <option value="gemini-3-flash">gemini-3-flash</option>
+            <option value="gemini-3-pro">gemini-3-pro</option>
             <option value="gemini-2.0-flash">gemini-2.0-flash</option>
           </select>
         </div>
@@ -494,6 +496,10 @@ defmodule ClientatsWeb.LLMWizardLive do
   def handle_event("back", _, socket) do
     new_step = max(socket.assigns.current_step - 1, 1)
     {:noreply, assign(socket, :current_step, new_step)}
+  end
+
+  def handle_event("cancel", _, socket) do
+    {:noreply, redirect(socket, to: ~p"/dashboard")}
   end
 
   def handle_event("validate_gemini", %{"api_key" => api_key, "default_model" => model}, socket) do
