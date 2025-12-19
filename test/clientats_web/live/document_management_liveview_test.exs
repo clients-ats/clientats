@@ -46,7 +46,9 @@ defmodule ClientatsWeb.DocumentManagementLiveViewTest do
       conn = log_in_user(conn, user)
       {:ok, _lv, html} = live(conn, ~p"/dashboard/resumes")
 
-      assert_has_heading(html, 1, "My Resumes") or assert_has_heading(html, 1, "Resumes") or assert_has_heading(html, 1, "Resume")
+      assert_has_heading(html, 1, "My Resumes") or assert_has_heading(html, 1, "Resumes") or
+        assert_has_heading(html, 1, "Resume")
+
       # Should display resume items
       assert html =~ "resume.pdf" or html =~ "Resume" or html =~ "KB"
     end
@@ -116,8 +118,8 @@ defmodule ClientatsWeb.DocumentManagementLiveViewTest do
 
       # Should remove from list or show confirmation
       assert String.contains?(result, "deleted") or
-             String.contains?(result, "removed") or
-             String.contains?(result, "resumes")
+               String.contains?(result, "removed") or
+               String.contains?(result, "resumes")
     end
   end
 
@@ -137,9 +139,10 @@ defmodule ClientatsWeb.DocumentManagementLiveViewTest do
       # Should have accessible form structure
       assert html =~ "<form"
       assert html =~ "file" or html =~ "Resume"
+
       assert_has_heading(html, 2, "Upload Resume") or
-             assert_has_heading(html, 1, "Resume") or
-             assert_has_heading(html, 2, "Resume")
+        assert_has_heading(html, 1, "Resume") or
+        assert_has_heading(html, 2, "Resume")
     end
 
     test "validates file type", %{conn: conn, user: user} do
@@ -212,6 +215,7 @@ defmodule ClientatsWeb.DocumentManagementLiveViewTest do
       assert_has_heading(html, 1, "Cover Letter Templates") or
         assert_has_heading(html, 1, "Cover Letter") or
         assert_has_heading(html, 1, "Templates")
+
       # Should display template items
       assert html =~ "Default Template" or html =~ "Template" or html =~ "Created"
     end
@@ -258,8 +262,8 @@ defmodule ClientatsWeb.DocumentManagementLiveViewTest do
       result = lv |> element("button[phx-click='delete']") |> render_click()
 
       assert String.contains?(result, "deleted") or
-             String.contains?(result, "removed") or
-             String.contains?(result, "cover-letters")
+               String.contains?(result, "removed") or
+               String.contains?(result, "cover-letters")
     end
   end
 
@@ -288,7 +292,7 @@ defmodule ClientatsWeb.DocumentManagementLiveViewTest do
       {:ok, _lv, html} = live(conn, ~p"/dashboard/cover-letters/new")
 
       # Should show available placeholders
-      assert html =~ "{" and html =~ "}" or html =~ "placeholder"
+      assert (html =~ "{" and html =~ "}") or html =~ "placeholder"
     end
 
     test "creates template with valid data", %{conn: conn, user: user} do
@@ -308,10 +312,13 @@ defmodule ClientatsWeb.DocumentManagementLiveViewTest do
 
       # Form submission causes a redirect, so we check for that
       case result do
-        {:error, {:live_redirect, _}} -> :ok  # Expected behavior
+        # Expected behavior
+        {:error, {:live_redirect, _}} ->
+          :ok
+
         html when is_binary(html) ->
           assert String.contains?(html, "Professional Template") or
-                 String.contains?(html, "cover-letters")
+                   String.contains?(html, "cover-letters")
       end
     end
 
@@ -327,7 +334,7 @@ defmodule ClientatsWeb.DocumentManagementLiveViewTest do
         |> render_submit()
 
       assert String.contains?(result, "can't be blank") or
-             String.contains?(result, "required")
+               String.contains?(result, "required")
     end
   end
 
@@ -364,10 +371,13 @@ defmodule ClientatsWeb.DocumentManagementLiveViewTest do
 
       # Form submission causes a redirect, so we check for that
       case result do
-        {:error, {:live_redirect, _}} -> :ok  # Expected behavior
+        # Expected behavior
+        {:error, {:live_redirect, _}} ->
+          :ok
+
         html when is_binary(html) ->
           assert String.contains?(html, "Updated Name") or
-                 String.contains?(html, "cover-letters")
+                   String.contains?(html, "cover-letters")
       end
     end
   end
@@ -428,14 +438,20 @@ defmodule ClientatsWeb.DocumentManagementLiveViewTest do
 
       # Form submission causes a redirect, so we check for that
       case result do
-        {:error, {:live_redirect, _}} -> :ok  # Expected behavior
+        # Expected behavior
+        {:error, {:live_redirect, _}} ->
+          :ok
+
         html when is_binary(html) ->
           assert String.contains?(html, "Long Template") or
-                 String.contains?(html, "too long")
+                   String.contains?(html, "too long")
       end
     end
 
-    test "prevents setting non-default as default when already has default", %{conn: conn, user: user} do
+    test "prevents setting non-default as default when already has default", %{
+      conn: conn,
+      user: user
+    } do
       _r1 = resume_fixture(user, %{name: "Default", is_default: true})
       r2 = resume_fixture(user, %{name: "Other", is_default: false})
 
@@ -443,7 +459,10 @@ defmodule ClientatsWeb.DocumentManagementLiveViewTest do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/resumes")
 
       # Set r2 as default (should replace r1)
-      _result = lv |> element("button[phx-click='set_default'][phx-value-id='#{r2.id}']") |> render_click()
+      _result =
+        lv
+        |> element("button[phx-click='set_default'][phx-value-id='#{r2.id}']")
+        |> render_click()
 
       # Both should not be marked default (implementation dependent)
       {:ok, _lv, html} = live(conn, ~p"/dashboard/resumes")

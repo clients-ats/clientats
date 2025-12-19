@@ -1,44 +1,45 @@
 defmodule Clientats.LLM.Service do
   @moduledoc """
   LLM Service for job scraping and text analysis.
-  
+
   Provides a unified interface for interacting with various LLM providers
   with built-in error handling, fallback mechanisms, and token management.
   """
-  
+
   alias Clientats.LLM.{PromptTemplates, Cache, ErrorHandler}
   alias Clientats.LLMConfig
   alias Clientats.Browser
 
   require Logger
-  
+
   @type provider :: :openai | :anthropic | :mistral | atom()
-  @type extraction_result :: {
-          :ok,
-          map() |
-          %{
-            company_name: String.t(),
-            position_title: String.t(),
-            job_description: String.t(),
-            location: String.t(),
-            work_model: String.t(),
-            salary: map() | nil,
-            skills: list(String.t()),
-            metadata: map()
+  @type extraction_result ::
+          {
+            :ok,
+            map()
+            | %{
+                company_name: String.t(),
+                position_title: String.t(),
+                job_description: String.t(),
+                location: String.t(),
+                work_model: String.t(),
+                salary: map() | nil,
+                skills: list(String.t()),
+                metadata: map()
+              }
           }
-        } |
-        {:error, atom() | String.t()}
-  
+          | {:error, atom() | String.t()}
+
   @doc """
   Extract job data from URL content using LLM.
-  
+
   ## Parameters
     - content: Raw HTML or text content from job posting
     - url: Original URL for context and source detection
     - mode: :specific (for known job boards) or :generic (for any content)
     - provider: Specific LLM provider to use (optional)
     - options: Additional options like temperature, max_tokens, etc.
-  
+
   ## Returns
     - {:ok, extracted_data} on success
     - {:error, reason} on failure
@@ -48,7 +49,6 @@ defmodule Clientats.LLM.Service do
     with {:ok, content} <- validate_content(content),
          {:ok, url} <- validate_url(url),
          {:ok, provider} <- determine_provider(provider) do
-
       # Try to extract with primary provider first
       case attempt_extraction(content, url, mode, provider, options) do
         {:ok, result} ->
@@ -69,7 +69,7 @@ defmodule Clientats.LLM.Service do
       {:error, _} = error -> error
     end
   end
-  
+
   @doc """
   Extract job data from URL using browser screenshot + multimodal LLM.
 
@@ -85,7 +85,9 @@ defmodule Clientats.LLM.Service do
   """
   def extract_job_data_from_url(url, mode \\ :generic, options \\ []) do
     # Determine provider
-    provider = Keyword.get(options, :provider) || Application.get_env(:req_llm, :primary_provider, :openai)
+    provider =
+      Keyword.get(options, :provider) || Application.get_env(:req_llm, :primary_provider, :openai)
+
     _user_id = Keyword.get(options, :user_id)
     progress_callback = Keyword.get(options, :progress_callback)
 
@@ -101,7 +103,10 @@ defmodule Clientats.LLM.Service do
         extract_with_screenshot(screenshot_path, url, mode, provider, options, progress_callback)
 
       {:error, reason} ->
-        IO.puts("[Service] Screenshot failed (#{inspect(reason)}), falling back to HTML extraction")
+        IO.puts(
+          "[Service] Screenshot failed (#{inspect(reason)}), falling back to HTML extraction"
+        )
+
         # Fallback to HTML if screenshot unavailable
         with {:ok, content} <- fetch_url_content(url),
              {:ok, extracted} <- extract_job_data(content, url, mode, provider, options) do
@@ -123,7 +128,14 @@ defmodule Clientats.LLM.Service do
     - options: Additional options
     - progress_callback: Optional callback function to report progress phases
   """
-  def extract_with_screenshot(screenshot_path, url, mode, provider, options, progress_callback \\ nil) do
+  def extract_with_screenshot(
+        screenshot_path,
+        url,
+        mode,
+        provider,
+        options,
+        progress_callback \\ nil
+      ) do
     with {:ok, provider} <- determine_provider(provider) do
       # Send sending phase update
       if progress_callback, do: progress_callback.(:sending)
@@ -183,7 +195,10 @@ defmodule Clientats.LLM.Service do
 
               _ ->
                 # For other providers, would need different image handling
-                IO.puts("[Service] Image extraction not supported for provider #{provider}, will retry with fallback providers")
+                IO.puts(
+                  "[Service] Image extraction not supported for provider #{provider}, will retry with fallback providers"
+                )
+
                 {:error, :unsupported_for_screenshot}
             end
 
@@ -231,6 +246,7 @@ defmodule Clientats.LLM.Service do
         # Clean up screenshot only after successful extraction
         File.rm(screenshot_path)
         {:ok, result}
+
       :error ->
         # Clean up screenshot if all providers failed
         File.rm(screenshot_path)
@@ -240,10 +256,14 @@ defmodule Clientats.LLM.Service do
 
   defp try_screenshot_fallbacks([provider | rest], screenshot_path, url, mode, options, _tried) do
     case attempt_screenshot_extraction(screenshot_path, url, mode, provider, options) do
-      {:ok, result} -> {:ok, result}
-      {:error, _reason} -> try_screenshot_fallbacks(rest, screenshot_path, url, mode, options, [provider])
+      {:ok, result} ->
+        {:ok, result}
+
+      {:error, _reason} ->
+        try_screenshot_fallbacks(rest, screenshot_path, url, mode, options, [provider])
     end
   end
+
   defp try_screenshot_fallbacks([], _screenshot_path, _url, _mode, _options, _tried), do: :error
 
   defp call_ollama_with_image(screenshot_path, prompt, options) do
@@ -263,7 +283,13 @@ defmodule Clientats.LLM.Service do
     ]
 
     # Call Ollama provider with image
-    Clientats.LLM.Providers.Ollama.generate_with_image(model, prompt, screenshot_path, ollama_options, base_url)
+    Clientats.LLM.Providers.Ollama.generate_with_image(
+      model,
+      prompt,
+      screenshot_path,
+      ollama_options,
+      base_url
+    )
   end
 
   defp call_google_gemini(prompt, options) do
@@ -277,6 +303,7 @@ defmodule Clientats.LLM.Service do
           {:ok, setting} ->
             # API key is stored in plain text
             setting.api_key
+
           {:error, :not_found} ->
             nil
         end
@@ -294,32 +321,40 @@ defmodule Clientats.LLM.Service do
           {:error, :not_found} -> "gemini-2.0-flash"
         end
       else
-        Application.get_env(:req_llm, :providers, %{})[:google][:default_model] || "gemini-2.0-flash"
+        Application.get_env(:req_llm, :providers, %{})[:google][:default_model] ||
+          "gemini-2.0-flash"
       end
 
-    api_version = Application.get_env(:req_llm, :providers, %{})[:google][:api_version] || "v1beta"
+    api_version =
+      Application.get_env(:req_llm, :providers, %{})[:google][:api_version] || "v1beta"
 
     if !api_key do
       {:error, :missing_api_key}
     else
       # Build Google Gemini API request
-      url = "https://generativelanguage.googleapis.com/#{api_version}/models/#{model}:generateContent"
+      url =
+        "https://generativelanguage.googleapis.com/#{api_version}/models/#{model}:generateContent"
 
       body = %{
-        "contents" => [%{
-          "parts" => [%{
-            "text" => prompt
-          }]
-        }]
+        "contents" => [
+          %{
+            "parts" => [
+              %{
+                "text" => prompt
+              }
+            ]
+          }
+        ]
       }
 
       try do
-        response = Req.post!(
-          url,
-          headers: [{"x-goog-api-key", api_key}],
-          json: body,
-          receive_timeout: options[:timeout] || 30_000
-        )
+        response =
+          Req.post!(
+            url,
+            headers: [{"x-goog-api-key", api_key}],
+            json: body,
+            receive_timeout: options[:timeout] || 30_000
+          )
 
         handle_google_response(response)
       rescue
@@ -341,6 +376,7 @@ defmodule Clientats.LLM.Service do
           {:ok, setting} ->
             # API key is stored in plain text
             setting.api_key
+
           {:error, :not_found} ->
             nil
         end
@@ -358,10 +394,12 @@ defmodule Clientats.LLM.Service do
           {:error, :not_found} -> "gemini-2.0-flash"
         end
       else
-        Application.get_env(:req_llm, :providers, %{})[:google][:vision_model] || "gemini-2.0-flash"
+        Application.get_env(:req_llm, :providers, %{})[:google][:vision_model] ||
+          "gemini-2.0-flash"
       end
 
-    api_version = Application.get_env(:req_llm, :providers, %{})[:google][:api_version] || "v1beta"
+    api_version =
+      Application.get_env(:req_llm, :providers, %{})[:google][:api_version] || "v1beta"
 
     if !api_key do
       {:error, :missing_api_key}
@@ -371,37 +409,43 @@ defmodule Clientats.LLM.Service do
         base64_image = Base.encode64(image_data)
 
         # Build Google Gemini API request with image
-        url = "https://generativelanguage.googleapis.com/#{api_version}/models/#{model}:generateContent"
+        url =
+          "https://generativelanguage.googleapis.com/#{api_version}/models/#{model}:generateContent"
 
         body = %{
-          "contents" => [%{
-            "parts" => [
-              %{
-                "text" => prompt
-              },
-              %{
-                "inlineData" => %{
-                  "mimeType" => "image/png",
-                  "data" => base64_image
+          "contents" => [
+            %{
+              "parts" => [
+                %{
+                  "text" => prompt
+                },
+                %{
+                  "inlineData" => %{
+                    "mimeType" => "image/png",
+                    "data" => base64_image
+                  }
                 }
-              }
-            ]
-          }]
+              ]
+            }
+          ]
         }
 
         try do
-          response = Req.post!(
-            url,
-            headers: [{"x-goog-api-key", api_key}],
-            json: body,
-            receive_timeout: options[:timeout] || 30_000
-          )
+          response =
+            Req.post!(
+              url,
+              headers: [{"x-goog-api-key", api_key}],
+              json: body,
+              receive_timeout: options[:timeout] || 30_000
+            )
 
           handle_google_response(response)
         rescue
           e ->
             IO.puts("[ERROR] Google Gemini Vision API call failed: #{Exception.message(e)}")
-            {:error, {:llm_error, "Google Gemini Vision API call failed: #{Exception.message(e)}"}}
+
+            {:error,
+             {:llm_error, "Google Gemini Vision API call failed: #{Exception.message(e)}"}}
         end
       else
         {:error, reason} ->
@@ -479,21 +523,21 @@ defmodule Clientats.LLM.Service do
   """
   def get_available_providers do
     providers = Application.get_env(:req_llm, :providers) || %{}
-    
+
     Enum.map(providers, fn {name, config} ->
       %{name: name, available: Map.has_key?(config, :api_key) && !is_nil(config[:api_key])}
     end)
   end
-  
+
   @doc """
   Get current LLM configuration.
   """
   def get_config do
     Application.get_env(:req_llm, :providers) || %{}
   end
-  
+
   # Private functions
-  
+
   defp validate_content(content) when is_binary(content) and byte_size(content) > 0 do
     if byte_size(content) > Application.get_env(:req_llm, :max_content_length, 10_000) do
       {:error, :content_too_large}
@@ -501,38 +545,45 @@ defmodule Clientats.LLM.Service do
       {:ok, content}
     end
   end
+
   defp validate_content(_), do: {:error, :invalid_content}
-  
+
   defp validate_url(url) when is_binary(url) do
     uri = URI.parse(url)
+
     if uri.scheme in ["http", "https"] do
       {:ok, url}
     else
       {:error, :invalid_url}
     end
   end
+
   defp validate_url(_), do: {:error, :invalid_url}
-  
+
   defp determine_provider(nil) do
     primary = Application.get_env(:req_llm, :primary_provider, :openai)
     {:ok, primary}
   end
+
   defp determine_provider(provider) when is_atom(provider) do
     {:ok, provider}
   end
+
   defp determine_provider(_), do: {:error, :invalid_provider}
-  
+
   defp attempt_extraction(content, url, mode, provider, options) do
     # Check cache first
     case Cache.get(url) do
-      {:ok, cached} -> {:ok, cached}
+      {:ok, cached} ->
+        {:ok, cached}
+
       :not_found ->
         # Build prompt based on mode
         prompt = PromptTemplates.build_job_extraction_prompt(content, url, mode)
-        
+
         IO.puts("[DEBUG] Attempting extraction with provider: #{inspect(provider)}")
         IO.puts("[DEBUG] Using model: #{get_model_for_provider(provider)}")
-        
+
         # Call LLM with provider
         try do
           result =
@@ -554,7 +605,7 @@ defmodule Clientats.LLM.Service do
                 # For now, return an error for non-Ollama providers until ReqLLM is properly integrated
                 {:error, {:llm_error, "ReqLLM provider #{provider} not yet fully integrated"}}
             end
-          
+
           IO.puts("[DEBUG] Received LLM result: #{inspect(result)}")
 
           # Parse and validate response
@@ -565,11 +616,13 @@ defmodule Clientats.LLM.Service do
                   # Cache successful result
                   Cache.put(url, parsed)
                   {:ok, parsed}
+
                 {:error, reason} ->
                   IO.puts("[ERROR] Failed to parse LLM response: #{inspect(reason)}")
                   IO.puts("[ERROR] Response map was: #{inspect(response_map)}")
                   {:error, reason}
               end
+
             {:error, reason} ->
               IO.puts("[ERROR] LLM call failed: #{inspect(reason)}")
               {:error, reason}
@@ -582,7 +635,7 @@ defmodule Clientats.LLM.Service do
         end
     end
   end
-  
+
   defp retry_with_fallback(content, url, mode, options) do
     fallback_providers = Application.get_env(:req_llm, :fallback_providers, [])
 
@@ -634,7 +687,7 @@ defmodule Clientats.LLM.Service do
     provider_config = Map.get(providers_config, provider, %{})
     Map.get(provider_config, :max_retries, 3)
   end
-  
+
   defp call_ollama(prompt, options) do
     # Get Ollama configuration from env (fallback)
     providers = Application.get_env(:req_llm, :providers, %{})
@@ -656,8 +709,11 @@ defmodule Clientats.LLM.Service do
 
   defp get_model_for_provider(provider) do
     providers = Application.get_env(:req_llm, :providers, %{})
+
     case providers[provider] do
-      %{default_model: model} -> model
+      %{default_model: model} ->
+        model
+
       _ ->
         case provider do
           :openai -> "gpt-4o"
@@ -696,14 +752,18 @@ defmodule Clientats.LLM.Service do
     case get_provider_config_with_fallback(user_id, provider) do
       {:ok, config} ->
         case provider do
-          :ollama -> true
+          :ollama ->
+            true
+
           _ ->
             # Handle both map and struct formats
-            api_key = case config do
-              %{api_key: key} -> key
-              %{"api_key" => key} -> key
-              _ -> nil
-            end
+            api_key =
+              case config do
+                %{api_key: key} -> key
+                %{"api_key" => key} -> key
+                _ -> nil
+              end
+
             api_key != nil
         end
 
@@ -711,7 +771,7 @@ defmodule Clientats.LLM.Service do
         false
     end
   end
-  
+
   # Handle Ollama response format (string or atom keys)
   defp parse_llm_response(%{"response" => response}) when is_binary(response) do
     try do
@@ -739,7 +799,8 @@ defmodule Clientats.LLM.Service do
   end
 
   # Handle OpenAI-style response format (atom keys)
-  defp parse_llm_response(%{choices: [%{message: %{content: content}}]}) when is_binary(content) do
+  defp parse_llm_response(%{choices: [%{message: %{content: content}}]})
+       when is_binary(content) do
     try do
       parsed = Jason.decode!(content)
       extract_job_fields(parsed)
@@ -749,7 +810,8 @@ defmodule Clientats.LLM.Service do
   end
 
   # Handle OpenAI-style response format (string keys)
-  defp parse_llm_response(%{"choices" => [%{"message" => %{"content" => content}}]}) when is_binary(content) do
+  defp parse_llm_response(%{"choices" => [%{"message" => %{"content" => content}}]})
+       when is_binary(content) do
     try do
       parsed = Jason.decode!(content)
       extract_job_fields(parsed)
@@ -782,18 +844,21 @@ defmodule Clientats.LLM.Service do
         skills: parse_skills(parsed),
         metadata: %{
           posting_date: parsed["posting_date"] || parsed[:posting_date] || nil,
-          application_deadline: parsed["application_deadline"] || parsed[:application_deadline] || nil,
+          application_deadline:
+            parsed["application_deadline"] || parsed[:application_deadline] || nil,
           employment_type: parsed["employment_type"] || parsed[:employment_type] || "full_time",
           seniority_level: parsed["seniority_level"] || parsed[:seniority_level] || nil
         }
       }
+
       {:ok, result}
     else
       {:error, :missing_required_fields}
     end
   end
+
   defp extract_job_fields(_), do: {:error, :invalid_response_format}
-  
+
   defp parse_salary(parsed) do
     salary_min = parsed["salary_min"] || parsed[:salary_min]
     salary_max = parsed["salary_max"] || parsed[:salary_max]
@@ -808,24 +873,29 @@ defmodule Clientats.LLM.Service do
           currency: currency,
           period: salary_period
         }
+
       salary_min ->
         %{
           min: salary_min,
           currency: currency,
           period: salary_period
         }
+
       salary_max ->
         %{
           max: salary_max,
           currency: currency,
           period: salary_period
         }
-      true -> nil
+
+      true ->
+        nil
     end
   end
 
   defp parse_skills(parsed) do
     skills = parsed["skills"] || parsed[:skills]
+
     case skills do
       nil -> []
       skills when is_list(skills) -> skills
@@ -833,21 +903,23 @@ defmodule Clientats.LLM.Service do
       _ -> []
     end
   end
-  
+
   defp fetch_url_content(url) do
     # Enhanced URL fetching with proper headers and longer timeout
     try do
       IO.puts("[Fetch] Fetching content from: #{url}")
 
-      response = Req.get!(url,
-           headers: [
-             {"User-Agent", "Mozilla/5.0 (compatible; Clientats/1.0; +https://clientats.com)"},
-             {"Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"},
-             {"Accept-Language", "en-US,en;q=0.5"}
-           ],
-           receive_timeout: 30_000,  # Increased timeout for slower job sites
-           redirect: true
-          )
+      response =
+        Req.get!(url,
+          headers: [
+            {"User-Agent", "Mozilla/5.0 (compatible; Clientats/1.0; +https://clientats.com)"},
+            {"Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"},
+            {"Accept-Language", "en-US,en;q=0.5"}
+          ],
+          # Increased timeout for slower job sites
+          receive_timeout: 30_000,
+          redirect: true
+        )
 
       case response.status do
         200 ->
@@ -884,7 +956,8 @@ defmodule Clientats.LLM.Service do
     # Try to extract JSON from text that might contain extra content
     case Regex.scan(~r/\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/, text) do
       [[json | _] | _] -> json
-      _ -> text  # If no JSON found, try to parse the whole text
+      # If no JSON found, try to parse the whole text
+      _ -> text
     end
   end
 end

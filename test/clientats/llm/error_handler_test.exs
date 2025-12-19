@@ -21,8 +21,10 @@ defmodule Clientats.LLM.ErrorHandlerTest do
     end
 
     test "recognizes specific status codes as retryable" do
-      assert ErrorHandler.retryable?({:http_error, 408}) == true  # Request timeout
-      assert ErrorHandler.retryable?({:http_error, 429}) == true  # Rate limit
+      # Request timeout
+      assert ErrorHandler.retryable?({:http_error, 408}) == true
+      # Rate limit
+      assert ErrorHandler.retryable?({:http_error, 429}) == true
     end
 
     test "recognizes connection errors as retryable" do
@@ -56,7 +58,8 @@ defmodule Clientats.LLM.ErrorHandlerTest do
       # Without jitter control, we can only test the base calculation
       # attempt 0: base_delay * 2^0 = 100
       base = ErrorHandler.calculate_backoff(0, 100)
-      assert base >= 100 and base <= 110  # With 10% jitter
+      # With 10% jitter
+      assert base >= 100 and base <= 110
 
       # attempt 1: base_delay * 2^1 = 200
       base = ErrorHandler.calculate_backoff(1, 100)

@@ -77,8 +77,7 @@ defmodule ClientatsWeb.JobInterestLive.New do
                     navigate={~p"/dashboard/job-interests/scrape"}
                     class="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
                   >
-                    <.icon name="hero-magic-wand" class="w-4 h-4" />
-                    Import from URL
+                    <.icon name="hero-magic-wand" class="w-4 h-4" /> Import from URL
                   </.link>
                   <p class="text-xs text-gray-500 mt-1">Use AI to extract job details</p>
                 <% else %>
@@ -86,7 +85,10 @@ defmodule ClientatsWeb.JobInterestLive.New do
                     <span class="text-gray-400">Import from URL (disabled)</span>
                   </p>
                   <p class="text-xs text-gray-400 mt-1">
-                    <.link navigate={~p"/dashboard/llm-setup"} class="text-blue-600 hover:text-blue-800">
+                    <.link
+                      navigate={~p"/dashboard/llm-setup"}
+                      class="text-blue-600 hover:text-blue-800"
+                    >
                       Configure an LLM provider
                     </.link>
                   </p>
@@ -136,7 +138,12 @@ defmodule ClientatsWeb.JobInterestLive.New do
                   />
                 </div>
 
-                <.input field={@form[:job_description]} type="textarea" label="Job Description" rows="4" />
+                <.input
+                  field={@form[:job_description]}
+                  type="textarea"
+                  label="Job Description"
+                  rows="4"
+                />
 
                 <div class="grid grid-cols-2 gap-4">
                   <.input

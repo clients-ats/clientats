@@ -31,6 +31,7 @@ defmodule Clientats.Logging.Timestamp do
   """
   def filename_safe_now(:microsecond) do
     now = DateTime.utc_now()
+
     "#{format_date(now)}_#{format_time(now)}_#{now.microsecond |> elem(0) |> Integer.to_string() |> String.pad_leading(6, "0")}"
   end
 

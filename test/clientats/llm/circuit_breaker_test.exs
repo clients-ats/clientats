@@ -12,23 +12,25 @@ defmodule Clientats.LLM.CircuitBreakerTest do
 
   describe "provider registration" do
     test "registers a provider with health check function" do
-      result = CircuitBreaker.register_provider(
-        :test_provider,
-        fn -> {:ok, :healthy} end,
-        failure_threshold: 5,
-        success_threshold: 2,
-        timeout_seconds: 60
-      )
+      result =
+        CircuitBreaker.register_provider(
+          :test_provider,
+          fn -> {:ok, :healthy} end,
+          failure_threshold: 5,
+          success_threshold: 2,
+          timeout_seconds: 60
+        )
 
       # Should return ok or atom
       assert result in [:ok, :alreadystarted] or is_atom(result)
     end
 
     test "provider registration with default options" do
-      result = CircuitBreaker.register_provider(
-        :default_test,
-        fn -> {:ok, :healthy} end
-      )
+      result =
+        CircuitBreaker.register_provider(
+          :default_test,
+          fn -> {:ok, :healthy} end
+        )
 
       assert result in [:ok, :alreadystarted] or is_atom(result)
     end
@@ -50,7 +52,8 @@ defmodule Clientats.LLM.CircuitBreakerTest do
     test "newly registered provider is available" do
       result = CircuitBreaker.available?(:test_available)
       # Provider should be in closed state (available)
-      assert result == true or result == false  # Just verify it returns boolean
+      # Just verify it returns boolean
+      assert result == true or result == false
     end
   end
 
@@ -192,11 +195,12 @@ defmodule Clientats.LLM.CircuitBreakerTest do
 
     test "handles concurrent recording of failures" do
       # Spawn multiple processes recording failures
-      tasks = Enum.map(1..5, fn _ ->
-        Task.async(fn ->
-          CircuitBreaker.record_failure(:concurrent_test)
+      tasks =
+        Enum.map(1..5, fn _ ->
+          Task.async(fn ->
+            CircuitBreaker.record_failure(:concurrent_test)
+          end)
         end)
-      end)
 
       # Wait for all tasks
       results = Task.await_many(tasks)
@@ -206,11 +210,12 @@ defmodule Clientats.LLM.CircuitBreakerTest do
     end
 
     test "handles concurrent availability checks" do
-      tasks = Enum.map(1..5, fn _ ->
-        Task.async(fn ->
-          CircuitBreaker.available?(:concurrent_test)
+      tasks =
+        Enum.map(1..5, fn _ ->
+          Task.async(fn ->
+            CircuitBreaker.available?(:concurrent_test)
+          end)
         end)
-      end)
 
       results = Task.await_many(tasks)
 
@@ -221,31 +226,34 @@ defmodule Clientats.LLM.CircuitBreakerTest do
 
   describe "configuration validation" do
     test "accepts custom failure threshold" do
-      result = CircuitBreaker.register_provider(
-        :threshold_test,
-        fn -> {:ok, :healthy} end,
-        failure_threshold: 10
-      )
+      result =
+        CircuitBreaker.register_provider(
+          :threshold_test,
+          fn -> {:ok, :healthy} end,
+          failure_threshold: 10
+        )
 
       assert is_atom(result)
     end
 
     test "accepts custom success threshold" do
-      result = CircuitBreaker.register_provider(
-        :success_threshold_test,
-        fn -> {:ok, :healthy} end,
-        success_threshold: 3
-      )
+      result =
+        CircuitBreaker.register_provider(
+          :success_threshold_test,
+          fn -> {:ok, :healthy} end,
+          success_threshold: 3
+        )
 
       assert is_atom(result)
     end
 
     test "accepts custom timeout" do
-      result = CircuitBreaker.register_provider(
-        :timeout_test,
-        fn -> {:ok, :healthy} end,
-        timeout_seconds: 120
-      )
+      result =
+        CircuitBreaker.register_provider(
+          :timeout_test,
+          fn -> {:ok, :healthy} end,
+          timeout_seconds: 120
+        )
 
       assert is_atom(result)
     end
@@ -277,8 +285,11 @@ defmodule Clientats.LLM.CircuitBreakerTest do
       assert is_map(status)
 
       if map_size(status) > 0 do
-        assert Enum.any?(status, fn {provider, _} -> provider in [:primary, :secondary, :tertiary] end) or
-                 true  # Might not be in status if not yet accessed
+        # Might not be in status if not yet accessed
+        assert Enum.any?(status, fn {provider, _} ->
+                 provider in [:primary, :secondary, :tertiary]
+               end) or
+                 true
       end
     end
 

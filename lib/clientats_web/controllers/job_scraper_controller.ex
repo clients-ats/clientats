@@ -13,16 +13,16 @@ defmodule ClientatsWeb.JobScraperController do
   alias Clientats.Jobs
   alias Clientats.Accounts
   alias ClientatsWeb.Versioning.APIVersion
-  
+
   @doc """
   Scrape job data from URL.
-  
+
   ## Parameters
     - url: Job posting URL (required)
     - mode: Extraction mode (:specific or :generic, default: :generic)
     - provider: LLM provider to use (optional)
     - save: Whether to automatically create job interest (default: false)
-  
+
   ## Returns
     - 200: Success with extracted job data
     - 400: Invalid request
@@ -36,10 +36,12 @@ defmodule ClientatsWeb.JobScraperController do
     mode = params["mode"] || "generic"
     provider = params["provider"]
     save = params["save"] || "false"
-    
+
     # Validate authentication
     case ensure_authenticated(conn) do
-      conn when conn.halted -> conn
+      conn when conn.halted ->
+        conn
+
       {:ok, current_user} ->
         case do_scrape(url, mode, provider, save, current_user) do
           {:ok, result} ->
@@ -76,7 +78,7 @@ defmodule ClientatsWeb.JobScraperController do
         end
     end
   end
-  
+
   @doc """
   Get available LLM providers and their status.
   """
@@ -122,7 +124,7 @@ defmodule ClientatsWeb.JobScraperController do
       })
     end
   end
-  
+
   # Private functions
 
   defp get_api_version(conn) do
@@ -130,33 +132,36 @@ defmodule ClientatsWeb.JobScraperController do
     case String.split(conn.request_path, "/") do
       [_, "api", "v1" | _] -> "v1"
       [_, "api", "v2" | _] -> "v2"
-      [_, "api" | _] -> "v1"  # Default to v1 for legacy /api/* routes
+      # Default to v1 for legacy /api/* routes
+      [_, "api" | _] -> "v1"
       _ -> APIVersion.current_version()
     end
   end
 
   defp ensure_authenticated(conn) do
     case Accounts.get_authenticated_user(conn) do
-      nil -> 
+      nil ->
         conn
         |> put_status(:unauthorized)
         |> json(%{error: "Unauthorized", message: "Authentication required"})
         |> halt()
-      
-      user -> 
+
+      user ->
         {:ok, user}
     end
   end
-  
+
   defp do_scrape(url, mode, provider, save, current_user) do
     # Validate URL
     case validate_scrape_request(url) do
-      {:error, reason} -> {:error, reason}
-      :ok -> 
+      {:error, reason} ->
+        {:error, reason}
+
+      :ok ->
         # Extract job data
         extraction_mode = String.to_atom(mode || "generic")
         provider_atom = parse_provider(provider)
-        
+
         case Service.extract_job_data_from_url(url, extraction_mode, provider: provider_atom) do
           {:ok, job_data} ->
             if save == "true" do
@@ -164,38 +169,39 @@ defmodule ClientatsWeb.JobScraperController do
             else
               {:ok, job_data}
             end
-          
-          {:error, reason} -> {:error, map_error_reason(reason)}
+
+          {:error, reason} ->
+            {:error, map_error_reason(reason)}
         end
     end
   end
-  
+
   defp validate_scrape_request(url) do
     cond do
       !url || String.trim(url) == "" ->
         {:error, "URL is required"}
-      
+
       !String.starts_with?(url, "http://") && !String.starts_with?(url, "https://") ->
         {:error, "URL must start with http:// or https://"}
-      
+
       byte_size(url) > 2000 ->
         {:error, "URL is too long (max 2000 characters)"}
-      
+
       true ->
         :ok
     end
   end
-  
+
   defp parse_provider(nil), do: nil
   defp parse_provider("openai"), do: :openai
   defp parse_provider("anthropic"), do: :anthropic
   defp parse_provider("mistral"), do: :mistral
   defp parse_provider(_), do: nil
-  
+
   defp map_error_reason(reason) do
     ErrorHandler.user_friendly_message(reason)
   end
-  
+
   defp create_job_interest_from_data(job_data, current_user) do
     job_interest_params = %{
       user_id: current_user.id,
@@ -209,11 +215,11 @@ defmodule ClientatsWeb.JobScraperController do
       priority: "medium",
       notes: "Imported via LLM job scraper"
     }
-    
+
     case Jobs.create_job_interest(job_interest_params) do
       {:ok, job_interest} ->
         {:ok, Map.put(job_data, :job_interest_id, job_interest.id)}
-      
+
       {:error, changeset} ->
         {:error, "Failed to create job interest: " <> inspect(changeset.errors)}
     end

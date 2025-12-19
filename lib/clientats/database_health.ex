@@ -58,8 +58,8 @@ defmodule Clientats.DatabaseHealth do
       case Repo.query("SELECT version()", []) do
         {:ok, %{rows: [[version_string | _] | _]}} ->
           version_string
-            |> String.split(",")
-            |> List.first()
+          |> String.split(",")
+          |> List.first()
 
         _ ->
           "Unknown"
@@ -93,19 +93,20 @@ defmodule Clientats.DatabaseHealth do
   """
   def get_database_activity do
     case Repo.query(
-      """
-      SELECT
-        count(*) as total_connections,
-        count(CASE WHEN state = 'active' THEN 1 END) as active,
-        count(CASE WHEN state = 'idle' THEN 1 END) as idle,
-        max(EXTRACT(EPOCH FROM (now() - query_start)) * 1000) as longest_query_ms
-      FROM pg_stat_activity
-      WHERE datname = current_database()
-      """,
-      []
-    ) do
+           """
+           SELECT
+             count(*) as total_connections,
+             count(CASE WHEN state = 'active' THEN 1 END) as active,
+             count(CASE WHEN state = 'idle' THEN 1 END) as idle,
+             max(EXTRACT(EPOCH FROM (now() - query_start)) * 1000) as longest_query_ms
+           FROM pg_stat_activity
+           WHERE datname = current_database()
+           """,
+           []
+         ) do
       {:ok, %{rows: rows}} when is_list(rows) and length(rows) > 0 ->
         [total, active, idle, longest] = List.first(rows)
+
         %{
           total_connections: total,
           active_connections: active,
@@ -138,18 +139,18 @@ defmodule Clientats.DatabaseHealth do
   """
   def get_performance_insights do
     case Repo.query(
-      """
-      SELECT
-        schemaname,
-        tablename,
-        indexname
-      FROM pg_stat_user_indexes
-      WHERE idx_scan = 0
-        AND indexname NOT LIKE '%_pkey'
-      LIMIT 10
-      """,
-      []
-    ) do
+           """
+           SELECT
+             schemaname,
+             tablename,
+             indexname
+           FROM pg_stat_user_indexes
+           WHERE idx_scan = 0
+             AND indexname NOT LIKE '%_pkey'
+           LIMIT 10
+           """,
+           []
+         ) do
       {:ok, result} ->
         Enum.map(result.rows, fn [schema, table, index] ->
           %{

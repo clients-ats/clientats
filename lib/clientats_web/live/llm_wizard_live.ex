@@ -37,8 +37,8 @@ defmodule ClientatsWeb.LLMWizardLive do
           <h1 class="text-3xl font-bold text-gray-900 mb-2">LLM Provider Setup</h1>
           <p class="text-gray-600">Let's get your AI provider configured in just a few steps</p>
         </div>
-
-        <!-- Step Indicator -->
+        
+    <!-- Step Indicator -->
         <div class="mb-8">
           <div class="flex items-center justify-between">
             <div class={step_class(1, @current_step)}>
@@ -50,7 +50,12 @@ defmodule ClientatsWeb.LLMWizardLive do
               </div>
             </div>
 
-            <div class={if @current_step > 1, do: "flex-1 h-1 bg-primary mx-2", else: "flex-1 h-1 bg-gray-300 mx-2"}></div>
+            <div class={
+              if @current_step > 1,
+                do: "flex-1 h-1 bg-primary mx-2",
+                else: "flex-1 h-1 bg-gray-300 mx-2"
+            }>
+            </div>
 
             <div class={step_class(2, @current_step)}>
               <div class="flex items-center">
@@ -68,7 +73,12 @@ defmodule ClientatsWeb.LLMWizardLive do
               </div>
             </div>
 
-            <div class={if @current_step > 2, do: "flex-1 h-1 bg-primary mx-2", else: "flex-1 h-1 bg-gray-300 mx-2"}></div>
+            <div class={
+              if @current_step > 2,
+                do: "flex-1 h-1 bg-primary mx-2",
+                else: "flex-1 h-1 bg-gray-300 mx-2"
+            }>
+            </div>
 
             <div class={step_class(3, @current_step)}>
               <div class="flex items-center">
@@ -87,13 +97,12 @@ defmodule ClientatsWeb.LLMWizardLive do
             </div>
           </div>
         </div>
-
-        <!-- Step Content -->
+        
+    <!-- Step Content -->
         <div class="bg-white rounded-lg shadow p-8">
           <%= case @current_step do %>
             <% 1 -> %>
               <.render_step_1 provider_choice={@provider_choice} />
-
             <% 2 -> %>
               <%= if @provider_choice == "gemini" do %>
                 <.render_step_2_gemini
@@ -114,7 +123,6 @@ defmodule ClientatsWeb.LLMWizardLive do
                   ollama_models={@ollama_models}
                 />
               <% end %>
-
             <% 3 -> %>
               <.render_step_3
                 provider_choice={@provider_choice}
@@ -123,8 +131,8 @@ defmodule ClientatsWeb.LLMWizardLive do
               />
           <% end %>
         </div>
-
-        <!-- Navigation -->
+        
+    <!-- Navigation -->
         <div class="mt-8 flex justify-between">
           <div class="flex gap-2">
             <%= if @current_step > 1 do %>
@@ -260,12 +268,12 @@ defmodule ClientatsWeb.LLMWizardLive do
           </p>
           <%= if errors = @form_errors["api_key"] do %>
             <div class="alert alert-error alert-sm mt-2">
-              <span><%= Enum.join(errors, ", ") %></span>
+              <span>{Enum.join(errors, ", ")}</span>
             </div>
           <% end %>
         </div>
-
-        <!-- Model Selection -->
+        
+    <!-- Model Selection -->
         <div>
           <label class="label">
             <span class="label-text font-semibold">Model <span class="text-error">*</span></span>
@@ -278,8 +286,8 @@ defmodule ClientatsWeb.LLMWizardLive do
             <option value="gemini-2.0-flash">gemini-2.0-flash</option>
           </select>
         </div>
-
-        <!-- Test Connection -->
+        
+    <!-- Test Connection -->
         <div>
           <button
             type="button"
@@ -295,25 +303,23 @@ defmodule ClientatsWeb.LLMWizardLive do
             }
           >
             <%= if @testing do %>
-              <span class="loading loading-spinner loading-sm"></span>
-              Testing...
+              <span class="loading loading-spinner loading-sm"></span> Testing...
             <% else %>
               Test Connection
             <% end %>
           </button>
         </div>
-
-        <!-- Test Result -->
+        
+    <!-- Test Result -->
         <%= if @test_result do %>
           <%= case @test_result do %>
             <% {:ok, _} -> %>
               <div class="alert alert-success">
                 <span>✓ Connection successful! Ready to proceed.</span>
               </div>
-
             <% {:error, message} -> %>
               <div class="alert alert-error">
-                <span><%= message %></span>
+                <span>{message}</span>
               </div>
           <% end %>
         <% end %>
@@ -348,8 +354,8 @@ defmodule ClientatsWeb.LLMWizardLive do
             </a>
           </p>
         </div>
-
-        <!-- Discover Models -->
+        
+    <!-- Discover Models -->
         <div>
           <button
             type="button"
@@ -365,15 +371,14 @@ defmodule ClientatsWeb.LLMWizardLive do
             }
           >
             <%= if @discovering_models do %>
-              <span class="loading loading-spinner loading-sm"></span>
-              Discovering...
+              <span class="loading loading-spinner loading-sm"></span> Discovering...
             <% else %>
               Discover Models
             <% end %>
           </button>
         </div>
-
-        <!-- Model Selection -->
+        
+    <!-- Model Selection -->
         <div>
           <label class="label">
             <span class="label-text font-semibold">Model <span class="text-error">*</span></span>
@@ -381,15 +386,17 @@ defmodule ClientatsWeb.LLMWizardLive do
           <select name="default_model" class="select select-bordered w-full">
             <option value="">Select a model...</option>
             <%= for model <- @ollama_models do %>
-              <option value={model} selected={@config["default_model"] == model}><%= model %></option>
+              <option value={model} selected={@config["default_model"] == model}>{model}</option>
             <% end %>
           </select>
           <%= if Enum.empty?(@ollama_models) do %>
-            <p class="text-sm text-gray-600 mt-2">No models found. Please click "Discover Models" first.</p>
+            <p class="text-sm text-gray-600 mt-2">
+              No models found. Please click "Discover Models" first.
+            </p>
           <% end %>
         </div>
-
-        <!-- Test Connection -->
+        
+    <!-- Test Connection -->
         <div>
           <button
             type="button"
@@ -405,25 +412,23 @@ defmodule ClientatsWeb.LLMWizardLive do
             }
           >
             <%= if @testing do %>
-              <span class="loading loading-spinner loading-sm"></span>
-              Testing...
+              <span class="loading loading-spinner loading-sm"></span> Testing...
             <% else %>
               Test Connection
             <% end %>
           </button>
         </div>
-
-        <!-- Test Result -->
+        
+    <!-- Test Result -->
         <%= if @test_result do %>
           <%= case @test_result do %>
             <% {:ok, _} -> %>
               <div class="alert alert-success">
                 <span>✓ Connection successful! Ready to proceed.</span>
               </div>
-
             <% {:error, message} -> %>
               <div class="alert alert-error">
-                <span><%= message %></span>
+                <span>{message}</span>
               </div>
           <% end %>
         <% end %>
@@ -449,7 +454,7 @@ defmodule ClientatsWeb.LLMWizardLive do
           </div>
           <div>
             <h3 class="text-lg font-semibold text-gray-900 mb-2">
-              <%= String.capitalize(@provider_choice) %>
+              {String.capitalize(@provider_choice)}
             </h3>
             <div class="text-sm text-gray-600 space-y-1">
               <p>✓ Provider configured</p>
@@ -538,7 +543,11 @@ defmodule ClientatsWeb.LLMWizardLive do
   def handle_event("complete", _, socket) do
     user_id = socket.assigns.user_id
     provider = socket.assigns.provider_choice
-    config = if provider == "gemini", do: socket.assigns.gemini_config, else: socket.assigns.ollama_config
+
+    config =
+      if provider == "gemini",
+        do: socket.assigns.gemini_config,
+        else: socket.assigns.ollama_config
 
     # Enable the provider by default when creating from wizard
     config_with_enabled = Map.put(config, "enabled", true)
@@ -590,7 +599,8 @@ defmodule ClientatsWeb.LLMWizardLive do
   end
 
   def handle_info({:test_connection, provider}, socket) do
-    config = if provider == :gemini, do: socket.assigns.gemini_config, else: socket.assigns.ollama_config
+    config =
+      if provider == :gemini, do: socket.assigns.gemini_config, else: socket.assigns.ollama_config
 
     result = LLMConfig.test_connection(provider, config)
 

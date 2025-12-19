@@ -33,6 +33,7 @@ defmodule LLMResponseMock do
   """
   def generate_response_map(scenario \\ :successful) do
     response = generate_response(scenario)
+
     case Jason.decode(response) do
       {:ok, map} -> map
       {:error, _} -> %{}
@@ -59,8 +60,8 @@ defmodule LLMResponseMock do
       "job_description" => "Join our team to build scalable systems...",
       "location" => "San Francisco, CA",
       "work_model" => "hybrid",
-      "salary_min" => 150000,
-      "salary_max" => 200000,
+      "salary_min" => 150_000,
+      "salary_max" => 200_000,
       "currency" => "USD",
       "salary_period" => "yearly",
       "skills" => ["Elixir", "Phoenix", "PostgreSQL", "AWS"],
@@ -107,7 +108,8 @@ defmodule LLMResponseMock do
       "job_description" => "Process large datasets...",
       "location" => "New York, NY",
       "work_model" => "on_site",
-      "salary_min" => "not_a_number",  # Invalid salary format
+      # Invalid salary format
+      "salary_min" => "not_a_number",
       "salary_max" => "also_invalid",
       "currency" => "USD",
       "salary_period" => "yearly",
@@ -122,7 +124,7 @@ defmodule LLMResponseMock do
       "job_description" => "Lead product strategy and development...",
       "location" => "Boston, MA",
       "work_model" => "hybrid",
-      "salary_min" => 120000,
+      "salary_min" => 120_000,
       # salary_max missing - only min provided
       "currency" => "USD",
       "salary_period" => "yearly",

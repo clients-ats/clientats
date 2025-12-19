@@ -142,7 +142,7 @@ defmodule ClientatsWeb.JobInterestLiveTest do
 
     test "displays salary range", %{conn: conn} do
       user = user_fixture()
-      interest = job_interest_fixture(user_id: user.id, salary_min: 100000, salary_max: 150000)
+      interest = job_interest_fixture(user_id: user.id, salary_min: 100_000, salary_max: 150_000)
       conn = log_in_user(conn, user)
 
       {:ok, _lv, html} = live(conn, ~p"/dashboard/job-interests/#{interest}")
@@ -153,7 +153,10 @@ defmodule ClientatsWeb.JobInterestLiveTest do
 
     test "displays job URL link", %{conn: conn} do
       user = user_fixture()
-      interest = job_interest_fixture(user_id: user.id, job_url: "https://careers.example.com/job")
+
+      interest =
+        job_interest_fixture(user_id: user.id, job_url: "https://careers.example.com/job")
+
       conn = log_in_user(conn, user)
 
       {:ok, _lv, html} = live(conn, ~p"/dashboard/job-interests/#{interest}")
@@ -164,7 +167,10 @@ defmodule ClientatsWeb.JobInterestLiveTest do
 
     test "displays status and priority", %{conn: conn} do
       user = user_fixture()
-      interest = job_interest_fixture(user_id: user.id, status: "ready_to_apply", priority: "high")
+
+      interest =
+        job_interest_fixture(user_id: user.id, status: "ready_to_apply", priority: "high")
+
       conn = log_in_user(conn, user)
 
       {:ok, _lv, html} = live(conn, ~p"/dashboard/job-interests/#{interest}")

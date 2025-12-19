@@ -49,13 +49,17 @@ defmodule Clientats.MigrationTestHelper do
 
   def table_exists?(table_name) when is_binary(table_name) do
     {:ok, result} =
-      SQL.query(Repo, """
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables
-        WHERE table_schema = 'public'
-        AND table_name = $1
+      SQL.query(
+        Repo,
+        """
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables
+          WHERE table_schema = 'public'
+          AND table_name = $1
+        )
+        """,
+        [table_name]
       )
-      """, [table_name])
 
     [[exists]] = result.rows
     exists
@@ -72,13 +76,17 @@ defmodule Clientats.MigrationTestHelper do
 
   def get_table_columns(table_name) when is_binary(table_name) do
     {:ok, result} =
-      SQL.query(Repo, """
-      SELECT column_name
-      FROM information_schema.columns
-      WHERE table_schema = 'public'
-      AND table_name = $1
-      ORDER BY ordinal_position
-      """, [table_name])
+      SQL.query(
+        Repo,
+        """
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+        AND table_name = $1
+        ORDER BY ordinal_position
+        """,
+        [table_name]
+      )
 
     Enum.map(result.rows, fn [col_name] -> col_name end)
   end
@@ -95,26 +103,33 @@ defmodule Clientats.MigrationTestHelper do
   @doc """
   Get column info including type and constraints.
   """
-  def get_column_info(table_name, column_name) when is_binary(table_name) and is_binary(column_name) do
+  def get_column_info(table_name, column_name)
+      when is_binary(table_name) and is_binary(column_name) do
     {:ok, result} =
-      SQL.query(Repo, """
-      SELECT
-        data_type,
-        is_nullable,
-        column_default
-      FROM information_schema.columns
-      WHERE table_schema = 'public'
-      AND table_name = $1
-      AND column_name = $2
-      """, [table_name, column_name])
+      SQL.query(
+        Repo,
+        """
+        SELECT
+          data_type,
+          is_nullable,
+          column_default
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+        AND table_name = $1
+        AND column_name = $2
+        """,
+        [table_name, column_name]
+      )
 
     case result.rows do
       [[data_type, is_nullable, column_default]] ->
-        {:ok, %{
-          data_type: data_type,
-          nullable: is_nullable == "YES",
-          default: column_default
-        }}
+        {:ok,
+         %{
+           data_type: data_type,
+           nullable: is_nullable == "YES",
+           default: column_default
+         }}
+
       [] ->
         {:error, :column_not_found}
     end
@@ -123,16 +138,21 @@ defmodule Clientats.MigrationTestHelper do
   @doc """
   Check if an index exists on a table.
   """
-  def index_exists?(table_name, index_name) when is_binary(table_name) and is_binary(index_name) do
+  def index_exists?(table_name, index_name)
+      when is_binary(table_name) and is_binary(index_name) do
     {:ok, result} =
-      SQL.query(Repo, """
-      SELECT EXISTS (
-        SELECT FROM pg_indexes
-        WHERE schemaname = 'public'
-        AND tablename = $1
-        AND indexname = $2
+      SQL.query(
+        Repo,
+        """
+        SELECT EXISTS (
+          SELECT FROM pg_indexes
+          WHERE schemaname = 'public'
+          AND tablename = $1
+          AND indexname = $2
+        )
+        """,
+        [table_name, index_name]
       )
-      """, [table_name, index_name])
 
     [[exists]] = result.rows
     exists
@@ -143,12 +163,16 @@ defmodule Clientats.MigrationTestHelper do
   """
   def get_table_indexes(table_name) when is_binary(table_name) do
     {:ok, result} =
-      SQL.query(Repo, """
-      SELECT indexname, indexdef
-      FROM pg_indexes
-      WHERE schemaname = 'public'
-      AND tablename = $1
-      """, [table_name])
+      SQL.query(
+        Repo,
+        """
+        SELECT indexname, indexdef
+        FROM pg_indexes
+        WHERE schemaname = 'public'
+        AND tablename = $1
+        """,
+        [table_name]
+      )
 
     Enum.map(result.rows, fn [name, definition] ->
       %{name: name, definition: definition}
@@ -158,15 +182,20 @@ defmodule Clientats.MigrationTestHelper do
   @doc """
   Check if a foreign key exists.
   """
-  def foreign_key_exists?(from_table, to_table) when is_binary(from_table) and is_binary(to_table) do
+  def foreign_key_exists?(from_table, to_table)
+      when is_binary(from_table) and is_binary(to_table) do
     {:ok, result} =
-      SQL.query(Repo, """
-      SELECT EXISTS (
-        SELECT FROM information_schema.table_constraints
-        WHERE constraint_type = 'FOREIGN KEY'
-        AND table_name = $1
+      SQL.query(
+        Repo,
+        """
+        SELECT EXISTS (
+          SELECT FROM information_schema.table_constraints
+          WHERE constraint_type = 'FOREIGN KEY'
+          AND table_name = $1
+        )
+        """,
+        [from_table]
       )
-      """, [from_table])
 
     [[exists]] = result.rows
     exists
@@ -186,12 +215,16 @@ defmodule Clientats.MigrationTestHelper do
   """
   def get_unique_constraints(table_name) when is_binary(table_name) do
     {:ok, result} =
-      SQL.query(Repo, """
-      SELECT constraint_name
-      FROM information_schema.table_constraints
-      WHERE constraint_type = 'UNIQUE'
-      AND table_name = $1
-      """, [table_name])
+      SQL.query(
+        Repo,
+        """
+        SELECT constraint_name
+        FROM information_schema.table_constraints
+        WHERE constraint_type = 'UNIQUE'
+        AND table_name = $1
+        """,
+        [table_name]
+      )
 
     Enum.map(result.rows, fn [name] -> name end)
   end
@@ -215,7 +248,9 @@ defmodule Clientats.MigrationTestHelper do
     values = Map.values(data_with_timestamps)
 
     column_list = Enum.join(columns, ", ")
-    placeholders = columns |> Enum.with_index(1) |> Enum.map(fn {_, i} -> "$#{i}" end) |> Enum.join(", ")
+
+    placeholders =
+      columns |> Enum.with_index(1) |> Enum.map(fn {_, i} -> "$#{i}" end) |> Enum.join(", ")
 
     query = "INSERT INTO #{table_name} (#{column_list}) VALUES (#{placeholders}) RETURNING *"
 
@@ -227,7 +262,11 @@ defmodule Clientats.MigrationTestHelper do
   """
   def fk_value_exists?(parent_table, parent_id_col, child_value) when is_binary(parent_table) do
     {:ok, result} =
-      SQL.query(Repo, "SELECT EXISTS (SELECT 1 FROM #{parent_table} WHERE #{parent_id_col} = $1)", [child_value])
+      SQL.query(
+        Repo,
+        "SELECT EXISTS (SELECT 1 FROM #{parent_table} WHERE #{parent_id_col} = $1)",
+        [child_value]
+      )
 
     [[exists]] = result.rows
     exists

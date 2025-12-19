@@ -159,8 +159,14 @@ defmodule Clientats.Logging.LLMLogger do
         updated =
           stats_entry
           |> Map.update!("total_requests", &(&1 + 1))
-          |> Map.update!("successful_requests", &(&1 + (if entry["success"] === true, do: 1, else: 0)))
-          |> Map.update!("failed_requests", &(&1 + (if entry["success"] === false, do: 1, else: 0)))
+          |> Map.update!(
+            "successful_requests",
+            &(&1 + if(entry["success"] === true, do: 1, else: 0))
+          )
+          |> Map.update!(
+            "failed_requests",
+            &(&1 + if(entry["success"] === false, do: 1, else: 0))
+          )
           |> Map.update!("total_latency_ms", &(&1 + (entry["latency_ms"] || 0)))
           |> Map.update!("total_prompt_tokens", &(&1 + (entry["prompt_length"] || 0)))
           |> Map.update!("total_response_tokens", &(&1 + (entry["response_length"] || 0)))

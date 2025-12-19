@@ -37,7 +37,7 @@ defmodule Clientats.JobsTest do
         location: "Remote",
         work_model: "remote",
         salary_min: 80000,
-        salary_max: 120000,
+        salary_max: 120_000,
         status: "interested",
         priority: "high"
       }
@@ -84,12 +84,14 @@ defmodule Clientats.JobsTest do
         user_id: user.id,
         company_name: "Tech Corp",
         position_title: "Engineer",
-        salary_min: 120000,
+        salary_min: 120_000,
         salary_max: 80000
       }
 
       assert {:error, changeset} = Jobs.create_job_interest(invalid_attrs)
-      assert %{salary_max: ["must be greater than or equal to minimum salary"]} = errors_on(changeset)
+
+      assert %{salary_max: ["must be greater than or equal to minimum salary"]} =
+               errors_on(changeset)
     end
 
     test "update_job_interest/2 with valid data updates the job interest" do
@@ -269,12 +271,14 @@ defmodule Clientats.JobsTest do
         company_name: "Tech Corp",
         position_title: "Engineer",
         application_date: ~D[2024-01-15],
-        salary_min: 120000,
+        salary_min: 120_000,
         salary_max: 80000
       }
 
       assert {:error, changeset} = Jobs.create_job_application(invalid_attrs)
-      assert %{salary_max: ["must be greater than or equal to minimum salary"]} = errors_on(changeset)
+
+      assert %{salary_max: ["must be greater than or equal to minimum salary"]} =
+               errors_on(changeset)
     end
   end
 

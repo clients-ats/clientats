@@ -59,11 +59,12 @@ defmodule Clientats.Error.HandlerTest do
     end
 
     test "formats duplicate error" do
-      result = Handler.format_error(
-        {:error, :duplicate},
-        :duplicate_error,
-        %{resource: "job interest"}
-      )
+      result =
+        Handler.format_error(
+          {:error, :duplicate},
+          :duplicate_error,
+          %{resource: "job interest"}
+        )
 
       assert result.type == :duplicate_error
       assert result.message == "Resource already exists"

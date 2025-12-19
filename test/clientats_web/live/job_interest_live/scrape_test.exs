@@ -32,7 +32,7 @@ defmodule ClientatsWeb.JobInterestLive.ScrapeTest do
 
     %{conn: conn, user: user}
   end
-  
+
   describe "Job Scrape LiveView" do
     test "renders scrape page", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/dashboard/job-interests/scrape")
@@ -81,7 +81,9 @@ defmodule ClientatsWeb.JobInterestLive.ScrapeTest do
       # Update URL input
       html =
         view
-        |> form("form[phx-change='update_url']", %{"url" => "https://www.linkedin.com/jobs/view/123"})
+        |> form("form[phx-change='update_url']", %{
+          "url" => "https://www.linkedin.com/jobs/view/123"
+        })
         |> render_change()
 
       # Verify form still renders

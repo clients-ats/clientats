@@ -72,7 +72,13 @@ defmodule ClientatsWeb.DashboardLiveTest do
 
     test "displays job interests when they exist", %{conn: conn} do
       user = user_fixture()
-      job_interest_fixture(user_id: user.id, company_name: "Tech Corp", position_title: "Software Engineer")
+
+      job_interest_fixture(
+        user_id: user.id,
+        company_name: "Tech Corp",
+        position_title: "Software Engineer"
+      )
+
       conn = log_in_user(conn, user)
 
       {:ok, _lv, html} = live(conn, ~p"/dashboard")
@@ -84,8 +90,19 @@ defmodule ClientatsWeb.DashboardLiveTest do
 
     test "displays multiple job interests", %{conn: conn} do
       user = user_fixture()
-      job_interest_fixture(user_id: user.id, company_name: "Company A", position_title: "Developer")
-      job_interest_fixture(user_id: user.id, company_name: "Company B", position_title: "Engineer")
+
+      job_interest_fixture(
+        user_id: user.id,
+        company_name: "Company A",
+        position_title: "Developer"
+      )
+
+      job_interest_fixture(
+        user_id: user.id,
+        company_name: "Company B",
+        position_title: "Engineer"
+      )
+
       conn = log_in_user(conn, user)
 
       {:ok, _lv, html} = live(conn, ~p"/dashboard")
@@ -124,14 +141,22 @@ defmodule ClientatsWeb.DashboardLiveTest do
 
       {:ok, lv, _html} = live(conn, ~p"/dashboard")
 
-      lv |> element("div[phx-click='select_interest'][phx-value-id='#{interest.id}']") |> render_click()
+      lv
+      |> element("div[phx-click='select_interest'][phx-value-id='#{interest.id}']")
+      |> render_click()
 
       assert_redirect(lv, ~p"/dashboard/job-interests/#{interest.id}")
     end
 
     test "displays job applications when they exist", %{conn: conn} do
       user = user_fixture()
-      job_application_fixture(user_id: user.id, company_name: "App Corp", position_title: "Developer")
+
+      job_application_fixture(
+        user_id: user.id,
+        company_name: "App Corp",
+        position_title: "Developer"
+      )
+
       conn = log_in_user(conn, user)
 
       {:ok, _lv, html} = live(conn, ~p"/dashboard")

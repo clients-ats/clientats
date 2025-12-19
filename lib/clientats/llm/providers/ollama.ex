@@ -7,20 +7,21 @@ defmodule Clientats.LLM.Providers.Ollama do
   """
 
   @default_base_url "http://localhost:11434"
-  @default_timeout 600_000  # 10 minutes for LLM generation
-  
+  # 10 minutes for LLM generation
+  @default_timeout 600_000
+
   @type options :: Keyword.t()
   @type response :: map()
-  
+
   @doc """
   Generate text completion using Ollama.
-  
+
   ## Parameters
     - model: Model name (e.g., "hf.co/unsloth/Magistral-Small-2509-GGUF:UD-Q4_K_XL")
     - prompt: Input prompt
     - options: Additional options (temperature, top_p, etc.)
     - base_url: Ollama server URL (default: http://localhost:11434)
-  
+
   ## Returns
     - {:ok, response} on success
     - {:error, reason} on failure
@@ -44,10 +45,11 @@ defmodule Clientats.LLM.Providers.Ollama do
 
     # Make HTTP request with proper error handling
     try do
-      response = Req.post!("#{base_url}/api/generate",
-        json: body,
-        receive_timeout: @default_timeout
-      )
+      response =
+        Req.post!("#{base_url}/api/generate",
+          json: body,
+          receive_timeout: @default_timeout
+        )
 
       case response do
         %{status: 200, body: response_body} ->
@@ -102,16 +104,16 @@ defmodule Clientats.LLM.Providers.Ollama do
         end
     end
   end
-  
+
   @doc """
   Chat completion using Ollama.
-  
+
   ## Parameters
     - model: Model name
     - messages: List of message maps with :role and :content
     - options: Additional options
     - base_url: Ollama server URL
-  
+
   ## Returns
     - {:ok, response} on success
     - {:error, reason} on failure
@@ -154,88 +156,89 @@ defmodule Clientats.LLM.Providers.Ollama do
     else
       # Read image file and encode as base64
       case File.read(image_path) do
-      {:ok, image_data} ->
-        image_base64 = Base.encode64(image_data)
+        {:ok, image_data} ->
+          image_base64 = Base.encode64(image_data)
 
-        # Build request body with image
-        body = %{
-          "model" => model,
-          "prompt" => prompt,
-          "stream" => false,
-          "images" => [image_base64],
-          "options" => build_options(options)
-        }
+          # Build request body with image
+          body = %{
+            "model" => model,
+            "prompt" => prompt,
+            "stream" => false,
+            "images" => [image_base64],
+            "options" => build_options(options)
+          }
 
-        # Log request details
-        IO.puts("[Ollama] Sending multimodal request to #{base_url}/api/generate")
-        IO.puts("[Ollama] Model: #{model}")
-        IO.puts("[Ollama] Image: #{image_path} (#{byte_size(image_data)} bytes)")
-        IO.puts("[Ollama] Prompt size: #{byte_size(prompt)} bytes")
-        IO.puts("[Ollama] Options: #{inspect(body["options"])}")
+          # Log request details
+          IO.puts("[Ollama] Sending multimodal request to #{base_url}/api/generate")
+          IO.puts("[Ollama] Model: #{model}")
+          IO.puts("[Ollama] Image: #{image_path} (#{byte_size(image_data)} bytes)")
+          IO.puts("[Ollama] Prompt size: #{byte_size(prompt)} bytes")
+          IO.puts("[Ollama] Options: #{inspect(body["options"])}")
 
-        # Make HTTP request
-        try do
-          response = Req.post!("#{base_url}/api/generate",
-            json: body,
-            receive_timeout: @default_timeout
-          )
+          # Make HTTP request
+          try do
+            response =
+              Req.post!("#{base_url}/api/generate",
+                json: body,
+                receive_timeout: @default_timeout
+              )
 
-          case response do
-            %{status: 200, body: response_body} ->
-              # Handle both string and map responses
-              decoded =
-                case response_body do
-                  %{} -> response_body
-                  _ -> Jason.decode!(response_body)
+            case response do
+              %{status: 200, body: response_body} ->
+                # Handle both string and map responses
+                decoded =
+                  case response_body do
+                    %{} -> response_body
+                    _ -> Jason.decode!(response_body)
+                  end
+
+                # Log response details
+                IO.puts("[Ollama] Response received (status 200)")
+                IO.puts("[Ollama] Response keys: #{inspect(Map.keys(decoded))}")
+
+                if is_map(decoded) && Map.has_key?(decoded, "response") do
+                  IO.puts("[Ollama] Response text size: #{byte_size(decoded["response"])} bytes")
                 end
 
-              # Log response details
-              IO.puts("[Ollama] Response received (status 200)")
-              IO.puts("[Ollama] Response keys: #{inspect(Map.keys(decoded))}")
+                {:ok, decoded}
 
-              if is_map(decoded) && Map.has_key?(decoded, "response") do
-                IO.puts("[Ollama] Response text size: #{byte_size(decoded["response"])} bytes")
-              end
+              %{status: 429} ->
+                IO.puts("[Ollama] Rate limited (429)")
+                {:error, :rate_limited}
 
-              {:ok, decoded}
+              %{status: 401} ->
+                IO.puts("[Ollama] Authentication failed (401)")
+                {:error, :auth_error}
 
-            %{status: 429} ->
-              IO.puts("[Ollama] Rate limited (429)")
-              {:error, :rate_limited}
+              %{status: 403} ->
+                IO.puts("[Ollama] Access denied (403)")
+                {:error, :auth_error}
 
-            %{status: 401} ->
-              IO.puts("[Ollama] Authentication failed (401)")
-              {:error, :auth_error}
+              %{status: status} when status >= 500 ->
+                IO.puts("[Ollama] Server error (#{status})")
+                {:error, {:http_error, status}}
 
-            %{status: 403} ->
-              IO.puts("[Ollama] Access denied (403)")
-              {:error, :auth_error}
-
-            %{status: status} when status >= 500 ->
-              IO.puts("[Ollama] Server error (#{status})")
-              {:error, {:http_error, status}}
-
-            %{status: status} ->
-              IO.puts("[Ollama] HTTP Error: #{status}")
-              {:error, {:http_error, status}}
-          end
-        rescue
-          e ->
-            case e do
-              %Req.TransportError{reason: :timeout} ->
-                IO.puts("[Ollama] Request timeout after #{@default_timeout}ms")
-                {:error, {:timeout, "Ollama request timeout"}}
-
-              _ ->
-                error_msg = Exception.message(e)
-                IO.puts("[Ollama] Exception: #{error_msg}")
-                {:error, {:exception, error_msg}}
+              %{status: status} ->
+                IO.puts("[Ollama] HTTP Error: #{status}")
+                {:error, {:http_error, status}}
             end
-        end
+          rescue
+            e ->
+              case e do
+                %Req.TransportError{reason: :timeout} ->
+                  IO.puts("[Ollama] Request timeout after #{@default_timeout}ms")
+                  {:error, {:timeout, "Ollama request timeout"}}
 
-      {:error, reason} ->
-        IO.puts("[Ollama] Failed to read image file: #{inspect(reason)}")
-        {:error, {:image_read_error, reason}}
+                _ ->
+                  error_msg = Exception.message(e)
+                  IO.puts("[Ollama] Exception: #{error_msg}")
+                  {:error, {:exception, error_msg}}
+              end
+          end
+
+        {:error, reason} ->
+          IO.puts("[Ollama] Failed to read image file: #{inspect(reason)}")
+          {:error, {:image_read_error, reason}}
       end
     end
   end
@@ -265,7 +268,7 @@ defmodule Clientats.LLM.Providers.Ollama do
       e -> {:error, {:exception, Exception.message(e)}}
     end
   end
-  
+
   @doc """
   Check if Ollama server is available.
   """
@@ -274,6 +277,7 @@ defmodule Clientats.LLM.Providers.Ollama do
 
     try do
       response = Req.get!("#{base_url}", receive_timeout: 10_000)
+
       case response.status do
         200 -> {:ok, :available}
         _ -> {:error, :unavailable}
@@ -282,17 +286,18 @@ defmodule Clientats.LLM.Providers.Ollama do
       _ -> {:error, :unavailable}
     end
   end
-  
+
   # Private functions
-  
+
   defp build_options(options) when is_list(options) do
     # Convert keyword list to map
     options
     |> Enum.into(%{})
   end
+
   defp build_options(options) when is_map(options), do: options
   defp build_options(_), do: %{}
-  
+
   defp build_prompt_from_messages(messages) do
     messages
     |> Enum.map(fn msg ->
@@ -302,6 +307,4 @@ defmodule Clientats.LLM.Providers.Ollama do
     end)
     |> Enum.join("\n")
   end
-  
-
 end

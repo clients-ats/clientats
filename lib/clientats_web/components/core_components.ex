@@ -477,7 +477,10 @@ defmodule ClientatsWeb.CoreComponents do
 
       <.error_recovery_panel error_details={@error_details} />
   """
-  attr :error_details, :map, required: true, doc: "error details map from ErrorHandler.error_details/1"
+  attr :error_details, :map,
+    required: true,
+    doc: "error details map from ErrorHandler.error_details/1"
+
   attr :on_manual_entry, :string, default: nil, doc: "phx-click action for manual entry button"
   attr :on_retry, :string, default: nil, doc: "phx-click action for retry button"
   attr :on_config, :string, default: nil, doc: "phx-click action for config link"
@@ -494,32 +497,38 @@ defmodule ClientatsWeb.CoreComponents do
         <div class="flex-1">
           <h3 class="font-semibold text-red-900">
             <%= case @error_details.error_type do %>
-              <% :all_failed -> %>Unable to Extract Job Details
-              <% :provider_timeout -> %>Processing Took Too Long
-              <% :provider_unavailable -> %>Provider Not Available
-              <% :auth_config_issue -> %>Configuration Error
-              <% :unsupported_page -> %>Page Not Supported
-              <% _ -> %>Error During Processing
+              <% :all_failed -> %>
+                Unable to Extract Job Details
+              <% :provider_timeout -> %>
+                Processing Took Too Long
+              <% :provider_unavailable -> %>
+                Provider Not Available
+              <% :auth_config_issue -> %>
+                Configuration Error
+              <% :unsupported_page -> %>
+                Page Not Supported
+              <% _ -> %>
+                Error During Processing
             <% end %>
           </h3>
-          <p class="text-sm text-red-700 mt-1"><%= @error_details.user_message %></p>
+          <p class="text-sm text-red-700 mt-1">{@error_details.user_message}</p>
         </div>
       </div>
-
-      <!-- Recovery Steps -->
+      
+    <!-- Recovery Steps -->
       <div class="bg-white rounded-md p-3 mb-4">
         <h4 class="text-sm font-medium text-gray-900 mb-2">What you can do:</h4>
         <ul class="space-y-2">
           <%= for step <- @error_details.recovery_steps do %>
             <li class="flex items-start gap-2 text-sm text-gray-700">
               <.icon name="hero-check-circle" class="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-              <span><%= step %></span>
+              <span>{step}</span>
             </li>
           <% end %>
         </ul>
       </div>
-
-      <!-- Action Buttons -->
+      
+    <!-- Action Buttons -->
       <div class="flex flex-wrap gap-3">
         <%= if @on_manual_entry do %>
           <button
@@ -527,8 +536,7 @@ defmodule ClientatsWeb.CoreComponents do
             phx-click={@on_manual_entry}
             class="btn btn-sm btn-outline btn-primary"
           >
-            <.icon name="hero-pencil-square" class="w-4 h-4" />
-            Enter Details Manually
+            <.icon name="hero-pencil-square" class="w-4 h-4" /> Enter Details Manually
           </button>
         <% end %>
 
@@ -538,8 +546,7 @@ defmodule ClientatsWeb.CoreComponents do
             phx-click={@on_retry}
             class="btn btn-sm btn-outline"
           >
-            <.icon name="hero-arrow-path" class="w-4 h-4" />
-            Try Again
+            <.icon name="hero-arrow-path" class="w-4 h-4" /> Try Again
           </button>
         <% end %>
 
@@ -548,8 +555,7 @@ defmodule ClientatsWeb.CoreComponents do
             navigate={@on_config}
             class="btn btn-sm btn-outline btn-secondary"
           >
-            <.icon name="hero-cog-6-tooth" class="w-4 h-4" />
-            Update Configuration
+            <.icon name="hero-cog-6-tooth" class="w-4 h-4" /> Update Configuration
           </.link>
         <% end %>
       </div>

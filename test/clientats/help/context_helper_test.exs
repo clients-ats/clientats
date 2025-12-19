@@ -5,71 +5,78 @@ defmodule Clientats.Help.ContextHelperTest do
 
   describe "get_help_text/1" do
     test "returns search bar help for beginners" do
-      help = ContextHelper.get_help_text(%{
-        feature: :job_interests,
-        element: :search_bar,
-        experience_level: :beginner
-      })
+      help =
+        ContextHelper.get_help_text(%{
+          feature: :job_interests,
+          element: :search_bar,
+          experience_level: :beginner
+        })
 
       assert help.title == "Search Help"
       assert is_list(help.tips)
     end
 
     test "returns advanced search help for advanced users" do
-      help = ContextHelper.get_help_text(%{
-        feature: :job_interests,
-        element: :search_bar,
-        experience_level: :advanced
-      })
+      help =
+        ContextHelper.get_help_text(%{
+          feature: :job_interests,
+          element: :search_bar,
+          experience_level: :advanced
+        })
 
       assert help.title == "Search Operators"
       assert is_list(help.tips)
     end
 
     test "returns priority filter help" do
-      help = ContextHelper.get_help_text(%{
-        feature: :job_interests,
-        element: :priority_filter
-      })
+      help =
+        ContextHelper.get_help_text(%{
+          feature: :job_interests,
+          element: :priority_filter
+        })
 
       assert help.title == "Priority Levels"
       assert is_list(help.tips)
     end
 
     test "returns salary range help" do
-      help = ContextHelper.get_help_text(%{
-        feature: :job_interests,
-        element: :salary_range
-      })
+      help =
+        ContextHelper.get_help_text(%{
+          feature: :job_interests,
+          element: :salary_range
+        })
 
       assert help.title == "Salary Range"
       assert is_list(help.tips)
     end
 
     test "returns application date help" do
-      help = ContextHelper.get_help_text(%{
-        feature: :applications,
-        element: :application_date
-      })
+      help =
+        ContextHelper.get_help_text(%{
+          feature: :applications,
+          element: :application_date
+        })
 
       assert help.title == "Application Timeline"
       assert is_list(help.tips)
     end
 
     test "returns resume upload help" do
-      help = ContextHelper.get_help_text(%{
-        feature: :documents,
-        element: :resume_upload
-      })
+      help =
+        ContextHelper.get_help_text(%{
+          feature: :documents,
+          element: :resume_upload
+        })
 
       assert help.title == "Upload Resume"
       assert is_list(help.tips)
     end
 
     test "returns generic help for unknown elements" do
-      help = ContextHelper.get_help_text(%{
-        feature: :unknown_feature
-      })
+      help =
+        ContextHelper.get_help_text(%{
+          feature: :unknown_feature
+        })
 
       assert is_map(help)
     end
@@ -194,11 +201,12 @@ defmodule Clientats.Help.ContextHelperTest do
 
   describe "format_error_with_recovery/3" do
     test "formats error with recovery suggestions" do
-      result = ContextHelper.format_error_with_recovery(
-        "Invalid email format",
-        :validation_error,
-        %{field: "email"}
-      )
+      result =
+        ContextHelper.format_error_with_recovery(
+          "Invalid email format",
+          :validation_error,
+          %{field: "email"}
+        )
 
       assert result.error == "Invalid email format"
       assert result.title == "Validation Error"
@@ -207,12 +215,15 @@ defmodule Clientats.Help.ContextHelperTest do
     end
 
     test "includes help text for recovery" do
-      result = ContextHelper.format_error_with_recovery(
-        "Connection failed",
-        :network_error
-      )
+      result =
+        ContextHelper.format_error_with_recovery(
+          "Connection failed",
+          :network_error
+        )
 
-      assert result.suggestions |> Enum.map(& &1.label) |> Enum.any?(&String.contains?(&1, "Retry"))
+      assert result.suggestions
+             |> Enum.map(& &1.label)
+             |> Enum.any?(&String.contains?(&1, "Retry"))
     end
   end
 

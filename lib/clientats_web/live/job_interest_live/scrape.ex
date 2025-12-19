@@ -132,7 +132,12 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
   end
 
   def handle_event("back_to_url", _params, socket) do
-    {:noreply, socket |> assign(:step, 1) |> assign(:error, nil) |> assign(:error_details, nil) |> assign(:manual_entry_mode, false)}
+    {:noreply,
+     socket
+     |> assign(:step, 1)
+     |> assign(:error, nil)
+     |> assign(:error_details, nil)
+     |> assign(:manual_entry_mode, false)}
   end
 
   def handle_event("toggle_manual_entry", _params, socket) do
@@ -172,9 +177,13 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
       {:noreply,
        socket
        |> assign(:llm_status, "unavailable")
-       |> assign(:error, "Ollama server is not available. Please start Ollama or select another provider.")}
+       |> assign(
+         :error,
+         "Ollama server is not available. Please start Ollama or select another provider."
+       )}
     else
-      {:noreply, socket}  # Already handled, do nothing
+      # Already handled, do nothing
+      {:noreply, socket}
     end
   end
 
@@ -228,12 +237,14 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
 
   defp validate_url(url) when is_binary(url) do
     uri = URI.parse(url)
+
     if uri.scheme in ["http", "https"] do
       {:ok, url}
     else
       {:error, :invalid_url}
     end
   end
+
   defp validate_url(_), do: {:error, :invalid_url}
 
   defp get_llm_providers do
@@ -280,6 +291,7 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
       case Clientats.LLM.Providers.Ollama.ping() do
         {:ok, :available} ->
           send(liveview_pid, :ollama_available)
+
         {:error, :unavailable} ->
           send(liveview_pid, :ollama_unavailable)
       end
@@ -309,7 +321,8 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
         :gemini -> :gemini
         "google" -> :google
         :google -> :google
-        _ -> provider  # Pass through if already an atom or unknown
+        # Pass through if already an atom or unknown
+        _ -> provider
       end
 
     # Get the estimated time for this specific provider
@@ -358,7 +371,7 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
 
   defp get_provider_icon(provider_id) do
     providers = get_llm_providers()
-    
+
     case Enum.find(providers, &(&1.id == provider_id)) do
       %{icon: icon} -> icon
       _ -> "hero-cog"
@@ -367,7 +380,7 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
 
   defp get_provider_name(provider_id) do
     providers = get_llm_providers()
-    
+
     case Enum.find(providers, &(&1.id == provider_id)) do
       %{name: name} -> name
       _ -> provider_id
@@ -395,46 +408,55 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
         <div class="bg-white rounded-lg shadow p-6">
           <div class="mb-6">
             <h1 class="text-2xl font-bold text-gray-900">Import Job from URL</h1>
-            <p class="text-sm text-gray-600 mt-1">Paste a job posting URL to automatically extract details</p>
+            <p class="text-sm text-gray-600 mt-1">
+              Paste a job posting URL to automatically extract details
+            </p>
           </div>
-
-          <!-- Provider Info - Using Global Configuration -->
+          
+    <!-- Provider Info - Using Global Configuration -->
           <div class="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
             <div class="flex items-center gap-3">
               <div class="flex-shrink-0">
                 <.icon name="hero-cog-6-tooth" class="w-5 h-5 text-blue-600" />
               </div>
               <div class="flex-1">
-                <p class="text-sm font-medium text-blue-900">Using configured LLM provider: <span class="capitalize"><%= @llm_provider %></span></p>
-                <p class="text-xs text-blue-600 mt-0.5">Change your provider in <.link navigate={~p"/dashboard/llm-config"} class="underline hover:text-blue-800">LLM Configuration</.link></p>
+                <p class="text-sm font-medium text-blue-900">
+                  Using configured LLM provider: <span class="capitalize">{@llm_provider}</span>
+                </p>
+                <p class="text-xs text-blue-600 mt-0.5">
+                  Change your provider in
+                  <.link navigate={~p"/dashboard/llm-config"} class="underline hover:text-blue-800">
+                    LLM Configuration
+                  </.link>
+                </p>
               </div>
             </div>
           </div>
-
-          <!-- Progress Steps -->
+          
+    <!-- Progress Steps -->
           <div class="mb-8">
             <div class="flex items-center justify-between">
               <div class={"flex items-center gap-2 " <> step_class(1, @step)}>
                 <div class={"w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold " <> step_color(1, @step)}>
-                  <%= if @step > 1, do: "✓", else: "1" %>
+                  {if @step > 1, do: "✓", else: "1"}
                 </div>
                 <span class="text-sm hidden sm:inline">Enter URL</span>
               </div>
-              
+
               <div class="flex-1 h-0.5 bg-gray-200 mx-2">
                 <div class={"h-full bg-blue-500 transition-all" <> progress_width(@step)}></div>
               </div>
-              
+
               <div class={"flex items-center gap-2 " <> step_class(2, @step)}>
                 <div class={"w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold " <> step_color(2, @step)}>
-                  <%= if @step > 2, do: "✓", else: "2" %>
+                  {if @step > 2, do: "✓", else: "2"}
                 </div>
                 <span class="text-sm hidden sm:inline">Review & Save</span>
               </div>
             </div>
           </div>
-
-          <!-- Step 1: URL Input -->
+          
+    <!-- Step 1: URL Input -->
           <%= if @step == 1 do %>
             <div class="space-y-6">
               <div>
@@ -463,12 +485,12 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
                       <% else %>
                         <.icon name="hero-arrow-right" class="w-4 h-4" />
                       <% end %>
-                      <%= if @scraping, do: "Processing...", else: "Import" %>
+                      {if @scraping, do: "Processing...", else: "Import"}
                     </button>
                   </div>
                 </form>
-
-                <!-- Error Recovery Panel with Fallback Options -->
+                
+    <!-- Error Recovery Panel with Fallback Options -->
                 <%= if @error_details do %>
                   <div class="mt-4">
                     <.error_recovery_panel
@@ -479,12 +501,16 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
                     />
                   </div>
                 <% end %>
-
-                <!-- Manual Entry Form (appears when all LLM providers fail) -->
+                
+    <!-- Manual Entry Form (appears when all LLM providers fail) -->
                 <%= if @manual_entry_mode && @error_details do %>
                   <div class="mt-6 bg-white rounded-lg border border-gray-300 p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Enter Job Details Manually</h3>
-                    <p class="text-sm text-gray-600 mb-6">Fill in the job information below. You can always edit it later.</p>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                      Enter Job Details Manually
+                    </h3>
+                    <p class="text-sm text-gray-600 mb-6">
+                      Fill in the job information below. You can always edit it later.
+                    </p>
 
                     <form phx-submit="save_job_interest" class="space-y-4">
                       <div class="grid md:grid-cols-2 gap-4">
@@ -579,15 +605,14 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
                           class="btn btn-primary"
                           phx-disable-with="Saving..."
                         >
-                          <.icon name="hero-check" class="w-4 h-4 mr-2" />
-                          Save Job Interest
+                          <.icon name="hero-check" class="w-4 h-4 mr-2" /> Save Job Interest
                         </button>
                       </div>
                     </form>
                   </div>
                 <% end %>
-
-                <!-- ETA Display during scraping -->
+                
+    <!-- ETA Display during scraping -->
                 <%= if @scraping do %>
                   <div class="mt-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
                     <div class="flex items-start gap-4">
@@ -597,9 +622,11 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
                         </div>
                       </div>
                       <div class="flex-1">
-                        <p class="text-sm font-medium text-gray-900 mb-4">Processing job posting...</p>
-
-                        <!-- Phase Progress List -->
+                        <p class="text-sm font-medium text-gray-900 mb-4">
+                          Processing job posting...
+                        </p>
+                        
+    <!-- Phase Progress List -->
                         <div class="space-y-2">
                           <%= for phase <- @phases do %>
                             <div class="flex items-center gap-3">
@@ -608,17 +635,20 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
                                   <% :complete -> %>
                                     <.icon name="hero-check-circle" class="w-5 h-5 text-green-600" />
                                   <% :in_progress -> %>
-                                    <.icon name="hero-arrow-path" class="w-5 h-5 text-blue-600 animate-spin" />
+                                    <.icon
+                                      name="hero-arrow-path"
+                                      class="w-5 h-5 text-blue-600 animate-spin"
+                                    />
                                   <% :pending -> %>
                                     <div class="w-5 h-5 rounded-full border-2 border-gray-300"></div>
                                 <% end %>
                               </div>
-                              <span class="text-xs font-medium text-gray-700"><%= phase.label %></span>
+                              <span class="text-xs font-medium text-gray-700">{phase.label}</span>
                             </div>
                           <% end %>
                         </div>
 
-                        <p class="mt-4 text-xs text-gray-500">Using <%= @llm_provider %> provider</p>
+                        <p class="mt-4 text-xs text-gray-500">Using {@llm_provider} provider</p>
                       </div>
                     </div>
                   </div>
@@ -629,7 +659,7 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
                 <h3 class="font-medium text-blue-800 mb-2">Supported Job Boards</h3>
                 <div class="flex flex-wrap gap-2">
                   <%= for site <- @supported_sites do %>
-                    <span class="bg-white px-2 py-1 rounded text-xs text-gray-700"><%= site %></span>
+                    <span class="bg-white px-2 py-1 rounded text-xs text-gray-700">{site}</span>
                   <% end %>
                 </div>
                 <p class="mt-3 text-xs text-blue-600">
@@ -638,8 +668,8 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
               </div>
             </div>
           <% end %>
-
-          <!-- Step 2: Review Data -->
+          
+    <!-- Step 2: Review Data -->
           <%= if @step == 2 do %>
             <form phx-submit="save_job_interest" class="space-y-6">
               <!-- Provider Info -->
@@ -647,10 +677,12 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
                 <.icon name={get_provider_icon(@llm_provider)} class="w-6 h-6 text-gray-600" />
                 <div>
                   <p class="text-sm text-gray-600">Processed using</p>
-                  <p class="font-medium text-gray-900"><%= get_provider_name(@llm_provider) %></p>
+                  <p class="font-medium text-gray-900">{get_provider_name(@llm_provider)}</p>
                 </div>
                 <%= if @llm_status == "success" do %>
-                  <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full ml-auto">Success</span>
+                  <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full ml-auto">
+                    Success
+                  </span>
                 <% end %>
               </div>
 
@@ -731,9 +763,15 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
                     class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                     disabled={@saving}
                   >
-                    <option value="remote" selected={@scraped_data[:work_model] == "remote"}>Remote</option>
-                    <option value="hybrid" selected={@scraped_data[:work_model] == "hybrid"}>Hybrid</option>
-                    <option value="on_site" selected={@scraped_data[:work_model] == "on_site"}>On-site</option>
+                    <option value="remote" selected={@scraped_data[:work_model] == "remote"}>
+                      Remote
+                    </option>
+                    <option value="hybrid" selected={@scraped_data[:work_model] == "hybrid"}>
+                      Hybrid
+                    </option>
+                    <option value="on_site" selected={@scraped_data[:work_model] == "on_site"}>
+                      On-site
+                    </option>
                   </select>
                 </div>
               </div>
@@ -742,19 +780,21 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
                 <div class="bg-gray-50 rounded-lg p-4">
                   <h3 class="font-medium text-gray-800 mb-2">Extracted Salary Information</h3>
                   <p class="text-sm text-gray-600">
-                    <%= format_salary(@scraped_data) %>
+                    {format_salary(@scraped_data)}
                   </p>
                 </div>
               <% end %>
-
-              <!-- Loading Indicator during save -->
+              
+    <!-- Loading Indicator during save -->
               <%= if @saving do %>
                 <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center gap-3">
                   <div class="flex items-center gap-2">
                     <.icon name="hero-arrow-path" class="w-5 h-5 text-blue-600 animate-spin" />
                     <div>
                       <p class="text-sm font-medium text-blue-900">Saving job interest...</p>
-                      <p class="text-xs text-blue-600 mt-0.5">This typically takes <%= div(@estimated_llm_time_ms, 1000) %> seconds</p>
+                      <p class="text-xs text-blue-600 mt-0.5">
+                        This typically takes {div(@estimated_llm_time_ms, 1000)} seconds
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -767,8 +807,7 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
                   class="btn btn-ghost"
                   disabled={@saving}
                 >
-                  <.icon name="hero-arrow-left" class="w-4 h-4 mr-2" />
-                  Back
+                  <.icon name="hero-arrow-left" class="w-4 h-4 mr-2" /> Back
                 </button>
 
                 <button
@@ -778,11 +817,9 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
                   phx-disable-with="Saving..."
                 >
                   <%= if @saving do %>
-                    <.icon name="hero-arrow-path" class="w-4 h-4 mr-2 animate-spin" />
-                    Saving...
+                    <.icon name="hero-arrow-path" class="w-4 h-4 mr-2 animate-spin" /> Saving...
                   <% else %>
-                    <.icon name="hero-check" class="w-4 h-4 mr-2" />
-                    Save Job Interest
+                    <.icon name="hero-check" class="w-4 h-4 mr-2" /> Save Job Interest
                   <% end %>
                 </button>
               </div>
@@ -825,17 +862,22 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
     |> String.replace(~r/\([^)]+\)/, "")
     |> String.trim()
   end
+
   defp extract_location(_), do: ""
 
   defp format_salary(data) do
     salary = data[:salary]
+
     cond do
       salary && salary[:min] && salary[:max] ->
         "$#{salary[:min]} - $#{salary[:max]}"
+
       salary && salary[:min] ->
         "$#{salary[:min]}+"
+
       salary && salary[:max] ->
         "Up to $#{salary[:max]}"
+
       true ->
         "Not specified"
     end
@@ -844,7 +886,9 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
   defp get_preferred_provider(user_id, enabled_providers) do
     # Get the user's preferred provider from config, default to first enabled or ollama
     case LLMConfig.get_provider_config(user_id, "preferred_provider") do
-      {:ok, %{"provider" => provider}} -> provider
+      {:ok, %{"provider" => provider}} ->
+        provider
+
       _ ->
         # Default to ollama if available, otherwise first enabled provider
         if Enum.member?(enabled_providers, "ollama") do
@@ -857,15 +901,17 @@ defmodule ClientatsWeb.JobInterestLive.Scrape do
 
   defp get_estimated_provider_time(provider) do
     case provider do
-      "ollama" -> 120_000   # ~2 minutes for Ollama
+      # ~2 minutes for Ollama
+      "ollama" -> 120_000
       :ollama -> 120_000
-      "gemini" -> 45_000    # ~45 seconds for Gemini
+      # ~45 seconds for Gemini
+      "gemini" -> 45_000
       :gemini -> 45_000
-      "google" -> 45_000    # ~45 seconds for Google
+      # ~45 seconds for Google
+      "google" -> 45_000
       :google -> 45_000
-      _ -> 45_000           # Default to 45 seconds
+      # Default to 45 seconds
+      _ -> 45_000
     end
   end
-
-
 end

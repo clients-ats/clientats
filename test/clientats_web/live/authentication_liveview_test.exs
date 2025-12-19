@@ -29,6 +29,7 @@ defmodule ClientatsWeb.AuthenticationLiveViewTest do
 
       # Authenticated users should be redirected to dashboard
       result = live(conn, ~p"/login")
+
       case result do
         {:error, {:redirect, %{to: path}}} -> assert path == ~p"/dashboard"
         _ -> flunk("Expected redirect to dashboard")
@@ -105,6 +106,7 @@ defmodule ClientatsWeb.AuthenticationLiveViewTest do
 
       # Authenticated users should be redirected to dashboard
       result = live(conn, ~p"/register")
+
       case result do
         {:error, {:redirect, %{to: path}}} -> assert path == ~p"/dashboard"
         _ -> flunk("Expected redirect to dashboard")
@@ -224,6 +226,7 @@ defmodule ClientatsWeb.AuthenticationLiveViewTest do
       {:ok, _lv, html} = live(conn, ~p"/login")
 
       warnings = get_accessibility_warnings(html)
+
       refute Enum.any?(warnings, &String.contains?(&1, "alt text")),
              "Should not have images without alt text"
     end
@@ -232,6 +235,7 @@ defmodule ClientatsWeb.AuthenticationLiveViewTest do
       {:ok, _lv, html} = live(conn, ~p"/register")
 
       warnings = get_accessibility_warnings(html)
+
       refute Enum.any?(warnings, &String.contains?(&1, "alt text")),
              "Should not have images without alt text"
     end

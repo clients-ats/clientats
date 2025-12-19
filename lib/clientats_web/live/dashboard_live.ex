@@ -33,7 +33,9 @@ defmodule ClientatsWeb.DashboardLive do
           <div class="alert alert-info mb-8">
             <div>
               <h3 class="font-semibold">Get started with AI features</h3>
-              <p class="text-sm">Configure an LLM provider to unlock AI-powered features like job analysis and auto-fill.</p>
+              <p class="text-sm">
+                Configure an LLM provider to unlock AI-powered features like job analysis and auto-fill.
+              </p>
             </div>
             <div class="flex gap-2">
               <.link navigate={~p"/dashboard/llm-setup"} class="btn btn-sm btn-primary">
@@ -71,21 +73,25 @@ defmodule ClientatsWeb.DashboardLive do
             <% else %>
               <div class="space-y-3">
                 <%= for interest <- @job_interests do %>
-                  <div class="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer" phx-click="select_interest" phx-value-id={interest.id}>
+                  <div
+                    class="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer"
+                    phx-click="select_interest"
+                    phx-value-id={interest.id}
+                  >
                     <div class="flex justify-between items-start">
                       <div class="flex-1">
-                        <h3 class="font-semibold text-gray-900"><%= interest.position_title %></h3>
-                        <p class="text-sm text-gray-600"><%= interest.company_name %></p>
+                        <h3 class="font-semibold text-gray-900">{interest.position_title}</h3>
+                        <p class="text-sm text-gray-600">{interest.company_name}</p>
                         <%= if interest.location do %>
-                          <p class="text-sm text-gray-500"><%= interest.location %></p>
+                          <p class="text-sm text-gray-500">{interest.location}</p>
                         <% end %>
                       </div>
                       <div class="flex flex-col items-end gap-2">
                         <span class={"badge badge-sm " <> status_color(interest.status)}>
-                          <%= format_status(interest.status) %>
+                          {format_status(interest.status)}
                         </span>
                         <span class={"badge badge-sm badge-outline " <> priority_color(interest.priority)}>
-                          <%= String.capitalize(interest.priority) %>
+                          {String.capitalize(interest.priority)}
                         </span>
                       </div>
                     </div>
@@ -127,14 +133,14 @@ defmodule ClientatsWeb.DashboardLive do
                   >
                     <div class="flex justify-between items-start">
                       <div class="flex-1">
-                        <h3 class="font-semibold text-gray-900"><%= application.position_title %></h3>
-                        <p class="text-sm text-gray-600"><%= application.company_name %></p>
+                        <h3 class="font-semibold text-gray-900">{application.position_title}</h3>
+                        <p class="text-sm text-gray-600">{application.company_name}</p>
                         <p class="text-xs text-gray-500 mt-1">
-                          Applied <%= Calendar.strftime(application.application_date, "%b %d, %Y") %>
+                          Applied {Calendar.strftime(application.application_date, "%b %d, %Y")}
                         </p>
                       </div>
                       <span class={"badge badge-sm " <> app_status_color(application.status)}>
-                        <%= format_status(application.status) %>
+                        {format_status(application.status)}
                       </span>
                     </div>
                   </.link>

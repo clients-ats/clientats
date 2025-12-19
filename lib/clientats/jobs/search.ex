@@ -170,6 +170,7 @@ defmodule Clientats.Jobs.Search do
 
   defp maybe_search(query, nil), do: query
   defp maybe_search(query, ""), do: query
+
   defp maybe_search(query, search_term) do
     search_pattern = "%#{search_term}%"
 
@@ -186,6 +187,7 @@ defmodule Clientats.Jobs.Search do
 
   defp maybe_search_application(query, nil), do: query
   defp maybe_search_application(query, ""), do: query
+
   defp maybe_search_application(query, search_term) do
     search_pattern = "%#{search_term}%"
 
@@ -200,63 +202,87 @@ defmodule Clientats.Jobs.Search do
   end
 
   defp maybe_filter_status(query, nil), do: query
+
   defp maybe_filter_status(query, status) do
     where(query, [j], j.status == ^status)
   end
 
   defp maybe_filter_app_status(query, nil), do: query
+
   defp maybe_filter_app_status(query, status) do
     where(query, [a], a.status == ^status)
   end
 
   defp maybe_filter_priority(query, nil), do: query
+
   defp maybe_filter_priority(query, priority) do
     where(query, [j], j.priority == ^priority)
   end
 
   defp maybe_filter_salary_min(query, nil), do: query
+
   defp maybe_filter_salary_min(query, min_salary) do
     where(query, [j], j.salary_min >= ^min_salary)
   end
 
   defp maybe_filter_salary_max(query, nil), do: query
+
   defp maybe_filter_salary_max(query, max_salary) do
     where(query, [j], j.salary_max <= ^max_salary)
   end
 
   defp maybe_filter_work_model(query, nil), do: query
+
   defp maybe_filter_work_model(query, work_model) do
     where(query, [j], j.work_model == ^work_model)
   end
 
   defp maybe_filter_location(query, nil), do: query
   defp maybe_filter_location(query, ""), do: query
+
   defp maybe_filter_location(query, location) do
     search_pattern = "%#{location}%"
     where(query, [j], ilike(j.location, ^search_pattern))
   end
 
   defp maybe_filter_date_range(query, nil, nil), do: query
+
   defp maybe_filter_date_range(query, from_date, nil) do
     where(query, [a], a.application_date >= ^from_date)
   end
+
   defp maybe_filter_date_range(query, nil, to_date) do
     where(query, [a], a.application_date <= ^to_date)
   end
+
   defp maybe_filter_date_range(query, from_date, to_date) do
     where(query, [a], a.application_date >= ^from_date and a.application_date <= ^to_date)
   end
 
   defp order_by_column(query, :company, order), do: order_by(query, [j], {^order, j.company_name})
-  defp order_by_column(query, :position, order), do: order_by(query, [j], {^order, j.position_title})
+
+  defp order_by_column(query, :position, order),
+    do: order_by(query, [j], {^order, j.position_title})
+
   defp order_by_column(query, :priority, order), do: order_by(query, [j], {^order, j.priority})
-  defp order_by_column(query, :created_at, order), do: order_by(query, [j], {^order, j.inserted_at})
+
+  defp order_by_column(query, :created_at, order),
+    do: order_by(query, [j], {^order, j.inserted_at})
+
   defp order_by_column(query, :salary, order), do: order_by(query, [j], {^order, j.salary_max})
   defp order_by_column(query, _, order), do: order_by(query, [j], {^order, j.inserted_at})
 
-  defp order_by_app_column(query, :company, order), do: order_by(query, [a], {^order, a.company_name})
-  defp order_by_app_column(query, :position, order), do: order_by(query, [a], {^order, a.position_title})
-  defp order_by_app_column(query, :applied_date, order), do: order_by(query, [a], {^order, a.application_date})
+  defp order_by_app_column(query, :company, order),
+    do: order_by(query, [a], {^order, a.company_name})
+
+  defp order_by_app_column(query, :position, order),
+    do: order_by(query, [a], {^order, a.position_title})
+
+  defp order_by_app_column(query, :applied_date, order),
+    do: order_by(query, [a], {^order, a.application_date})
+
   defp order_by_app_column(query, :status, order), do: order_by(query, [a], {^order, a.status})
-  defp order_by_app_column(query, _, order), do: order_by(query, [a], {^order, a.application_date})
+
+  defp order_by_app_column(query, _, order),
+    do: order_by(query, [a], {^order, a.application_date})
 end
