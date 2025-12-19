@@ -9,13 +9,13 @@ defmodule Clientats.Audit.AuditLog do
   use Ecto.Schema
   import Ecto.Changeset
 
-  @primary_key {:id, :binary_id, autogenerate: true}
-  @foreign_key_type :binary_id
+  @primary_key {:id, Ecto.UUID, autogenerate: true}
+  @foreign_key_type Ecto.UUID
   schema "audit_logs" do
-    field :user_id, :binary_id
+    field :user_id, Ecto.UUID
     field :action, :string
     field :resource_type, :string
-    field :resource_id, :binary_id
+    field :resource_id, Ecto.UUID
     field :description, :string
     field :ip_address, :string
     field :user_agent, :string
