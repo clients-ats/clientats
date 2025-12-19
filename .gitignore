@@ -50,3 +50,7 @@ npm-debug.log
 /priv/static/images/*-[0-9a-f]*.svg
 /priv/static/*-[0-9a-f]*.txt
 
+# SQLite databases
+*.db
+*.db-shm
+*.db-wal

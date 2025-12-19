@@ -14,9 +14,10 @@ config :clientats,
 
 # Configure Oban background job queue
 config :clientats, Oban,
+  engine: Oban.Engines.Lite,
   repo: Clientats.Repo,
   plugins: [
-    {Oban.Plugins.Pruner, interval: :timer.hours(12)}
+    {Oban.Plugins.Pruner, interval: :timer.hours(12), limit: 5000}
   ],
   queues: [
     scrape: [limit: 10],

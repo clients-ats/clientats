@@ -21,23 +21,22 @@ if System.get_env("PHX_SERVER") do
 end
 
 if config_env() == :prod do
-  database_url =
-    System.get_env("DATABASE_URL") ||
+  database_path =
+    System.get_env("DATABASE_PATH") ||
       raise """
-      environment variable DATABASE_URL is missing.
-      For example: ecto://USER:PASS@HOST/DATABASE
+      environment variable DATABASE_PATH is missing.
+      For example: /var/lib/clientats/production.db
       """
 
-  maybe_ipv6 = if System.get_env("ECTO_IPV6") in ~w(true 1), do: [:inet6], else: []
-
   config :clientats, Clientats.Repo,
-    url: database_url,
-    ssl: System.get_env("DATABASE_SSL") in ~w(true 1),
-    pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
-    pool_count: String.to_integer(System.get_env("POOL_COUNT") || "1"),
-    max_overflow: String.to_integer(System.get_env("MAX_OVERFLOW") || "0"),
-    timeout: String.to_integer(System.get_env("POOL_TIMEOUT") || "5000"),
-    socket_options: maybe_ipv6
+    database: database_path,
+    pool_size: String.to_integer(System.get_env("POOL_SIZE") || "5"),
+    busy_timeout: String.to_integer(System.get_env("BUSY_TIMEOUT") || "5000"),
+    journal_mode: :wal,
+    cache_size: -64000,
+    temp_store: :memory,
+    synchronous: :normal,
+    foreign_keys: :on
 
   # The secret key base is used to sign/encrypt cookies and other secrets.
   # A default value is used in config/dev.exs and config/test.exs but you
