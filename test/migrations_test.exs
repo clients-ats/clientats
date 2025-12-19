@@ -177,7 +177,7 @@ defmodule Clientats.MigrationsTest do
       assert initial_count >= 1
 
       # Delete the user
-      SQL.query(Repo, "DELETE FROM users WHERE id = $1", [user_id])
+      Helper.execute_query("DELETE FROM users WHERE id = $1", [user_id])
 
       final_count = Helper.count_rows("job_interests")
       assert final_count == 0
@@ -253,7 +253,7 @@ defmodule Clientats.MigrationsTest do
       initial_count = Helper.count_rows("job_applications")
       assert initial_count >= 1
 
-      SQL.query(Repo, "DELETE FROM users WHERE id = $1", [user_id])
+      Helper.execute_query("DELETE FROM users WHERE id = $1", [user_id])
 
       final_count = Helper.count_rows("job_applications")
       assert final_count == 0
@@ -272,7 +272,7 @@ defmodule Clientats.MigrationsTest do
       })
 
       # Delete the job interest
-      SQL.query(Repo, "DELETE FROM job_interests WHERE id = $1", [job_interest_id])
+      Helper.execute_query("DELETE FROM job_interests WHERE id = $1", [job_interest_id])
 
       # Check that job_interest_id is now NULL
       {:ok, result} = SQL.query(Repo, "SELECT job_interest_id FROM job_applications LIMIT 1", [])
@@ -331,7 +331,7 @@ defmodule Clientats.MigrationsTest do
       initial_count = Helper.count_rows("application_events")
       assert initial_count >= 1
 
-      SQL.query(Repo, "DELETE FROM job_applications WHERE id = $1", [app_id])
+      Helper.execute_query("DELETE FROM job_applications WHERE id = $1", [app_id])
 
       final_count = Helper.count_rows("application_events")
       assert final_count == 0
@@ -391,7 +391,7 @@ defmodule Clientats.MigrationsTest do
       initial_count = Helper.count_rows("resumes")
       assert initial_count >= 1
 
-      SQL.query(Repo, "DELETE FROM users WHERE id = $1", [user_id])
+      Helper.execute_query("DELETE FROM users WHERE id = $1", [user_id])
 
       final_count = Helper.count_rows("resumes")
       assert final_count == 0
@@ -447,7 +447,7 @@ defmodule Clientats.MigrationsTest do
       initial_count = Helper.count_rows("cover_letter_templates")
       assert initial_count >= 1
 
-      SQL.query(Repo, "DELETE FROM users WHERE id = $1", [user_id])
+      Helper.execute_query("DELETE FROM users WHERE id = $1", [user_id])
 
       final_count = Helper.count_rows("cover_letter_templates")
       assert final_count == 0
@@ -523,7 +523,7 @@ defmodule Clientats.MigrationsTest do
       initial_count = Helper.count_rows("llm_settings")
       assert initial_count >= 1
 
-      SQL.query(Repo, "DELETE FROM users WHERE id = $1", [user_id])
+      Helper.execute_query("DELETE FROM users WHERE id = $1", [user_id])
 
       final_count = Helper.count_rows("llm_settings")
       assert final_count == 0
@@ -631,7 +631,7 @@ defmodule Clientats.MigrationsTest do
         })
 
       # Delete user
-      SQL.query(Repo, "DELETE FROM users WHERE id = $1", [user_id])
+      Helper.execute_query("DELETE FROM users WHERE id = $1", [user_id])
 
       # Verify cascading deletions
       job_interests_count = Helper.count_rows("job_interests")
