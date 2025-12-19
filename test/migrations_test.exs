@@ -115,11 +115,11 @@ defmodule Clientats.MigrationsTest do
         "last_name" => "User"
       })
 
-      [[user_id, _, _, _, _, _, _, _]] = result.rows
+      [[user_id, _, _, _, _, _, _, _, _]] = result.rows
       {:ok, user_id: user_id}
     end
 
-    test "job_interests table exists with correct structure", %{user_id: user_id} do
+    test "job_interests table exists with correct structure", %{user_id: _user_id} do
       assert Helper.table_exists?("job_interests")
 
       columns = Helper.get_table_columns("job_interests")
@@ -186,7 +186,7 @@ defmodule Clientats.MigrationsTest do
         "last_name" => "User"
       })
 
-      [[user_id, _, _, _, _, _, _, _]] = user_result.rows
+      [[user_id, _, _, _, _, _, _, _, _]] = user_result.rows
 
       {:ok, ji_result} = Helper.insert_data("job_interests", %{
         "user_id" => user_id,
@@ -326,7 +326,7 @@ defmodule Clientats.MigrationsTest do
         "last_name" => "User"
       })
 
-      [[user_id, _, _, _, _, _, _, _]] = result.rows
+      [[user_id, _, _, _, _, _, _, _, _]] = result.rows
       {:ok, user_id: user_id}
     end
 
@@ -383,7 +383,7 @@ defmodule Clientats.MigrationsTest do
         "last_name" => "User"
       })
 
-      [[user_id, _, _, _, _, _, _, _]] = result.rows
+      [[user_id, _, _, _, _, _, _, _, _]] = result.rows
       {:ok, user_id: user_id}
     end
 
@@ -438,7 +438,7 @@ defmodule Clientats.MigrationsTest do
         "last_name" => "User"
       })
 
-      [[user_id, _, _, _, _, _, _, _]] = result.rows
+      [[user_id, _, _, _, _, _, _, _, _]] = result.rows
       {:ok, user_id: user_id}
     end
 
@@ -519,7 +519,7 @@ defmodule Clientats.MigrationsTest do
         "last_name" => "User"
       })
 
-      [[user_id, _, _, _, _, _, _, _]] = user_result.rows
+      [[user_id, _, _, _, _, _, _, _, _]] = user_result.rows
 
       # Create job interest
       {:ok, ji_result} = Helper.insert_data("job_interests", %{
@@ -565,7 +565,7 @@ defmodule Clientats.MigrationsTest do
         "last_name" => "User"
       })
 
-      [[user_id, _, _, _, _, _, _, _]] = user_result.rows
+      [[user_id, _, _, _, _, _, _, _, _]] = user_result.rows
 
       {:ok, _} = Helper.insert_data("job_interests", %{
         "user_id" => user_id,
