@@ -1,6 +1,8 @@
 defmodule Clientats.JobImportWizardIntegrationTest do
   use ExUnit.Case
 
+  @moduletag :feature
+
   describe "job import wizard happy path" do
     test "complete successful job import workflow" do
       # Step 1: Initialize wizard

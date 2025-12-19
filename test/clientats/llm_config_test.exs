@@ -246,9 +246,9 @@ defmodule Clientats.LLMConfigTest do
       assert defaults[:ollama][:base_url] =~ "localhost"
 
       # Verify Gemini defaults
-      assert defaults[:gemini][:default_model] == "gemini-2.0-flash"
-      assert defaults[:gemini][:vision_model] == "gemini-2.0-flash"
-      assert defaults[:gemini][:text_model] == "gemini-2.0-flash"
+      assert defaults[:gemini][:default_model] == "gemini-2.5-flash"
+      assert defaults[:gemini][:vision_model] == "gemini-2.5-flash"
+      assert defaults[:gemini][:text_model] == "gemini-2.5-flash"
       assert is_boolean(defaults[:gemini][:enabled])
     end
   end
