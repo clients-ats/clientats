@@ -122,8 +122,9 @@ defmodule Clientats.LLM.CircuitBreaker do
         # In half-open state, check if we've succeeded enough times to close
         new_state =
           if new_state.state == :half_open and
-             new_state.success_count >= new_state.success_threshold do
+               new_state.success_count >= new_state.success_threshold do
             Logger.info("Circuit breaker: #{provider} closed after successful recovery")
+
             new_state
             |> Map.put(:state, :closed)
             |> Map.put(:failure_count, 0)
@@ -151,8 +152,9 @@ defmodule Clientats.LLM.CircuitBreaker do
         # Check if we should open the circuit
         new_state =
           if new_state.state == :closed and
-             new_state.failure_count >= new_state.failure_threshold do
+               new_state.failure_count >= new_state.failure_threshold do
             Logger.warning("Circuit breaker: #{provider} opened due to failures")
+
             new_state
             |> Map.put(:state, :open)
             |> Map.put(:opened_at, DateTime.utc_now())
@@ -160,6 +162,7 @@ defmodule Clientats.LLM.CircuitBreaker do
             # In half-open state, any failure returns to open
             if new_state.state == :half_open do
               Logger.warning("Circuit breaker: #{provider} reopened (health check failed)")
+
               new_state
               |> Map.put(:state, :open)
               |> Map.put(:opened_at, DateTime.utc_now())
@@ -198,6 +201,7 @@ defmodule Clientats.LLM.CircuitBreaker do
           success_count: provider_state.success_count,
           last_failure: provider_state.last_failure_time
         }
+
         {:reply, metrics, state}
 
       [] ->
@@ -253,7 +257,8 @@ defmodule Clientats.LLM.CircuitBreaker do
 
       if elapsed_seconds >= timeout do
         # Transition to half-open
-        false  # Still not available, but will try half-open
+        # Still not available, but will try half-open
+        false
       else
         false
       end

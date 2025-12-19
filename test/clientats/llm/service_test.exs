@@ -16,13 +16,16 @@ defmodule Clientats.LLM.ServiceTest do
     end
 
     test "returns error for unsupported provider" do
-      result = Service.extract_job_data("test", "https://example.com", :generic, :unsupported_provider)
+      result =
+        Service.extract_job_data("test", "https://example.com", :generic, :unsupported_provider)
+
       # Unsupported providers fail during extraction with invalid_response_format
       assert match?({:error, _}, result)
     end
 
     test "validates URL format properly" do
       valid_content = "Software Engineer role at ACME Corp"
+
       invalid_urls = [
         "not a url",
         "htp://missing-s.com",
@@ -55,7 +58,9 @@ defmodule Clientats.LLM.ServiceTest do
 
     test "returns error for unreachable URL" do
       # This would actually make an HTTP request, so we'll mock it in a separate test
-      result = Service.extract_job_data_from_url("https://this-url-should-not-exist-12345.com", :generic)
+      result =
+        Service.extract_job_data_from_url("https://this-url-should-not-exist-12345.com", :generic)
+
       # Should return fetch error or timeout
       assert match?({:error, _}, result)
     end
@@ -80,7 +85,7 @@ defmodule Clientats.LLM.ServiceTest do
 
       Enum.each(modes, fn mode ->
         result = Service.extract_job_data_from_url("https://example.com/job", mode)
-        assert (match?({:ok, _}, result) or match?({:error, _}, result))
+        assert match?({:ok, _}, result) or match?({:error, _}, result)
       end)
     end
   end
@@ -150,9 +155,12 @@ defmodule Clientats.LLM.ServiceTest do
     end
 
     test "prompt is not empty and has reasonable length" do
-      prompt = PromptTemplates.build_job_extraction_prompt("test", "https://example.com", :generic)
+      prompt =
+        PromptTemplates.build_job_extraction_prompt("test", "https://example.com", :generic)
+
       assert String.length(prompt) > 50
-      assert String.length(prompt) < 10_000  # Reasonable upper bound
+      # Reasonable upper bound
+      assert String.length(prompt) < 10_000
     end
   end
 
@@ -172,22 +180,46 @@ defmodule Clientats.LLM.ServiceTest do
 
   describe "build_job_extraction_prompt/3 source detection" do
     test "detects LinkedIn URLs in prompt" do
-      prompt = PromptTemplates.build_job_extraction_prompt("job content", "https://www.linkedin.com/jobs/view/123", :specific)
+      prompt =
+        PromptTemplates.build_job_extraction_prompt(
+          "job content",
+          "https://www.linkedin.com/jobs/view/123",
+          :specific
+        )
+
       assert String.contains?(prompt, "LinkedIn")
     end
 
     test "detects Indeed URLs in prompt" do
-      prompt = PromptTemplates.build_job_extraction_prompt("job content", "https://www.indeed.com/viewjob?jk=123", :specific)
+      prompt =
+        PromptTemplates.build_job_extraction_prompt(
+          "job content",
+          "https://www.indeed.com/viewjob?jk=123",
+          :specific
+        )
+
       assert String.contains?(prompt, "Indeed")
     end
 
     test "detects Glassdoor URLs in prompt" do
-      prompt = PromptTemplates.build_job_extraction_prompt("job content", "https://www.glassdoor.com/job-listing/123", :specific)
+      prompt =
+        PromptTemplates.build_job_extraction_prompt(
+          "job content",
+          "https://www.glassdoor.com/job-listing/123",
+          :specific
+        )
+
       assert String.contains?(prompt, "Glassdoor")
     end
 
     test "handles unknown URLs in prompt" do
-      prompt = PromptTemplates.build_job_extraction_prompt("job content", "https://www.example.com/jobs/123", :specific)
+      prompt =
+        PromptTemplates.build_job_extraction_prompt(
+          "job content",
+          "https://www.example.com/jobs/123",
+          :specific
+        )
+
       assert String.contains?(prompt, "unknown job board") or String.contains?(prompt, "generic")
     end
 
@@ -286,11 +318,16 @@ defmodule Clientats.LLM.ServiceTest do
 
     test "validates URL has proper structure" do
       invalid_urls = [
-        "https://",  # No hostname
-        "https://.",  # Invalid hostname
-        "",  # Empty
-        " ",  # Whitespace
-        "https://.com"  # Missing domain
+        # No hostname
+        "https://",
+        # Invalid hostname
+        "https://.",
+        # Empty
+        "",
+        # Whitespace
+        " ",
+        # Missing domain
+        "https://.com"
       ]
 
       Enum.each(invalid_urls, fn url ->
@@ -313,12 +350,18 @@ defmodule Clientats.LLM.ServiceTest do
   describe "mode parameter handling" do
     test "supports generic mode extraction" do
       result = Service.extract_job_data("job content", "https://example.com/job", :generic)
-      assert (match?({:ok, _}, result) or match?({:error, _}, result))
+      assert match?({:ok, _}, result) or match?({:error, _}, result)
     end
 
     test "supports specific mode extraction" do
-      result = Service.extract_job_data("job content", "https://www.linkedin.com/jobs/view/123", :specific)
-      assert (match?({:ok, _}, result) or match?({:error, _}, result))
+      result =
+        Service.extract_job_data(
+          "job content",
+          "https://www.linkedin.com/jobs/view/123",
+          :specific
+        )
+
+      assert match?({:ok, _}, result) or match?({:error, _}, result)
     end
   end
 end

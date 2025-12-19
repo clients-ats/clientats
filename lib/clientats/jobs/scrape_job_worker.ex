@@ -38,6 +38,7 @@ defmodule Clientats.Jobs.ScrapeJobWorker do
       url = args["url"]
       user_id = args["user_id"]
       Logger.error("Error scraping job: #{inspect(e)}")
+
       Audit.log_action(%{
         user_id: user_id,
         action: "job_scraping_error",
@@ -46,6 +47,7 @@ defmodule Clientats.Jobs.ScrapeJobWorker do
         error_message: Exception.message(e),
         metadata: %{"url" => url}
       })
+
       {:error, Exception.message(e)}
   end
 
@@ -65,19 +67,20 @@ defmodule Clientats.Jobs.ScrapeJobWorker do
 
     if save do
       case Jobs.create_job_interest(%{
-        user_id: user_id,
-        company_name: data["company_name"],
-        position_title: data["position_title"],
-        location: data["location"],
-        job_description: data["job_description"],
-        work_model: data["work_model"],
-        salary_min: data["salary_min"],
-        salary_max: data["salary_max"],
-        job_url: data["job_url"],
-        status: "interested"
-      }) do
+             user_id: user_id,
+             company_name: data["company_name"],
+             position_title: data["position_title"],
+             location: data["location"],
+             job_description: data["job_description"],
+             work_model: data["work_model"],
+             salary_min: data["salary_min"],
+             salary_max: data["salary_max"],
+             job_url: data["job_url"],
+             status: "interested"
+           }) do
         {:ok, _interest} ->
           Logger.info("Saved job interest for user #{user_id}")
+
           Audit.log_action(%{
             user_id: user_id,
             action: "create",
@@ -88,6 +91,7 @@ defmodule Clientats.Jobs.ScrapeJobWorker do
 
         {:error, changeset} ->
           Logger.error("Failed to save job interest: #{inspect(changeset)}")
+
           Audit.log_action(%{
             user_id: user_id,
             action: "create",

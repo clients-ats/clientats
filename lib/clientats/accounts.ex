@@ -18,28 +18,31 @@ defmodule Clientats.Accounts do
   """
   def get_authenticated_user(conn) do
     # Try to get user from assigns (for LiveView) or session (for controllers)
-    initial_user = conn.assigns[:current_user] ||
-           conn.assigns[:user] ||
-           (conn.assigns[:user_id] && get_user(conn.assigns[:user_id])) ||
-           (get_session(conn, :user_id) && get_user(get_session(conn, :user_id)))
+    initial_user =
+      conn.assigns[:current_user] ||
+        conn.assigns[:user] ||
+        (conn.assigns[:user_id] && get_user(conn.assigns[:user_id])) ||
+        (get_session(conn, :user_id) && get_user(get_session(conn, :user_id)))
 
     # In test environment, also check for user in assigns (for easier testing)
-    user = if Mix.env() == :test && conn.assigns[:user] do
-      initial_user || conn.assigns[:user]
-    else
-      initial_user
-    end
+    user =
+      if Mix.env() == :test && conn.assigns[:user] do
+        initial_user || conn.assigns[:user]
+      else
+        initial_user
+      end
 
     # If we got a user ID instead of a user object, fetch the user
-    final_user = if user && is_integer(user) do
-      get_user(user)
-    else
-      user
-    end
+    final_user =
+      if user && is_integer(user) do
+        get_user(user)
+      else
+        user
+      end
 
     final_user
   end
-  
+
   defp get_session(conn, key) do
     # In tests, session data is stored in conn.assigns after put_session
     # In production, it would be in cookies after session fetch middleware

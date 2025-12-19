@@ -77,10 +77,11 @@ defmodule Clientats.Error.Handler do
   def format_error(%Ecto.Changeset{} = changeset, :validation_error, context) do
     {field, {message, _}} = Enum.at(changeset.errors, 0) || {:unknown, {"Invalid input", []}}
 
-    recovery_context = Map.merge(context, %{
-      field: field,
-      message: message
-    })
+    recovery_context =
+      Map.merge(context, %{
+        field: field,
+        message: message
+      })
 
     recovery = ContextHelper.get_error_recovery(:validation_error, recovery_context)
 

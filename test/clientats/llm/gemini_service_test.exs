@@ -127,10 +127,11 @@ defmodule Clientats.LLM.GeminiServiceTest do
     test "Gemini is listed as valid provider" do
       alias Clientats.LLM.Setting
 
-      changeset = Setting.changeset(%Setting{}, %{
-        "user_id" => 1,
-        "provider" => "gemini"
-      })
+      changeset =
+        Setting.changeset(%Setting{}, %{
+          "user_id" => 1,
+          "provider" => "gemini"
+        })
 
       assert changeset.valid?
     end
@@ -138,13 +139,14 @@ defmodule Clientats.LLM.GeminiServiceTest do
     test "Gemini with all model configurations" do
       alias Clientats.LLM.Setting
 
-      changeset = Setting.changeset(%Setting{}, %{
-        "user_id" => 1,
-        "provider" => "gemini",
-        "default_model" => "gemini-2.0-flash",
-        "vision_model" => "gemini-2.0-flash",
-        "text_model" => "gemini-1.5-pro"
-      })
+      changeset =
+        Setting.changeset(%Setting{}, %{
+          "user_id" => 1,
+          "provider" => "gemini",
+          "default_model" => "gemini-2.0-flash",
+          "vision_model" => "gemini-2.0-flash",
+          "text_model" => "gemini-1.5-pro"
+        })
 
       assert changeset.valid?
     end
@@ -162,9 +164,13 @@ defmodule Clientats.LLM.GeminiServiceTest do
       config = Service.get_config()
       # Check if google config exists and has api_version
       case config[:google] do
-        nil -> assert true  # Config might not be set
+        # Config might not be set
+        nil ->
+          assert true
+
         google_config ->
           assert is_map(google_config)
+
           if Map.has_key?(google_config, :api_version) do
             assert google_config[:api_version] =~ ~r/v\d/
           end
@@ -175,7 +181,9 @@ defmodule Clientats.LLM.GeminiServiceTest do
       config = Service.get_config()
       # Check if timeout is configured
       case config[:google] do
-        nil -> assert true
+        nil ->
+          assert true
+
         google_config ->
           if Map.has_key?(google_config, :timeout) do
             assert is_integer(google_config[:timeout])

@@ -46,7 +46,10 @@ defmodule ClientatsWeb.JobInterestLive.Edit do
     <div class="min-h-screen bg-gray-50">
       <div class="bg-white shadow">
         <div class="container mx-auto px-4 py-4">
-          <.link navigate={~p"/dashboard/job-interests/#{@job_interest}"} class="text-blue-600 hover:text-blue-800">
+          <.link
+            navigate={~p"/dashboard/job-interests/#{@job_interest}"}
+            class="text-blue-600 hover:text-blue-800"
+          >
             <.icon name="hero-arrow-left" class="w-5 h-5 inline" /> Back to Job Interest
           </.link>
         </div>
@@ -100,7 +103,12 @@ defmodule ClientatsWeb.JobInterestLive.Edit do
                   />
                 </div>
 
-                <.input field={@form[:job_description]} type="textarea" label="Job Description" rows="4" />
+                <.input
+                  field={@form[:job_description]}
+                  type="textarea"
+                  label="Job Description"
+                  rows="4"
+                />
 
                 <div class="grid grid-cols-2 gap-4">
                   <.input

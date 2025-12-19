@@ -81,15 +81,13 @@ defmodule ClientatsWeb.HomeLive do
                   href={~p"/export"}
                   class="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-lg shadow-lg transition duration-200"
                 >
-                  <.icon name="hero-arrow-down-tray" class="w-5 h-5" />
-                  Export Data
+                  <.icon name="hero-arrow-down-tray" class="w-5 h-5" /> Export Data
                 </a>
                 <.link
                   navigate={~p"/import"}
                   class="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold px-6 py-3 rounded-lg shadow-lg transition duration-200"
                 >
-                  <.icon name="hero-arrow-up-tray" class="w-5 h-5" />
-                  Import Data
+                  <.icon name="hero-arrow-up-tray" class="w-5 h-5" /> Import Data
                 </.link>
               </div>
               <p class="text-sm text-gray-500 mt-4 text-center">

@@ -64,10 +64,13 @@ defmodule ClientatsWeb.JobManagementLiveViewTest do
 
       # Form submission causes a redirect, so we check for that
       case result do
-        {:error, {:live_redirect, _}} -> :ok  # Expected behavior
+        # Expected behavior
+        {:error, {:live_redirect, _}} ->
+          :ok
+
         html when is_binary(html) ->
           assert html =~ "Acme" or html =~ "Senior Engineer" or
-                 String.contains?(html, "dashboard")
+                   String.contains?(html, "dashboard")
       end
     end
 
@@ -88,7 +91,7 @@ defmodule ClientatsWeb.JobManagementLiveViewTest do
 
       # Should display validation errors
       assert String.contains?(result, "can't be blank") or
-             String.contains?(result, "required")
+               String.contains?(result, "required")
     end
 
     test "validates salary range", %{conn: conn, user: user} do
@@ -130,10 +133,13 @@ defmodule ClientatsWeb.JobManagementLiveViewTest do
 
       # Form submission causes a redirect, so we check for that
       case result do
-        {:error, {:live_redirect, _}} -> :ok  # Expected behavior
+        # Expected behavior
+        {:error, {:live_redirect, _}} ->
+          :ok
+
         html when is_binary(html) ->
           assert String.contains?(html, "Tech Inc") or
-                 String.contains?(html, "dashboard")
+                   String.contains?(html, "dashboard")
       end
     end
 
@@ -191,10 +197,13 @@ defmodule ClientatsWeb.JobManagementLiveViewTest do
 
       # Form submission causes a redirect, so we check for that
       case result do
-        {:error, {:live_redirect, _}} -> :ok  # Expected behavior
+        # Expected behavior
+        {:error, {:live_redirect, _}} ->
+          :ok
+
         html when is_binary(html) ->
           assert String.contains?(html, "Updated Corp") or
-                 String.contains?(html, "dashboard")
+                   String.contains?(html, "dashboard")
       end
     end
 
@@ -212,7 +221,7 @@ defmodule ClientatsWeb.JobManagementLiveViewTest do
         |> render_submit()
 
       assert String.contains?(result, "can't be blank") or
-             String.contains?(result, "required")
+               String.contains?(result, "required")
     end
   end
 
@@ -274,10 +283,13 @@ defmodule ClientatsWeb.JobManagementLiveViewTest do
 
       # Button click causes a redirect, which is expected
       case result do
-        {:error, {:live_redirect, _}} -> :ok  # Expected behavior
+        # Expected behavior
+        {:error, {:live_redirect, _}} ->
+          :ok
+
         html when is_binary(html) ->
           assert String.contains?(html, "dashboard") or
-                 String.contains?(html, "job-interests")
+                   String.contains?(html, "job-interests")
       end
     end
   end
@@ -334,10 +346,13 @@ defmodule ClientatsWeb.JobManagementLiveViewTest do
 
       # Link click causes a redirect, which is expected
       case result do
-        {:error, {:live_redirect, _}} -> :ok  # Expected behavior
+        # Expected behavior
+        {:error, {:live_redirect, _}} ->
+          :ok
+
         html when is_binary(html) ->
           assert String.contains?(html, "Convert Corp") or
-                 String.contains?(html, "job-applications")
+                   String.contains?(html, "job-applications")
       end
     end
 
@@ -378,9 +393,9 @@ defmodule ClientatsWeb.JobManagementLiveViewTest do
 
       # Status should be visible (checking case-insensitive)
       assert String.contains?(html, "Interested") or
-             String.contains?(html, "interested") or
-             String.contains?(html, "badge") or
-             String.contains?(html, "Status")
+               String.contains?(html, "interested") or
+               String.contains?(html, "badge") or
+               String.contains?(html, "Status")
     end
 
     test "salary display is formatted accessibly", %{conn: conn, user: user} do
@@ -411,9 +426,11 @@ defmodule ClientatsWeb.JobManagementLiveViewTest do
           {:ok, _lv, html} ->
             # If it succeeds, should show error or redirect
             assert html =~ "not found" or html =~ "dashboard" or html =~ "error"
+
           {:error, {:redirect, _}} ->
             # Expected - redirect on error
             :ok
+
           {:error, _} ->
             # Expected - some error response
             :ok
@@ -441,9 +458,11 @@ defmodule ClientatsWeb.JobManagementLiveViewTest do
         {:ok, _lv, html} ->
           # If it succeeds, should not show the other user's company name or should show error
           refute String.contains?(html, other_interest.company_name)
+
         {:error, {:redirect, _}} ->
           # Expected - redirect on unauthorized access
           :ok
+
         {:error, _} ->
           # Expected - error on unauthorized access
           :ok
@@ -469,7 +488,9 @@ defmodule ClientatsWeb.JobManagementLiveViewTest do
 
       # Should either show the form or redirect
       case result do
-        {:error, {:live_redirect, _}} -> :ok
+        {:error, {:live_redirect, _}} ->
+          :ok
+
         html when is_binary(html) ->
           assert String.contains?(html, "job_interest") or String.contains?(html, "dashboard")
       end
@@ -494,7 +515,9 @@ defmodule ClientatsWeb.JobManagementLiveViewTest do
 
       # Form submission may redirect, causing a tuple response
       case result do
-        {:error, {:live_redirect, _}} -> :ok
+        {:error, {:live_redirect, _}} ->
+          :ok
+
         html when is_binary(html) ->
           assert String.contains?(html, "Test") or String.contains?(html, "too long")
       end

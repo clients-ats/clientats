@@ -36,7 +36,8 @@ defmodule Clientats.LLM.IntegrationTest do
 
     test "handles different extraction modes", %{user: _user} do
       # Test specific mode
-      specific_result = Service.extract_job_data("test", "https://linkedin.com/jobs/123", :specific)
+      specific_result =
+        Service.extract_job_data("test", "https://linkedin.com/jobs/123", :specific)
 
       # Test generic mode
       generic_result = Service.extract_job_data("test", "https://example.com/jobs/123", :generic)
@@ -50,21 +51,23 @@ defmodule Clientats.LLM.IntegrationTest do
   describe "Prompt generation and parsing" do
     test "generates valid prompts for different scenarios" do
       # Test LinkedIn prompt
-      linkedin_prompt = PromptTemplates.build_job_extraction_prompt(
-        "Job content here",
-        "https://www.linkedin.com/jobs/view/12345",
-        :specific
-      )
+      linkedin_prompt =
+        PromptTemplates.build_job_extraction_prompt(
+          "Job content here",
+          "https://www.linkedin.com/jobs/view/12345",
+          :specific
+        )
 
       assert String.contains?(linkedin_prompt, "LinkedIn")
       assert String.contains?(linkedin_prompt, "Job content here")
 
       # Test generic prompt
-      generic_prompt = PromptTemplates.build_job_extraction_prompt(
-        "Job content here",
-        "https://www.example.com/jobs/123",
-        :generic
-      )
+      generic_prompt =
+        PromptTemplates.build_job_extraction_prompt(
+          "Job content here",
+          "https://www.example.com/jobs/123",
+          :generic
+        )
 
       assert String.contains?(generic_prompt, "unknown job board")
     end
@@ -85,7 +88,9 @@ defmodule Clientats.LLM.IntegrationTest do
     end
 
     test "handles invalid provider specification" do
-      result = Service.extract_job_data("test", "https://example.com", :generic, :invalid_provider)
+      result =
+        Service.extract_job_data("test", "https://example.com", :generic, :invalid_provider)
+
       # Invalid providers are treated as unknown atoms and get an LLM error
       assert match?({:error, _}, result)
     end

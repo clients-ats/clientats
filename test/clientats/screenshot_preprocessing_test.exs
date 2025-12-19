@@ -151,7 +151,9 @@ defmodule Clientats.ScreenshotPreprocessingTest do
     end
 
     test "rejects non-existent files" do
-      result = Clientats.ScreenshotPreprocessing.validate_screenshot_metadata("/nonexistent/file.png")
+      result =
+        Clientats.ScreenshotPreprocessing.validate_screenshot_metadata("/nonexistent/file.png")
+
       assert {:error, :file_not_found} = result
     end
 

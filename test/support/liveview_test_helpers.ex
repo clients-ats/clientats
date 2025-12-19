@@ -81,7 +81,7 @@ defmodule ClientatsWeb.LiveViewTestHelpers do
         name: "Main Resume",
         file_path: "/uploads/resume.pdf",
         original_filename: "resume.pdf",
-        file_size: 102400,
+        file_size: 102_400,
         is_default: true
       })
       |> Documents.create_resume()
@@ -158,6 +158,7 @@ defmodule ClientatsWeb.LiveViewTestHelpers do
 
   def assert_has_heading(html, level, text) do
     tag = "h#{level}"
+
     assert html =~ ~r/<#{tag}[^>]*>#{Regex.escape(text)}<\/#{tag}>/i,
            "Expected #{tag} with text: #{text}"
   end

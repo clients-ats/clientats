@@ -116,7 +116,8 @@ defmodule Clientats.DataExport do
       cover_letter_path: job_application.cover_letter_path,
       resume_path: job_application.resume_path,
       notes: job_application.notes,
-      application_events: Enum.map(job_application.application_events, &serialize_application_event/1),
+      application_events:
+        Enum.map(job_application.application_events, &serialize_application_event/1),
       inserted_at: DateTime.to_iso8601(job_application.inserted_at),
       updated_at: DateTime.to_iso8601(job_application.updated_at)
     }
@@ -201,33 +202,38 @@ defmodule Clientats.DataExport do
   end
 
   defp import_job_interests(user_id, interests, stats) do
-    count = Enum.reduce(interests, 0, fn interest, acc ->
-      case create_job_interest(user_id, interest) do
-        {:ok, _} -> acc + 1
-        {:error, _} -> acc
-      end
-    end)
+    count =
+      Enum.reduce(interests, 0, fn interest, acc ->
+        case create_job_interest(user_id, interest) do
+          {:ok, _} -> acc + 1
+          {:error, _} -> acc
+        end
+      end)
 
     Map.put(stats, :job_interests, count)
   end
 
   defp import_job_applications(user_id, applications, stats) do
-    {app_count, event_count} = Enum.reduce(applications, {0, 0}, fn application, {a_acc, e_acc} ->
-      case create_job_application(user_id, application) do
-        {:ok, job_app} ->
-          events = application["application_events"] || []
-          event_created = Enum.count(events, fn event ->
-            case create_application_event(job_app.id, event) do
-              {:ok, _} -> true
-              {:error, _} -> false
-            end
-          end)
-          {a_acc + 1, e_acc + event_created}
+    {app_count, event_count} =
+      Enum.reduce(applications, {0, 0}, fn application, {a_acc, e_acc} ->
+        case create_job_application(user_id, application) do
+          {:ok, job_app} ->
+            events = application["application_events"] || []
 
-        {:error, _} ->
-          {a_acc, e_acc}
-      end
-    end)
+            event_created =
+              Enum.count(events, fn event ->
+                case create_application_event(job_app.id, event) do
+                  {:ok, _} -> true
+                  {:error, _} -> false
+                end
+              end)
+
+            {a_acc + 1, e_acc + event_created}
+
+          {:error, _} ->
+            {a_acc, e_acc}
+        end
+      end)
 
     stats
     |> Map.put(:job_applications, app_count)
@@ -235,23 +241,25 @@ defmodule Clientats.DataExport do
   end
 
   defp import_resumes(user_id, resumes, stats) do
-    count = Enum.reduce(resumes, 0, fn resume, acc ->
-      case create_resume(user_id, resume) do
-        {:ok, _} -> acc + 1
-        {:error, _} -> acc
-      end
-    end)
+    count =
+      Enum.reduce(resumes, 0, fn resume, acc ->
+        case create_resume(user_id, resume) do
+          {:ok, _} -> acc + 1
+          {:error, _} -> acc
+        end
+      end)
 
     Map.put(stats, :resumes, count)
   end
 
   defp import_cover_letter_templates(user_id, templates, stats) do
-    count = Enum.reduce(templates, 0, fn template, acc ->
-      case create_cover_letter_template(user_id, template) do
-        {:ok, _} -> acc + 1
-        {:error, _} -> acc
-      end
-    end)
+    count =
+      Enum.reduce(templates, 0, fn template, acc ->
+        case create_cover_letter_template(user_id, template) do
+          {:ok, _} -> acc + 1
+          {:error, _} -> acc
+        end
+      end)
 
     Map.put(stats, :cover_letter_templates, count)
   end

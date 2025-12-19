@@ -20,17 +20,19 @@ defmodule ClientatsWeb.JobApplicationLive.ActivityTimelineTest do
       user = user_fixture()
       app = job_application_fixture(user_id: user.id)
 
-      _event1 = application_event_fixture(
-        job_application_id: app.id,
-        event_type: "contact",
-        event_date: ~D[2024-01-10]
-      )
+      _event1 =
+        application_event_fixture(
+          job_application_id: app.id,
+          event_type: "contact",
+          event_date: ~D[2024-01-10]
+        )
 
-      _event2 = application_event_fixture(
-        job_application_id: app.id,
-        event_type: "phone_screen",
-        event_date: ~D[2024-01-15]
-      )
+      _event2 =
+        application_event_fixture(
+          job_application_id: app.id,
+          event_type: "phone_screen",
+          event_date: ~D[2024-01-15]
+        )
 
       conn = log_in_user(conn, user)
 
@@ -150,12 +152,13 @@ defmodule ClientatsWeb.JobApplicationLive.ActivityTimelineTest do
       user = user_fixture()
       app = job_application_fixture(user_id: user.id)
 
-      event = application_event_fixture(
-        job_application_id: app.id,
-        event_type: "contact",
-        event_date: ~D[2024-01-15],
-        notes: "Initial email"
-      )
+      event =
+        application_event_fixture(
+          job_application_id: app.id,
+          event_type: "contact",
+          event_date: ~D[2024-01-15],
+          notes: "Initial email"
+        )
 
       conn = log_in_user(conn, user)
 
@@ -192,12 +195,13 @@ defmodule ClientatsWeb.JobApplicationLive.ActivityTimelineTest do
       user = user_fixture()
       app = job_application_fixture(user_id: user.id)
 
-      event = application_event_fixture(
-        job_application_id: app.id,
-        event_type: "follow_up",
-        event_date: ~D[2024-01-20],
-        notes: "Follow up call"
-      )
+      event =
+        application_event_fixture(
+          job_application_id: app.id,
+          event_type: "follow_up",
+          event_date: ~D[2024-01-20],
+          notes: "Follow up call"
+        )
 
       conn = log_in_user(conn, user)
 
@@ -221,12 +225,41 @@ defmodule ClientatsWeb.JobApplicationLive.ActivityTimelineTest do
       user = user_fixture()
       app = job_application_fixture(user_id: user.id)
 
-      application_event_fixture(job_application_id: app.id, event_type: "applied", event_date: ~D[2024-01-10])
-      application_event_fixture(job_application_id: app.id, event_type: "contact", event_date: ~D[2024-01-11])
-      application_event_fixture(job_application_id: app.id, event_type: "phone_screen", event_date: ~D[2024-01-12])
-      application_event_fixture(job_application_id: app.id, event_type: "technical_screen", event_date: ~D[2024-01-13])
-      application_event_fixture(job_application_id: app.id, event_type: "interview_onsite", event_date: ~D[2024-01-14])
-      application_event_fixture(job_application_id: app.id, event_type: "offer", event_date: ~D[2024-01-15])
+      application_event_fixture(
+        job_application_id: app.id,
+        event_type: "applied",
+        event_date: ~D[2024-01-10]
+      )
+
+      application_event_fixture(
+        job_application_id: app.id,
+        event_type: "contact",
+        event_date: ~D[2024-01-11]
+      )
+
+      application_event_fixture(
+        job_application_id: app.id,
+        event_type: "phone_screen",
+        event_date: ~D[2024-01-12]
+      )
+
+      application_event_fixture(
+        job_application_id: app.id,
+        event_type: "technical_screen",
+        event_date: ~D[2024-01-13]
+      )
+
+      application_event_fixture(
+        job_application_id: app.id,
+        event_type: "interview_onsite",
+        event_date: ~D[2024-01-14]
+      )
+
+      application_event_fixture(
+        job_application_id: app.id,
+        event_type: "offer",
+        event_date: ~D[2024-01-15]
+      )
 
       conn = log_in_user(conn, user)
 
@@ -244,11 +277,12 @@ defmodule ClientatsWeb.JobApplicationLive.ActivityTimelineTest do
       user = user_fixture()
       app = job_application_fixture(user_id: user.id)
 
-      event = application_event_fixture(
-        job_application_id: app.id,
-        event_type: "contact",
-        event_date: ~D[2024-01-15]
-      )
+      event =
+        application_event_fixture(
+          job_application_id: app.id,
+          event_type: "contact",
+          event_date: ~D[2024-01-15]
+        )
 
       # Update the event to change its updated_at
       :timer.sleep(1000)

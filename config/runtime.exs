@@ -91,7 +91,8 @@ if config_env() == :prod do
       },
       ollama: %{
         base_url: System.get_env("OLLAMA_BASE_URL") || "http://localhost:11434",
-        default_model: System.get_env("OLLAMA_MODEL") || "hf.co/unsloth/Magistral-Small-2509-GGUF:UD-Q4_K_XL",
+        default_model:
+          System.get_env("OLLAMA_MODEL") || "hf.co/unsloth/Magistral-Small-2509-GGUF:UD-Q4_K_XL",
         vision_model: System.get_env("OLLAMA_VISION_MODEL") || "qwen2.5vl:7b",
         timeout: 60_000,
         max_retries: 2
@@ -108,7 +109,8 @@ if config_env() == :prod do
     fallback_providers: [:anthropic, :mistral, :google, :ollama],
     max_content_length: 2_000_000,
     enable_logging: System.get_env("LLM_ENABLE_LOGGING") != "false",
-    cache_ttl: 86400 # 24 hours cache for successful extractions
+    # 24 hours cache for successful extractions
+    cache_ttl: 86400
 
   config :clientats, ClientatsWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],

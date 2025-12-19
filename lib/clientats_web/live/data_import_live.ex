@@ -91,14 +91,17 @@ defmodule ClientatsWeb.DataImportLive do
                   <div class="bg-green-50 border border-green-200 rounded-lg p-4">
                     <h3 class="text-green-800 font-semibold mb-2">Import Successful!</h3>
                     <div class="text-sm text-green-700 space-y-1">
-                      <p>Job Interests: <%= stats.job_interests %></p>
-                      <p>Job Applications: <%= stats.job_applications %></p>
-                      <p>Application Events: <%= stats.application_events %></p>
-                      <p>Resumes: <%= stats.resumes %></p>
-                      <p>Cover Letter Templates: <%= stats.cover_letter_templates %></p>
+                      <p>Job Interests: {stats.job_interests}</p>
+                      <p>Job Applications: {stats.job_applications}</p>
+                      <p>Application Events: {stats.application_events}</p>
+                      <p>Resumes: {stats.resumes}</p>
+                      <p>Cover Letter Templates: {stats.cover_letter_templates}</p>
                     </div>
                     <div class="mt-4">
-                      <.link navigate={~p"/dashboard"} class="text-green-800 font-semibold hover:underline">
+                      <.link
+                        navigate={~p"/dashboard"}
+                        class="text-green-800 font-semibold hover:underline"
+                      >
                         Go to Dashboard →
                       </.link>
                     </div>
@@ -106,7 +109,7 @@ defmodule ClientatsWeb.DataImportLive do
                 <% {:error, reason} -> %>
                   <div class="bg-red-50 border border-red-200 rounded-lg p-4">
                     <h3 class="text-red-800 font-semibold mb-2">Import Failed</h3>
-                    <p class="text-sm text-red-700"><%= reason %></p>
+                    <p class="text-sm text-red-700">{reason}</p>
                   </div>
               <% end %>
             </div>
@@ -139,9 +142,9 @@ defmodule ClientatsWeb.DataImportLive do
                       <div class="flex items-center gap-3">
                         <.icon name="hero-document" class="w-6 h-6 text-blue-600" />
                         <div>
-                          <p class="text-sm font-medium text-gray-900"><%= entry.client_name %></p>
+                          <p class="text-sm font-medium text-gray-900">{entry.client_name}</p>
                           <p class="text-xs text-gray-500">
-                            <%= Float.round(entry.client_size / 1024 / 1024, 2) %> MB
+                            {Float.round(entry.client_size / 1024 / 1024, 2)} MB
                           </p>
                         </div>
                       </div>
@@ -167,7 +170,7 @@ defmodule ClientatsWeb.DataImportLive do
                 <% end %>
 
                 <%= for err <- upload_errors(@uploads.import_file) do %>
-                  <p class="text-sm text-red-600 mt-2"><%= error_to_string(err) %></p>
+                  <p class="text-sm text-red-600 mt-2">{error_to_string(err)}</p>
                 <% end %>
               </div>
             </div>

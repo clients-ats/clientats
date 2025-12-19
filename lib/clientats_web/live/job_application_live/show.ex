@@ -69,8 +69,17 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
 
   def handle_event("toggle_form", _params, socket) do
     form_open = !socket.assigns.form_open
-    changeset = if form_open, do: Jobs.change_application_event(%Clientats.Jobs.ApplicationEvent{}), else: nil
-    {:noreply, socket |> assign(:form_open, form_open) |> assign(:editing_event_id, nil) |> assign(:changeset, changeset)}
+
+    changeset =
+      if form_open,
+        do: Jobs.change_application_event(%Clientats.Jobs.ApplicationEvent{}),
+        else: nil
+
+    {:noreply,
+     socket
+     |> assign(:form_open, form_open)
+     |> assign(:editing_event_id, nil)
+     |> assign(:changeset, changeset)}
   end
 
   def handle_event("save_event", params, socket) do
@@ -78,9 +87,11 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
       nil ->
         # Creating new event
         event_params = Map.put(params, "job_application_id", socket.assigns.application.id)
+
         case Jobs.create_application_event(event_params) do
           {:ok, _event} ->
             application = Jobs.get_job_application!(socket.assigns.application.id)
+
             {:noreply,
              socket
              |> assign(:application, application)
@@ -89,15 +100,20 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
              |> put_flash(:info, "Activity added successfully")}
 
           {:error, changeset} ->
-            {:noreply, socket |> assign(:changeset, changeset) |> put_flash(:error, "Failed to save activity")}
+            {:noreply,
+             socket
+             |> assign(:changeset, changeset)
+             |> put_flash(:error, "Failed to save activity")}
         end
 
       event_id ->
         # Updating existing event
         event = Jobs.get_application_event!(event_id)
+
         case Jobs.update_application_event(event, params) do
           {:ok, _event} ->
             application = Jobs.get_job_application!(socket.assigns.application.id)
+
             {:noreply,
              socket
              |> assign(:application, application)
@@ -107,7 +123,10 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
              |> put_flash(:info, "Activity updated successfully")}
 
           {:error, changeset} ->
-            {:noreply, socket |> assign(:changeset, changeset) |> put_flash(:error, "Failed to save activity")}
+            {:noreply,
+             socket
+             |> assign(:changeset, changeset)
+             |> put_flash(:error, "Failed to save activity")}
         end
     end
   end
@@ -115,6 +134,7 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
   def handle_event("edit_event", %{"id" => event_id}, socket) do
     event = Jobs.get_application_event!(event_id)
     changeset = Jobs.change_application_event(event)
+
     {:noreply,
      socket
      |> assign(:form_open, true)
@@ -126,6 +146,7 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
     event = Jobs.get_application_event!(event_id)
     {:ok, _} = Jobs.delete_application_event(event)
     application = Jobs.get_job_application!(socket.assigns.application.id)
+
     {:noreply,
      socket
      |> assign(:application, application)
@@ -169,8 +190,8 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
       <div class="container mx-auto px-4 py-8">
         <div class="bg-white rounded-lg shadow p-6">
           <div class="mb-6">
-            <h1 class="text-3xl font-bold text-gray-900"><%= @application.position_title %></h1>
-            <h2 class="text-xl text-gray-600 mt-2"><%= @application.company_name %></h2>
+            <h1 class="text-3xl font-bold text-gray-900">{@application.position_title}</h1>
+            <h2 class="text-xl text-gray-600 mt-2">{@application.company_name}</h2>
             <%= if @application.job_interest do %>
               <div class="mt-3">
                 <.link
@@ -190,33 +211,40 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
                 <div>
                   <dt class="text-sm text-gray-500">Application Date</dt>
                   <dd class="text-sm text-gray-900">
-                    <%= Calendar.strftime(@application.application_date, "%B %d, %Y") %>
+                    {Calendar.strftime(@application.application_date, "%B %d, %Y")}
                   </dd>
                 </div>
                 <div>
                   <dt class="text-sm text-gray-500">Status</dt>
                   <dd class="text-sm">
-                    <span class="badge"><%= format_status(@application.status) %></span>
+                    <span class="badge">{format_status(@application.status)}</span>
                   </dd>
                 </div>
                 <%= if @application.location do %>
                   <div>
                     <dt class="text-sm text-gray-500">Location</dt>
-                    <dd class="text-sm text-gray-900"><%= @application.location %></dd>
+                    <dd class="text-sm text-gray-900">{@application.location}</dd>
                   </div>
                 <% end %>
                 <%= if @application.work_model do %>
                   <div>
                     <dt class="text-sm text-gray-500">Work Model</dt>
-                    <dd class="text-sm text-gray-900"><%= format_work_model(@application.work_model) %></dd>
+                    <dd class="text-sm text-gray-900">
+                      {format_work_model(@application.work_model)}
+                    </dd>
                   </div>
                 <% end %>
                 <%= if @application.job_url do %>
                   <div>
                     <dt class="text-sm text-gray-500">Job Posting</dt>
                     <dd class="text-sm">
-                      <a href={@application.job_url} target="_blank" class="text-blue-600 hover:underline">
-                        View Posting <.icon name="hero-arrow-top-right-on-square" class="w-4 h-4 inline" />
+                      <a
+                        href={@application.job_url}
+                        target="_blank"
+                        class="text-blue-600 hover:underline"
+                      >
+                        View Posting
+                        <.icon name="hero-arrow-top-right-on-square" class="w-4 h-4 inline" />
                       </a>
                     </dd>
                   </div>
@@ -231,8 +259,13 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
                   <div>
                     <dt class="text-sm text-gray-500">Resume</dt>
                     <dd class="text-sm">
-                      <a href={@application.resume_path} target="_blank" class="text-blue-600 hover:underline">
-                        View Resume <.icon name="hero-arrow-top-right-on-square" class="w-4 h-4 inline" />
+                      <a
+                        href={@application.resume_path}
+                        target="_blank"
+                        class="text-blue-600 hover:underline"
+                      >
+                        View Resume
+                        <.icon name="hero-arrow-top-right-on-square" class="w-4 h-4 inline" />
                       </a>
                     </dd>
                   </div>
@@ -245,7 +278,7 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
                 <%= if @application.cover_letter_path do %>
                   <div>
                     <dt class="text-sm text-gray-500">Cover Letter</dt>
-                    <dd class="text-sm text-gray-900">Template #<%= @application.cover_letter_path %></dd>
+                    <dd class="text-sm text-gray-900">Template #{@application.cover_letter_path}</dd>
                   </div>
                 <% else %>
                   <div>
@@ -260,26 +293,26 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
           <%= if @application.salary_min || @application.salary_max do %>
             <div class="mt-6">
               <h3 class="font-semibold text-gray-900 mb-2">Compensation</h3>
-              <p class="text-sm text-gray-700"><%= format_salary_range(@application) %></p>
+              <p class="text-sm text-gray-700">{format_salary_range(@application)}</p>
             </div>
           <% end %>
 
           <%= if @application.job_description do %>
             <div class="mt-6">
               <h3 class="font-semibold text-gray-900 mb-2">Job Description</h3>
-              <p class="text-sm text-gray-700 whitespace-pre-wrap"><%= @application.job_description %></p>
+              <p class="text-sm text-gray-700 whitespace-pre-wrap">{@application.job_description}</p>
             </div>
           <% end %>
 
           <%= if @application.notes do %>
             <div class="mt-6">
               <h3 class="font-semibold text-gray-900 mb-2">Notes</h3>
-              <p class="text-sm text-gray-700 whitespace-pre-wrap"><%= @application.notes %></p>
+              <p class="text-sm text-gray-700 whitespace-pre-wrap">{@application.notes}</p>
             </div>
           <% end %>
         </div>
-
-        <!-- Activity Timeline Section -->
+        
+    <!-- Activity Timeline Section -->
         <div class="bg-white rounded-lg shadow p-6 mt-6">
           <div class="flex justify-between items-center mb-6">
             <h2 class="text-2xl font-bold text-gray-900">Activity Timeline</h2>
@@ -289,18 +322,21 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
               </.button>
             <% end %>
           </div>
-
-          <!-- Activity Form -->
+          
+    <!-- Activity Form -->
           <%= if @form_open do %>
             <div class="bg-gray-50 rounded-lg p-6 mb-6">
               <h3 class="text-lg font-semibold text-gray-900 mb-4">
-                <%= if @editing_event_id, do: "Update Activity", else: "Add Activity" %>
+                {if @editing_event_id, do: "Update Activity", else: "Add Activity"}
               </h3>
               <form phx-submit="save_event">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Event Type</label>
-                    <select name="event_type" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                    <select
+                      name="event_type"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    >
                       <option value="">Select event type...</option>
                       <option value="applied">Applied</option>
                       <option value="contact">Contact</option>
@@ -315,46 +351,72 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
                   </div>
                   <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Event Date</label>
-                    <input type="date" name="event_date" class="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+                    <input
+                      type="date"
+                      name="event_date"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    />
                   </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Contact Person</label>
-                    <input type="text" name="contact_person" class="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+                    <input
+                      type="text"
+                      name="contact_person"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    />
                   </div>
                   <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Contact Email</label>
-                    <input type="email" name="contact_email" class="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+                    <input
+                      type="email"
+                      name="contact_email"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    />
                   </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Contact Phone</label>
-                    <input type="tel" name="contact_phone" class="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+                    <input
+                      type="tel"
+                      name="contact_phone"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    />
                   </div>
                   <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Follow-up Date</label>
-                    <input type="date" name="follow_up_date" class="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+                    <input
+                      type="date"
+                      name="follow_up_date"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    />
                   </div>
                 </div>
 
                 <div class="mb-4">
                   <label class="block text-sm font-medium text-gray-700 mb-2">Notes</label>
-                  <textarea name="notes" class="w-full px-3 py-2 border border-gray-300 rounded-lg" rows="3"></textarea>
+                  <textarea
+                    name="notes"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    rows="3"
+                  ></textarea>
                 </div>
 
                 <div class="flex gap-2">
                   <button type="submit" class="btn btn-primary btn-sm">Save Activity</button>
-                  <button type="button" phx-click="toggle_form" class="btn btn-secondary btn-sm">Cancel</button>
+                  <button type="button" phx-click="toggle_form" class="btn btn-secondary btn-sm">
+                    Cancel
+                  </button>
                 </div>
               </form>
             </div>
           <% end %>
-
-          <!-- Events List -->
+          
+    <!-- Events List -->
           <%= if Enum.empty?(@application.events) do %>
             <div class="text-center py-12">
               <p class="text-gray-500 mb-2">No activities yet</p>
@@ -366,36 +428,55 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
                 <div class="border border-gray-200 rounded-lg p-4">
                   <div class="flex justify-between items-start mb-2">
                     <div>
-                      <h4 class="font-semibold text-gray-900"><%= format_event_type(event.event_type) %></h4>
-                      <p class="text-sm text-gray-600"><%= format_date(event.event_date) %></p>
+                      <h4 class="font-semibold text-gray-900">
+                        {format_event_type(event.event_type)}
+                      </h4>
+                      <p class="text-sm text-gray-600">{format_date(event.event_date)}</p>
                       <%= if event.updated_at != event.inserted_at do %>
-                        <p class="text-xs text-gray-400">Last updated <%= format_date(event.updated_at) %></p>
+                        <p class="text-xs text-gray-400">
+                          Last updated {format_date(event.updated_at)}
+                        </p>
                       <% end %>
                     </div>
                     <div class="flex gap-2">
-                      <button phx-click="edit_event" phx-value-id={event.id} class="btn btn-xs btn-ghost">
+                      <button
+                        phx-click="edit_event"
+                        phx-value-id={event.id}
+                        class="btn btn-xs btn-ghost"
+                      >
                         <.icon name="hero-pencil" class="w-4 h-4" />
                       </button>
-                      <button phx-click="delete_event" phx-value-id={event.id} data-confirm="Delete this activity?" class="btn btn-xs btn-ghost text-error">
+                      <button
+                        phx-click="delete_event"
+                        phx-value-id={event.id}
+                        data-confirm="Delete this activity?"
+                        class="btn btn-xs btn-ghost text-error"
+                      >
                         <.icon name="hero-trash" class="w-4 h-4" />
                       </button>
                     </div>
                   </div>
 
                   <%= if event.contact_person do %>
-                    <p class="text-sm text-gray-700"><strong>Contact:</strong> <%= event.contact_person %></p>
+                    <p class="text-sm text-gray-700">
+                      <strong>Contact:</strong> {event.contact_person}
+                    </p>
                   <% end %>
                   <%= if event.contact_email do %>
-                    <p class="text-sm text-gray-700"><strong>Email:</strong> <%= event.contact_email %></p>
+                    <p class="text-sm text-gray-700"><strong>Email:</strong> {event.contact_email}</p>
                   <% end %>
                   <%= if event.contact_phone do %>
-                    <p class="text-sm text-gray-700"><strong>Phone:</strong> <%= event.contact_phone %></p>
+                    <p class="text-sm text-gray-700"><strong>Phone:</strong> {event.contact_phone}</p>
                   <% end %>
                   <%= if event.notes do %>
-                    <p class="text-sm text-gray-700 mt-2"><strong>Notes:</strong> <%= event.notes %></p>
+                    <p class="text-sm text-gray-700 mt-2"><strong>Notes:</strong> {event.notes}</p>
                   <% end %>
                   <%= if event.follow_up_date do %>
-                    <p class="text-sm text-gray-700 mt-2"><span class="text-blue-600">Follow-up: <%= format_date_short(event.follow_up_date) %></span></p>
+                    <p class="text-sm text-gray-700 mt-2">
+                      <span class="text-blue-600">
+                        Follow-up: {format_date_short(event.follow_up_date)}
+                      </span>
+                    </p>
                   <% end %>
                 </div>
               <% end %>
@@ -412,7 +493,9 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
 
   defp format_salary_range(%{salary_min: nil, salary_max: nil}), do: "Not specified"
   defp format_salary_range(%{salary_min: min, salary_max: nil}), do: "$#{format_number(min)}+"
-  defp format_salary_range(%{salary_min: nil, salary_max: max}), do: "Up to $#{format_number(max)}"
+
+  defp format_salary_range(%{salary_min: nil, salary_max: max}),
+    do: "Up to $#{format_number(max)}"
 
   defp format_salary_range(%{salary_min: min, salary_max: max}),
     do: "$#{format_number(min)} - $#{format_number(max)}"
@@ -457,9 +540,20 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
 
   defp format_date(%Date{month: month, day: day, year: year}) do
     months = [
-      "January", "February", "March", "April", "May", "June",
-      "July", "August", "September", "October", "November", "December"
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December"
     ]
+
     month_name = Enum.at(months, month - 1)
     "#{month_name} #{day}, #{year}"
   end
@@ -485,9 +579,20 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
 
   defp format_date_short(%Date{month: month, day: day, year: year}) do
     months = [
-      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec"
     ]
+
     month_name = Enum.at(months, month - 1)
     "#{month_name} #{String.pad_leading(to_string(day), 2, "0")}, #{year}"
   end

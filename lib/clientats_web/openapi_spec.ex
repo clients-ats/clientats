@@ -295,7 +295,8 @@ defmodule ClientatsWeb.OpenAPISpec do
               "type" => "string",
               "enum" => ["specific", "generic"],
               "default" => "generic",
-              "description" => "Extraction mode - specific for known job boards, generic for any content"
+              "description" =>
+                "Extraction mode - specific for known job boards, generic for any content"
             },
             "provider" => %{
               "type" => "string",
