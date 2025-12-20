@@ -15,12 +15,10 @@ if [ ! -d "node_modules" ]; then
     npm install
 fi
 
-# Ensure database exists
-if [ ! -f "dev.db" ]; then
-    echo "🗄️  Creating database..."
-    mix ecto.create
-    mix ecto.migrate
-fi
+# Ensure database exists and is migrated
+echo "🗄️  Ensuring database is ready..."
+mix ecto.create --quiet 2>/dev/null || true
+mix ecto.migrate --quiet
 
 # Check if Phoenix server is already running
 if lsof -Pi :4000 -sTCP:LISTEN -t >/dev/null 2>&1 ; then
