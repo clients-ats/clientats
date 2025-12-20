@@ -3,11 +3,11 @@ defmodule Clientats.Repo.Migrations.CreateAuditLogs do
 
   def change do
     create table(:audit_logs, primary_key: false) do
-      add :id, :binary_id, primary_key: true
-      add :user_id, :binary_id
+      add :id, :string, primary_key: true
+      add :user_id, :string
       add :action, :string, null: false
       add :resource_type, :string, null: false
-      add :resource_id, :binary_id
+      add :resource_id, :string
       add :description, :string
       add :ip_address, :string
       add :user_agent, :string

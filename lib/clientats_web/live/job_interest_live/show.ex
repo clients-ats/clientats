@@ -63,8 +63,8 @@ defmodule ClientatsWeb.JobInterestLive.Show do
       <div class="container mx-auto px-4 py-8">
         <div class="bg-white rounded-lg shadow p-6">
           <div class="mb-6">
-            <h1 class="text-3xl font-bold text-gray-900"><%= @job_interest.position_title %></h1>
-            <h2 class="text-xl text-gray-600 mt-2"><%= @job_interest.company_name %></h2>
+            <h1 class="text-3xl font-bold text-gray-900">{@job_interest.position_title}</h1>
+            <h2 class="text-xl text-gray-600 mt-2">{@job_interest.company_name}</h2>
           </div>
 
           <div class="grid md:grid-cols-2 gap-6">
@@ -74,27 +74,34 @@ defmodule ClientatsWeb.JobInterestLive.Show do
                 <%= if @job_interest.location do %>
                   <div>
                     <dt class="text-sm text-gray-500">Location</dt>
-                    <dd class="text-sm text-gray-900"><%= @job_interest.location %></dd>
+                    <dd class="text-sm text-gray-900">{@job_interest.location}</dd>
                   </div>
                 <% end %>
                 <%= if @job_interest.work_model do %>
                   <div>
                     <dt class="text-sm text-gray-500">Work Model</dt>
-                    <dd class="text-sm text-gray-900"><%= format_work_model(@job_interest.work_model) %></dd>
+                    <dd class="text-sm text-gray-900">
+                      {format_work_model(@job_interest.work_model)}
+                    </dd>
                   </div>
                 <% end %>
                 <%= if @job_interest.salary_min || @job_interest.salary_max do %>
                   <div>
                     <dt class="text-sm text-gray-500">Salary Range</dt>
-                    <dd class="text-sm text-gray-900"><%= format_salary_range(@job_interest) %></dd>
+                    <dd class="text-sm text-gray-900">{format_salary_range(@job_interest)}</dd>
                   </div>
                 <% end %>
                 <%= if @job_interest.job_url do %>
                   <div>
                     <dt class="text-sm text-gray-500">Job Posting</dt>
                     <dd class="text-sm">
-                      <a href={@job_interest.job_url} target="_blank" class="text-blue-600 hover:underline">
-                        View Posting <.icon name="hero-arrow-top-right-on-square" class="w-4 h-4 inline" />
+                      <a
+                        href={@job_interest.job_url}
+                        target="_blank"
+                        class="text-blue-600 hover:underline"
+                      >
+                        View Posting
+                        <.icon name="hero-arrow-top-right-on-square" class="w-4 h-4 inline" />
                       </a>
                     </dd>
                   </div>
@@ -108,13 +115,15 @@ defmodule ClientatsWeb.JobInterestLive.Show do
                 <div>
                   <dt class="text-sm text-gray-500">Current Status</dt>
                   <dd class="text-sm">
-                    <span class="badge"><%= format_status(@job_interest.status) %></span>
+                    <span class="badge">{format_status(@job_interest.status)}</span>
                   </dd>
                 </div>
                 <div>
                   <dt class="text-sm text-gray-500">Priority</dt>
                   <dd class="text-sm">
-                    <span class="badge badge-outline"><%= String.capitalize(@job_interest.priority) %></span>
+                    <span class="badge badge-outline">
+                      {String.capitalize(@job_interest.priority)}
+                    </span>
                   </dd>
                 </div>
               </dl>
@@ -124,20 +133,18 @@ defmodule ClientatsWeb.JobInterestLive.Show do
           <%= if @job_interest.job_description do %>
             <div class="mt-6">
               <h3 class="font-semibold text-gray-900 mb-2">Job Description</h3>
-              <p class="text-sm text-gray-700 whitespace-pre-wrap"><%= @job_interest.job_description %></p>
+              <p class="text-sm text-gray-700 whitespace-pre-wrap">{@job_interest.job_description}</p>
             </div>
           <% end %>
 
           <%= if @job_interest.notes do %>
             <div class="mt-6">
               <h3 class="font-semibold text-gray-900 mb-2">Notes</h3>
-              <p class="text-sm text-gray-700 whitespace-pre-wrap"><%= @job_interest.notes %></p>
+              <p class="text-sm text-gray-700 whitespace-pre-wrap">{@job_interest.notes}</p>
             </div>
           <% end %>
         </div>
       </div>
-
-
     </div>
     """
   end
@@ -147,7 +154,9 @@ defmodule ClientatsWeb.JobInterestLive.Show do
 
   defp format_salary_range(%{salary_min: nil, salary_max: nil}), do: "Not specified"
   defp format_salary_range(%{salary_min: min, salary_max: nil}), do: "$#{format_number(min)}+"
-  defp format_salary_range(%{salary_min: nil, salary_max: max}), do: "Up to $#{format_number(max)}"
+
+  defp format_salary_range(%{salary_min: nil, salary_max: max}),
+    do: "Up to $#{format_number(max)}"
 
   defp format_salary_range(%{salary_min: min, salary_max: max}),
     do: "$#{format_number(min)} - $#{format_number(max)}"

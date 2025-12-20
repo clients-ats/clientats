@@ -183,33 +183,43 @@ defmodule Clientats.AccountsTest do
     test "authenticates user with valid credentials" do
       user = user_fixture(email: "test@example.com", password: "password123")
 
-      assert {:ok, authenticated_user} = Accounts.authenticate_user("test@example.com", "password123")
+      assert {:ok, authenticated_user} =
+               Accounts.authenticate_user("test@example.com", "password123")
+
       assert authenticated_user.id == user.id
     end
 
     test "returns error with invalid password" do
       user_fixture(email: "test@example.com", password: "password123")
 
-      assert {:error, :invalid_credentials} = Accounts.authenticate_user("test@example.com", "wrongpassword")
+      assert {:error, :invalid_credentials} =
+               Accounts.authenticate_user("test@example.com", "wrongpassword")
     end
 
     test "returns error with non-existent email" do
-      assert {:error, :invalid_credentials} = Accounts.authenticate_user("nonexistent@example.com", "password123")
+      assert {:error, :invalid_credentials} =
+               Accounts.authenticate_user("nonexistent@example.com", "password123")
     end
 
     test "prevents timing attacks on non-existent users" do
       user_fixture(email: "exists@example.com", password: "password123")
 
-      time_existing = :timer.tc(fn ->
-        Accounts.authenticate_user("exists@example.com", "wrongpassword")
-      end) |> elem(0)
+      time_existing =
+        :timer.tc(fn ->
+          Accounts.authenticate_user("exists@example.com", "wrongpassword")
+        end)
+        |> elem(0)
 
-      time_nonexistent = :timer.tc(fn ->
-        Accounts.authenticate_user("nonexistent@example.com", "password123")
-      end) |> elem(0)
+      time_nonexistent =
+        :timer.tc(fn ->
+          Accounts.authenticate_user("nonexistent@example.com", "password123")
+        end)
+        |> elem(0)
 
       ratio = time_nonexistent / time_existing
-      assert ratio > 0.5 and ratio < 2.0, "Timing difference too large, potential timing attack vulnerability"
+
+      assert ratio > 0.5 and ratio < 2.0,
+             "Timing difference too large, potential timing attack vulnerability"
     end
   end
 

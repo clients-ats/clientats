@@ -54,6 +54,7 @@ defmodule Clientats.Jobs.GenericJobWorker do
           status: "success",
           metadata: %{"format" => format, "days" => days}
         })
+
         :ok
 
       {:error, reason} ->
@@ -65,12 +66,14 @@ defmodule Clientats.Jobs.GenericJobWorker do
           error_message: to_string(reason),
           metadata: %{"format" => format}
         })
+
         {:error, reason}
     end
   end
 
   defp execute_job("cleanup_old_data", args) do
-    retention_days = args["retention_days"] || 2555  # ~7 years
+    # ~7 years
+    retention_days = args["retention_days"] || 2555
 
     Logger.info("Cleaning up data older than #{retention_days} days")
 

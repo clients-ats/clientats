@@ -207,6 +207,7 @@ defmodule Clientats.Jobs.Scheduler do
   end
 
   defp maybe_schedule_in(job, nil), do: job
+
   defp maybe_schedule_in(%Ecto.Changeset{} = changeset, seconds) when is_integer(seconds) do
     # Add scheduled_at to the changeset to schedule for later
     Ecto.Changeset.change(changeset, %{

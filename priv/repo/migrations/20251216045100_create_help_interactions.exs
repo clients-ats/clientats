@@ -7,7 +7,7 @@ defmodule Clientats.Repo.Migrations.CreateHelpInteractions do
       add :interaction_type, :string, null: false
       add :feature, :string
       add :element, :string
-      add :context, :jsonb
+      add :context, :map
       add :feedback, :text
       add :helpful, :boolean
 

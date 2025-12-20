@@ -9,8 +9,8 @@ defmodule LLMResponseMockTest do
       {:ok, parsed} = Jason.decode(response)
       assert parsed["company_name"] == "TechCorp Industries"
       assert parsed["position_title"] == "Senior Software Engineer"
-      assert parsed["salary_min"] == 150000
-      assert parsed["salary_max"] == 200000
+      assert parsed["salary_min"] == 150_000
+      assert parsed["salary_max"] == 200_000
       assert parsed["employment_type"] == "full_time"
       assert Enum.count(parsed["skills"]) > 0
     end
@@ -81,7 +81,15 @@ defmodule LLMResponseMockTest do
     end
 
     test "all response strings are valid JSON or known invalid" do
-      scenarios = [:successful, :minimal, :missing_fields, :invalid_salary, :partial_data, :empty_response, :error]
+      scenarios = [
+        :successful,
+        :minimal,
+        :missing_fields,
+        :invalid_salary,
+        :partial_data,
+        :empty_response,
+        :error
+      ]
 
       Enum.each(scenarios, fn scenario ->
         response = LLMResponseMock.generate_response(scenario)

@@ -1,6 +1,8 @@
 defmodule Clientats.ScreenshotPreprocessingTest do
   use ExUnit.Case
 
+  @moduletag :feature
+
   describe "scale_image/3" do
     test "scales image to specified dimensions" do
       # Generate a mock screenshot
@@ -149,7 +151,9 @@ defmodule Clientats.ScreenshotPreprocessingTest do
     end
 
     test "rejects non-existent files" do
-      result = Clientats.ScreenshotPreprocessing.validate_screenshot_metadata("/nonexistent/file.png")
+      result =
+        Clientats.ScreenshotPreprocessing.validate_screenshot_metadata("/nonexistent/file.png")
+
       assert {:error, :file_not_found} = result
     end
 

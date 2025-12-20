@@ -43,19 +43,22 @@ defmodule Clientats.MigrationsTest do
 
       columns = Helper.get_table_columns("users")
 
-      expected_columns = ~w(id email hashed_password first_name last_name resume_path inserted_at updated_at)
+      expected_columns =
+        ~w(id email hashed_password first_name last_name resume_path inserted_at updated_at)
+
       assert Enum.all?(expected_columns, &(&1 in columns))
     end
 
     test "users table columns have correct types" do
       # Check email column is string and not nullable
       {:ok, email_info} = Helper.get_column_info("users", "email")
-      assert email_info.data_type =~ "character"
+      # SQLite uses TEXT, PostgreSQL uses character/varchar
+      assert email_info.data_type =~ ~r/(character|TEXT)/
       assert email_info.nullable == false
 
       # Check hashed_password is not nullable
       {:ok, pwd_info} = Helper.get_column_info("users", "hashed_password")
-      assert pwd_info.data_type =~ "character"
+      assert pwd_info.data_type =~ ~r/(character|TEXT)/
       assert pwd_info.nullable == false
 
       # Check resume_path is nullable
@@ -75,12 +78,13 @@ defmodule Clientats.MigrationsTest do
     end
 
     test "can insert a user" do
-      {:ok, result} = Helper.insert_data("users", %{
-        "email" => "test@example.com",
-        "hashed_password" => "hashed_pwd",
-        "first_name" => "John",
-        "last_name" => "Doe"
-      })
+      {:ok, result} =
+        Helper.insert_data("users", %{
+          "email" => "test@example.com",
+          "hashed_password" => "hashed_pwd",
+          "first_name" => "John",
+          "last_name" => "Doe"
+        })
 
       assert result.num_rows == 1
     end
@@ -94,12 +98,13 @@ defmodule Clientats.MigrationsTest do
       })
 
       # Attempting to insert duplicate email should fail
-      result = Helper.insert_data("users", %{
-        "email" => "unique@example.com",
-        "hashed_password" => "pwd2",
-        "first_name" => "Jane",
-        "last_name" => "Doe"
-      })
+      result =
+        Helper.insert_data("users", %{
+          "email" => "unique@example.com",
+          "hashed_password" => "pwd2",
+          "first_name" => "Jane",
+          "last_name" => "Doe"
+        })
 
       assert match?({:error, _}, result)
     end
@@ -108,22 +113,25 @@ defmodule Clientats.MigrationsTest do
   describe "create_job_interests migration" do
     setup do
       # Create a user for foreign key references
-      {:ok, result} = Helper.insert_data("users", %{
-        "email" => "user@example.com",
-        "hashed_password" => "pwd",
-        "first_name" => "Test",
-        "last_name" => "User"
-      })
+      {:ok, result} =
+        Helper.insert_data("users", %{
+          "email" => "user@example.com",
+          "hashed_password" => "pwd",
+          "first_name" => "Test",
+          "last_name" => "User"
+        })
 
-      [[user_id, _, _, _, _, _, _, _]] = result.rows
+      [[user_id, _, _, _, _, _, _, _, _]] = result.rows
       {:ok, user_id: user_id}
     end
 
-    test "job_interests table exists with correct structure", %{user_id: user_id} do
+    test "job_interests table exists with correct structure", %{user_id: _user_id} do
       assert Helper.table_exists?("job_interests")
 
       columns = Helper.get_table_columns("job_interests")
-      expected = ~w(id user_id company_name position_title job_description job_url location work_model salary_min salary_max status priority notes inserted_at updated_at)
+
+      expected =
+        ~w(id user_id company_name position_title job_description job_url location work_model salary_min salary_max status priority notes inserted_at updated_at)
 
       assert Enum.all?(expected, &(&1 in columns))
     end
@@ -170,7 +178,7 @@ defmodule Clientats.MigrationsTest do
       assert initial_count >= 1
 
       # Delete the user
-      SQL.query(Repo, "DELETE FROM users WHERE id = $1", [user_id])
+      Helper.execute_query("DELETE FROM users WHERE id = $1", [user_id])
 
       final_count = Helper.count_rows("job_interests")
       assert final_count == 0
@@ -179,20 +187,22 @@ defmodule Clientats.MigrationsTest do
 
   describe "create_job_applications migration" do
     setup do
-      {:ok, user_result} = Helper.insert_data("users", %{
-        "email" => "user@example.com",
-        "hashed_password" => "pwd",
-        "first_name" => "Test",
-        "last_name" => "User"
-      })
+      {:ok, user_result} =
+        Helper.insert_data("users", %{
+          "email" => "user@example.com",
+          "hashed_password" => "pwd",
+          "first_name" => "Test",
+          "last_name" => "User"
+        })
 
-      [[user_id, _, _, _, _, _, _, _]] = user_result.rows
+      [[user_id, _, _, _, _, _, _, _, _]] = user_result.rows
 
-      {:ok, ji_result} = Helper.insert_data("job_interests", %{
-        "user_id" => user_id,
-        "company_name" => "Tech Corp",
-        "position_title" => "Engineer"
-      })
+      {:ok, ji_result} =
+        Helper.insert_data("job_interests", %{
+          "user_id" => user_id,
+          "company_name" => "Tech Corp",
+          "position_title" => "Engineer"
+        })
 
       [[job_interest_id, _, _, _, _, _, _, _, _, _, _, _, _, _, _]] = ji_result.rows
 
@@ -203,7 +213,9 @@ defmodule Clientats.MigrationsTest do
       assert Helper.table_exists?("job_applications")
 
       columns = Helper.get_table_columns("job_applications")
-      expected = ~w(id user_id job_interest_id company_name position_title job_description job_url location work_model salary_min salary_max application_date status cover_letter_path resume_path notes inserted_at updated_at)
+
+      expected =
+        ~w(id user_id job_interest_id company_name position_title job_description job_url location work_model salary_min salary_max application_date status cover_letter_path resume_path notes inserted_at updated_at)
 
       assert Enum.all?(expected, &(&1 in columns))
     end
@@ -213,7 +225,10 @@ defmodule Clientats.MigrationsTest do
       assert Helper.foreign_key_exists?("job_applications", "job_interests")
     end
 
-    test "job_applications status defaults to 'applied'", %{user_id: user_id, job_interest_id: job_interest_id} do
+    test "job_applications status defaults to 'applied'", %{
+      user_id: user_id,
+      job_interest_id: job_interest_id
+    } do
       Helper.insert_data("job_applications", %{
         "user_id" => user_id,
         "job_interest_id" => job_interest_id,
@@ -239,13 +254,16 @@ defmodule Clientats.MigrationsTest do
       initial_count = Helper.count_rows("job_applications")
       assert initial_count >= 1
 
-      SQL.query(Repo, "DELETE FROM users WHERE id = $1", [user_id])
+      Helper.execute_query("DELETE FROM users WHERE id = $1", [user_id])
 
       final_count = Helper.count_rows("job_applications")
       assert final_count == 0
     end
 
-    test "deleting job_interest sets application job_interest_id to null", %{user_id: user_id, job_interest_id: job_interest_id} do
+    test "deleting job_interest sets application job_interest_id to null", %{
+      user_id: user_id,
+      job_interest_id: job_interest_id
+    } do
       Helper.insert_data("job_applications", %{
         "user_id" => user_id,
         "job_interest_id" => job_interest_id,
@@ -255,7 +273,7 @@ defmodule Clientats.MigrationsTest do
       })
 
       # Delete the job interest
-      SQL.query(Repo, "DELETE FROM job_interests WHERE id = $1", [job_interest_id])
+      Helper.execute_query("DELETE FROM job_interests WHERE id = $1", [job_interest_id])
 
       # Check that job_interest_id is now NULL
       {:ok, result} = SQL.query(Repo, "SELECT job_interest_id FROM job_applications LIMIT 1", [])
@@ -266,21 +284,23 @@ defmodule Clientats.MigrationsTest do
 
   describe "create_application_events migration" do
     setup do
-      {:ok, user_result} = Helper.insert_data("users", %{
-        "email" => "user@example.com",
-        "hashed_password" => "pwd",
-        "first_name" => "Test",
-        "last_name" => "User"
-      })
+      {:ok, user_result} =
+        Helper.insert_data("users", %{
+          "email" => "user@example.com",
+          "hashed_password" => "pwd",
+          "first_name" => "Test",
+          "last_name" => "User"
+        })
 
       [[user_id | _]] = user_result.rows
 
-      {:ok, app_result} = Helper.insert_data("job_applications", %{
-        "user_id" => user_id,
-        "company_name" => "Tech Corp",
-        "position_title" => "Engineer",
-        "application_date" => Date.from_iso8601!("2025-12-15")
-      })
+      {:ok, app_result} =
+        Helper.insert_data("job_applications", %{
+          "user_id" => user_id,
+          "company_name" => "Tech Corp",
+          "position_title" => "Engineer",
+          "application_date" => Date.from_iso8601!("2025-12-15")
+        })
 
       [[app_id | _]] = app_result.rows
 
@@ -291,7 +311,9 @@ defmodule Clientats.MigrationsTest do
       assert Helper.table_exists?("application_events")
 
       columns = Helper.get_table_columns("application_events")
-      expected = ~w(id job_application_id event_type event_date contact_person contact_email contact_phone notes follow_up_date inserted_at updated_at)
+
+      expected =
+        ~w(id job_application_id event_type event_date contact_person contact_email contact_phone notes follow_up_date inserted_at updated_at)
 
       assert Enum.all?(expected, &(&1 in columns))
     end
@@ -310,7 +332,7 @@ defmodule Clientats.MigrationsTest do
       initial_count = Helper.count_rows("application_events")
       assert initial_count >= 1
 
-      SQL.query(Repo, "DELETE FROM job_applications WHERE id = $1", [app_id])
+      Helper.execute_query("DELETE FROM job_applications WHERE id = $1", [app_id])
 
       final_count = Helper.count_rows("application_events")
       assert final_count == 0
@@ -319,14 +341,15 @@ defmodule Clientats.MigrationsTest do
 
   describe "create_resumes migration" do
     setup do
-      {:ok, result} = Helper.insert_data("users", %{
-        "email" => "user@example.com",
-        "hashed_password" => "pwd",
-        "first_name" => "Test",
-        "last_name" => "User"
-      })
+      {:ok, result} =
+        Helper.insert_data("users", %{
+          "email" => "user@example.com",
+          "hashed_password" => "pwd",
+          "first_name" => "Test",
+          "last_name" => "User"
+        })
 
-      [[user_id, _, _, _, _, _, _, _]] = result.rows
+      [[user_id, _, _, _, _, _, _, _, _]] = result.rows
       {:ok, user_id: user_id}
     end
 
@@ -334,7 +357,9 @@ defmodule Clientats.MigrationsTest do
       assert Helper.table_exists?("resumes")
 
       columns = Helper.get_table_columns("resumes")
-      expected = ~w(id user_id name description file_path original_filename file_size is_default inserted_at updated_at)
+
+      expected =
+        ~w(id user_id name description file_path original_filename file_size is_default inserted_at updated_at)
 
       assert Enum.all?(expected, &(&1 in columns))
     end
@@ -353,7 +378,8 @@ defmodule Clientats.MigrationsTest do
 
       {:ok, result} = SQL.query(Repo, "SELECT is_default FROM resumes LIMIT 1", [])
       [[is_default]] = result.rows
-      assert is_default == false
+      # SQLite stores booleans as 0/1, PostgreSQL as true/false
+      assert is_default == false or is_default == 0
     end
 
     test "deleting user cascades to resumes", %{user_id: user_id} do
@@ -367,7 +393,7 @@ defmodule Clientats.MigrationsTest do
       initial_count = Helper.count_rows("resumes")
       assert initial_count >= 1
 
-      SQL.query(Repo, "DELETE FROM users WHERE id = $1", [user_id])
+      Helper.execute_query("DELETE FROM users WHERE id = $1", [user_id])
 
       final_count = Helper.count_rows("resumes")
       assert final_count == 0
@@ -376,14 +402,15 @@ defmodule Clientats.MigrationsTest do
 
   describe "create_cover_letter_templates migration" do
     setup do
-      {:ok, result} = Helper.insert_data("users", %{
-        "email" => "user@example.com",
-        "hashed_password" => "pwd",
-        "first_name" => "Test",
-        "last_name" => "User"
-      })
+      {:ok, result} =
+        Helper.insert_data("users", %{
+          "email" => "user@example.com",
+          "hashed_password" => "pwd",
+          "first_name" => "Test",
+          "last_name" => "User"
+        })
 
-      [[user_id, _, _, _, _, _, _, _]] = result.rows
+      [[user_id, _, _, _, _, _, _, _, _]] = result.rows
       {:ok, user_id: user_id}
     end
 
@@ -409,7 +436,8 @@ defmodule Clientats.MigrationsTest do
 
       {:ok, result} = SQL.query(Repo, "SELECT is_default FROM cover_letter_templates LIMIT 1", [])
       [[is_default]] = result.rows
-      assert is_default == false
+      # SQLite stores booleans as 0/1, PostgreSQL as true/false
+      assert is_default == false or is_default == 0
     end
 
     test "deleting user cascades to templates", %{user_id: user_id} do
@@ -422,7 +450,7 @@ defmodule Clientats.MigrationsTest do
       initial_count = Helper.count_rows("cover_letter_templates")
       assert initial_count >= 1
 
-      SQL.query(Repo, "DELETE FROM users WHERE id = $1", [user_id])
+      Helper.execute_query("DELETE FROM users WHERE id = $1", [user_id])
 
       final_count = Helper.count_rows("cover_letter_templates")
       assert final_count == 0
@@ -431,14 +459,15 @@ defmodule Clientats.MigrationsTest do
 
   describe "create_llm_settings migration" do
     setup do
-      {:ok, result} = Helper.insert_data("users", %{
-        "email" => "user@example.com",
-        "hashed_password" => "pwd",
-        "first_name" => "Test",
-        "last_name" => "User"
-      })
+      {:ok, result} =
+        Helper.insert_data("users", %{
+          "email" => "user@example.com",
+          "hashed_password" => "pwd",
+          "first_name" => "Test",
+          "last_name" => "User"
+        })
 
-      [[user_id, _, _, _, _, _, _, _]] = result.rows
+      [[user_id, _, _, _, _, _, _, _, _]] = result.rows
       {:ok, user_id: user_id}
     end
 
@@ -446,7 +475,9 @@ defmodule Clientats.MigrationsTest do
       assert Helper.table_exists?("llm_settings")
 
       columns = Helper.get_table_columns("llm_settings")
-      expected = ~w(id user_id provider api_key base_url default_model vision_model text_model enabled provider_status inserted_at updated_at)
+
+      expected =
+        ~w(id user_id provider api_key base_url default_model vision_model text_model enabled provider_status inserted_at updated_at)
 
       assert Enum.all?(expected, &(&1 in columns))
     end
@@ -464,7 +495,8 @@ defmodule Clientats.MigrationsTest do
 
       {:ok, result} = SQL.query(Repo, "SELECT enabled FROM llm_settings LIMIT 1", [])
       [[enabled]] = result.rows
-      assert enabled == false
+      # SQLite stores booleans as 0/1, PostgreSQL as true/false
+      assert enabled == false or enabled == 0
     end
 
     test "unique constraint on user_id and provider", %{user_id: user_id} do
@@ -475,11 +507,12 @@ defmodule Clientats.MigrationsTest do
       })
 
       # Attempting to insert duplicate user+provider should fail
-      result = Helper.insert_data("llm_settings", %{
-        "user_id" => user_id,
-        "provider" => "openai",
-        "api_key" => <<5, 6, 7, 8>>
-      })
+      result =
+        Helper.insert_data("llm_settings", %{
+          "user_id" => user_id,
+          "provider" => "openai",
+          "api_key" => <<5, 6, 7, 8>>
+        })
 
       assert match?({:error, _}, result)
     end
@@ -494,7 +527,7 @@ defmodule Clientats.MigrationsTest do
       initial_count = Helper.count_rows("llm_settings")
       assert initial_count >= 1
 
-      SQL.query(Repo, "DELETE FROM users WHERE id = $1", [user_id])
+      Helper.execute_query("DELETE FROM users WHERE id = $1", [user_id])
 
       final_count = Helper.count_rows("llm_settings")
       assert final_count == 0
@@ -512,41 +545,45 @@ defmodule Clientats.MigrationsTest do
   describe "comprehensive data flow tests" do
     test "full job application workflow maintains referential integrity" do
       # Create user
-      {:ok, user_result} = Helper.insert_data("users", %{
-        "email" => "workflow@example.com",
-        "hashed_password" => "pwd",
-        "first_name" => "Workflow",
-        "last_name" => "User"
-      })
+      {:ok, user_result} =
+        Helper.insert_data("users", %{
+          "email" => "workflow@example.com",
+          "hashed_password" => "pwd",
+          "first_name" => "Workflow",
+          "last_name" => "User"
+        })
 
-      [[user_id, _, _, _, _, _, _, _]] = user_result.rows
+      [[user_id, _, _, _, _, _, _, _, _]] = user_result.rows
 
       # Create job interest
-      {:ok, ji_result} = Helper.insert_data("job_interests", %{
-        "user_id" => user_id,
-        "company_name" => "Tech Corp",
-        "position_title" => "Senior Engineer"
-      })
+      {:ok, ji_result} =
+        Helper.insert_data("job_interests", %{
+          "user_id" => user_id,
+          "company_name" => "Tech Corp",
+          "position_title" => "Senior Engineer"
+        })
 
       [[job_interest_id | _]] = ji_result.rows
 
       # Create application
-      {:ok, app_result} = Helper.insert_data("job_applications", %{
-        "user_id" => user_id,
-        "job_interest_id" => job_interest_id,
-        "company_name" => "Tech Corp",
-        "position_title" => "Senior Engineer",
-        "application_date" => Date.from_iso8601!("2025-12-15")
-      })
+      {:ok, app_result} =
+        Helper.insert_data("job_applications", %{
+          "user_id" => user_id,
+          "job_interest_id" => job_interest_id,
+          "company_name" => "Tech Corp",
+          "position_title" => "Senior Engineer",
+          "application_date" => Date.from_iso8601!("2025-12-15")
+        })
 
       [[app_id | _]] = app_result.rows
 
       # Create application event
-      {:ok, event_result} = Helper.insert_data("application_events", %{
-        "job_application_id" => app_id,
-        "event_type" => "phone_interview",
-        "event_date" => Date.from_iso8601!("2025-12-16")
-      })
+      {:ok, event_result} =
+        Helper.insert_data("application_events", %{
+          "job_application_id" => app_id,
+          "event_type" => "phone_interview",
+          "event_date" => Date.from_iso8601!("2025-12-16")
+        })
 
       [[event_id | _]] = event_result.rows
 
@@ -558,42 +595,47 @@ defmodule Clientats.MigrationsTest do
     end
 
     test "cascade deletion works through entire hierarchy" do
-      {:ok, user_result} = Helper.insert_data("users", %{
-        "email" => "cascade@example.com",
-        "hashed_password" => "pwd",
-        "first_name" => "Cascade",
-        "last_name" => "User"
-      })
+      {:ok, user_result} =
+        Helper.insert_data("users", %{
+          "email" => "cascade@example.com",
+          "hashed_password" => "pwd",
+          "first_name" => "Cascade",
+          "last_name" => "User"
+        })
 
-      [[user_id, _, _, _, _, _, _, _]] = user_result.rows
+      [[user_id, _, _, _, _, _, _, _, _]] = user_result.rows
 
-      {:ok, _} = Helper.insert_data("job_interests", %{
-        "user_id" => user_id,
-        "company_name" => "Tech Corp",
-        "position_title" => "Engineer"
-      })
+      {:ok, _} =
+        Helper.insert_data("job_interests", %{
+          "user_id" => user_id,
+          "company_name" => "Tech Corp",
+          "position_title" => "Engineer"
+        })
 
-      {:ok, _} = Helper.insert_data("resumes", %{
-        "user_id" => user_id,
-        "name" => "resume",
-        "file_path" => "/path/to/file.pdf",
-        "original_filename" => "resume.pdf"
-      })
+      {:ok, _} =
+        Helper.insert_data("resumes", %{
+          "user_id" => user_id,
+          "name" => "resume",
+          "file_path" => "/path/to/file.pdf",
+          "original_filename" => "resume.pdf"
+        })
 
-      {:ok, _} = Helper.insert_data("cover_letter_templates", %{
-        "user_id" => user_id,
-        "name" => "template",
-        "content" => "Content..."
-      })
+      {:ok, _} =
+        Helper.insert_data("cover_letter_templates", %{
+          "user_id" => user_id,
+          "name" => "template",
+          "content" => "Content..."
+        })
 
-      {:ok, _} = Helper.insert_data("llm_settings", %{
-        "user_id" => user_id,
-        "provider" => "openai",
-        "api_key" => <<1, 2, 3>>
-      })
+      {:ok, _} =
+        Helper.insert_data("llm_settings", %{
+          "user_id" => user_id,
+          "provider" => "openai",
+          "api_key" => <<1, 2, 3>>
+        })
 
       # Delete user
-      SQL.query(Repo, "DELETE FROM users WHERE id = $1", [user_id])
+      Helper.execute_query("DELETE FROM users WHERE id = $1", [user_id])
 
       # Verify cascading deletions
       job_interests_count = Helper.count_rows("job_interests")

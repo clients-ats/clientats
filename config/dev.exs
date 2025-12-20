@@ -2,15 +2,16 @@ import Config
 
 # Configure your database
 config :clientats, Clientats.Repo,
-  username: "postgres",
-  password: "postgres",
-  hostname: "localhost",
-  database: "clientats_dev",
+  database: Path.expand("../clientats_dev.db", __DIR__),
+  pool_size: 5,
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,
-  pool_size: 10,
-  max_overflow: 2,
-  timeout: 5000
+  journal_mode: :wal,
+  cache_size: -64000,
+  temp_store: :memory,
+  synchronous: :normal,
+  foreign_keys: :on,
+  busy_timeout: 5000
 
 # For development, we disable any cache and enable
 # debugging and code reloading.
@@ -83,7 +84,8 @@ config :req_llm,
     },
     ollama: %{
       base_url: System.get_env("OLLAMA_BASE_URL") || "http://localhost:11434",
-      default_model: System.get_env("OLLAMA_MODEL") || "hf.co/unsloth/Magistral-Small-2509-GGUF:UD-Q4_K_XL",
+      default_model:
+        System.get_env("OLLAMA_MODEL") || "hf.co/unsloth/Magistral-Small-2509-GGUF:UD-Q4_K_XL",
       vision_model: System.get_env("OLLAMA_VISION_MODEL") || "qwen2.5vl:7b",
       timeout: 60_000
     },

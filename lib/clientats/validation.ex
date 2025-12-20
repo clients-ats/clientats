@@ -30,17 +30,23 @@ defmodule Clientats.Validation do
 
     cond do
       # Empty
-      url == "" -> {:error, :invalid_url}
+      url == "" ->
+        {:error, :invalid_url}
+
       # URL with only whitespace
-      Regex.match?(~r/^\s+$/, url) -> {:error, :invalid_url}
+      Regex.match?(~r/^\s+$/, url) ->
+        {:error, :invalid_url}
+
       # Must start with http:// or https://
       String.starts_with?(url, "http://") or String.starts_with?(url, "https://") ->
         case validate_url_structure(url) do
           true -> {:ok, url}
           false -> {:error, :invalid_url}
         end
+
       # Reject other schemes
-      true -> {:error, :invalid_url}
+      true ->
+        {:error, :invalid_url}
     end
   end
 
@@ -185,7 +191,8 @@ defmodule Clientats.Validation do
 
   def validate_file_upload(filename, size, allowed_types)
       when is_binary(filename) and is_integer(size) and is_list(allowed_types) do
-    max_size = 10 * 1024 * 1024  # 10MB
+    # 10MB
+    max_size = 10 * 1024 * 1024
 
     cond do
       # Empty filename
@@ -262,6 +269,7 @@ defmodule Clientats.Validation do
     filename
     |> String.replace(~r/[\/\\:]/, "_")
     |> String.replace(~r/[^A-Za-z0-9._-]/, "_")
-    |> String.slice(0..255)  # Max filename length
+    # Max filename length
+    |> String.slice(0..255)
   end
 end

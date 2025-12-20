@@ -86,17 +86,21 @@ defmodule ClientatsWeb.JobApplicationLive.Index do
         <% else %>
           <div class="space-y-4">
             <%= for application <- @applications do %>
-              <div class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow cursor-pointer" phx-click="select" phx-value-id={application.id}>
+              <div
+                class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow cursor-pointer"
+                phx-click="select"
+                phx-value-id={application.id}
+              >
                 <div class="flex justify-between items-start">
                   <div class="flex-1">
-                    <h3 class="text-lg font-semibold text-gray-900"><%= application.position_title %></h3>
-                    <p class="text-md text-gray-600"><%= application.company_name %></p>
+                    <h3 class="text-lg font-semibold text-gray-900">{application.position_title}</h3>
+                    <p class="text-md text-gray-600">{application.company_name}</p>
                     <%= if application.location do %>
-                      <p class="text-sm text-gray-500 mt-1"><%= application.location %></p>
+                      <p class="text-sm text-gray-500 mt-1">{application.location}</p>
                     <% end %>
                     <div class="flex items-center gap-3 mt-2">
                       <span class="text-sm text-gray-500">
-                        Applied <%= Calendar.strftime(application.application_date, "%b %d, %Y") %>
+                        Applied {Calendar.strftime(application.application_date, "%b %d, %Y")}
                       </span>
                       <%= if application.job_interest do %>
                         <span class="badge badge-sm badge-outline">
@@ -107,7 +111,7 @@ defmodule ClientatsWeb.JobApplicationLive.Index do
                   </div>
                   <div class="flex flex-col items-end gap-2">
                     <span class={"badge " <> status_color(application.status)}>
-                      <%= format_status(application.status) %>
+                      {format_status(application.status)}
                     </span>
                     <.link navigate={~p"/dashboard/applications/#{application}"} class="btn btn-xs">
                       View Details

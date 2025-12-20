@@ -8,7 +8,9 @@ defmodule Clientats.ValidationTest do
     test "accepts valid HTTPS URLs" do
       assert {:ok, _} = Validation.validate_url("https://www.example.com")
       assert {:ok, _} = Validation.validate_url("https://example.com/path")
-      assert {:ok, _} = Validation.validate_url("https://subdomain.example.com:8080/path?query=value")
+
+      assert {:ok, _} =
+               Validation.validate_url("https://subdomain.example.com:8080/path?query=value")
     end
 
     test "accepts valid HTTP URLs" do
@@ -205,8 +207,13 @@ defmodule Clientats.ValidationTest do
 
     test "rejects SQL injection patterns" do
       assert {:error, :invalid_search_query} = Validation.validate_search_query("' OR '1'='1")
-      assert {:error, :invalid_search_query} = Validation.validate_search_query("DROP TABLE users")
-      assert {:error, :invalid_search_query} = Validation.validate_search_query("DELETE FROM jobs")
+
+      assert {:error, :invalid_search_query} =
+               Validation.validate_search_query("DROP TABLE users")
+
+      assert {:error, :invalid_search_query} =
+               Validation.validate_search_query("DELETE FROM jobs")
+
       assert {:error, :invalid_search_query} = Validation.validate_search_query("; DELETE --")
     end
 
@@ -248,13 +255,17 @@ defmodule Clientats.ValidationTest do
     end
 
     test "accepts files under size limit" do
-      acceptable_size = 5 * 1024 * 1024  # 5MB
+      # 5MB
+      acceptable_size = 5 * 1024 * 1024
       assert {:ok, _} = Validation.validate_file_upload("document.pdf", acceptable_size, ["pdf"])
     end
 
     test "rejects unsupported file types" do
-      assert {:error, :unsupported_file_type} = Validation.validate_file_upload("script.exe", 1000, ["pdf"])
-      assert {:error, :unsupported_file_type} = Validation.validate_file_upload("image.jpg", 2000, ["pdf"])
+      assert {:error, :unsupported_file_type} =
+               Validation.validate_file_upload("script.exe", 1000, ["pdf"])
+
+      assert {:error, :unsupported_file_type} =
+               Validation.validate_file_upload("image.jpg", 2000, ["pdf"])
     end
 
     test "sanitizes filenames" do
@@ -265,8 +276,10 @@ defmodule Clientats.ValidationTest do
     end
 
     test "uses default file types if not provided" do
-      assert {:ok, _} = Validation.validate_file_upload("document.pdf", 1000)  # Default allows pdf
-      assert {:ok, _} = Validation.validate_file_upload("document.doc", 1000)   # Default allows doc
+      # Default allows pdf
+      assert {:ok, _} = Validation.validate_file_upload("document.pdf", 1000)
+      # Default allows doc
+      assert {:ok, _} = Validation.validate_file_upload("document.doc", 1000)
       assert {:error, :unsupported_file_type} = Validation.validate_file_upload("file.txt", 1000)
     end
 
@@ -291,11 +304,13 @@ defmodule Clientats.ValidationTest do
 
       Enum.each(traversal_attempts, fn filename ->
         result = Validation.validate_file_upload(filename, 1000, ["pdf"])
+
         case result do
           {:ok, sanitized} ->
             # Should not have forward slashes or backslashes after sanitization
             refute String.contains?(sanitized, "/"), "Should remove forward slashes: #{filename}"
             refute String.contains?(sanitized, "\\"), "Should remove backslashes: #{filename}"
+
           {:error, _} ->
             # File upload may be rejected if extension is missing after sanitization
             true

@@ -97,8 +97,9 @@ defmodule ClientatsWeb.JobApplicationLive.New do
               <div class="mt-3 p-3 bg-blue-50 rounded-lg">
                 <p class="text-sm text-blue-800">
                   <.icon name="hero-information-circle" class="w-5 h-5 inline" />
-                  Converting job interest to application: <strong><%= @job_interest.position_title %></strong>
-                  at <strong><%= @job_interest.company_name %></strong>
+                  Converting job interest to application:
+                  <strong>{@job_interest.position_title}</strong>
+                  at <strong>{@job_interest.company_name}</strong>
                 </p>
                 <p class="text-xs text-blue-700 mt-1">
                   The original job interest will be removed when you save this application.
@@ -107,7 +108,13 @@ defmodule ClientatsWeb.JobApplicationLive.New do
             <% end %>
           </div>
 
-          <.form for={@form} id="application-form" phx-change="validate" phx-submit="save" class="space-y-4">
+          <.form
+            for={@form}
+            id="application-form"
+            phx-change="validate"
+            phx-submit="save"
+            class="space-y-4"
+          >
             <.input
               field={@form[:job_url]}
               type="url"
@@ -120,7 +127,12 @@ defmodule ClientatsWeb.JobApplicationLive.New do
               <div class="space-y-4">
                 <.input field={@form[:company_name]} type="text" label="Company Name" required />
                 <.input field={@form[:position_title]} type="text" label="Position Title" required />
-                <.input field={@form[:application_date]} type="date" label="Application Date" required />
+                <.input
+                  field={@form[:application_date]}
+                  type="date"
+                  label="Application Date"
+                  required
+                />
               </div>
             </div>
 
@@ -186,7 +198,12 @@ defmodule ClientatsWeb.JobApplicationLive.New do
                   />
                 </div>
 
-                <.input field={@form[:job_description]} type="textarea" label="Job Description" rows="4" />
+                <.input
+                  field={@form[:job_description]}
+                  type="textarea"
+                  label="Job Description"
+                  rows="4"
+                />
 
                 <div class="grid grid-cols-2 gap-4">
                   <.input
@@ -223,7 +240,11 @@ defmodule ClientatsWeb.JobApplicationLive.New do
               </div>
             </div>
 
-            <input type="hidden" name="job_application[job_interest_id]" value={@job_interest && @job_interest.id} />
+            <input
+              type="hidden"
+              name="job_application[job_interest_id]"
+              value={@job_interest && @job_interest.id}
+            />
 
             <div>
               <.button phx-disable-with="Saving..." class="w-full">Create Application</.button>

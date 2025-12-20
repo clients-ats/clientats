@@ -65,12 +65,14 @@ defmodule Clientats.Browser do
 
   defp validate_url(url) when is_binary(url) do
     uri = URI.parse(url)
+
     if uri.scheme in ["http", "https"] do
       {:ok, url}
     else
       {:error, :invalid_url}
     end
   end
+
   defp validate_url(_), do: {:error, :invalid_url}
 
   defp run_chrome_screenshot(url, options) do
@@ -80,15 +82,19 @@ defmodule Clientats.Browser do
     script_path = Path.join(:code.priv_dir(:clientats), "../../../scripts/capture_screenshot.js")
 
     # Fall back to direct script path if priv doesn't work
-    script_path = if File.exists?(script_path) do
-      script_path
-    else
-      "scripts/capture_screenshot.js"
-    end
+    script_path =
+      if File.exists?(script_path) do
+        script_path
+      else
+        "scripts/capture_screenshot.js"
+      end
 
     case File.exists?(script_path) do
       false ->
-        IO.puts("[Browser] Screenshot script not found at #{script_path}. Screenshot capture unavailable.")
+        IO.puts(
+          "[Browser] Screenshot script not found at #{script_path}. Screenshot capture unavailable."
+        )
+
         {:error, :script_not_found}
 
       true ->
@@ -122,9 +128,7 @@ defmodule Clientats.Browser do
     # The node script has built-in timeouts (30s page load, 15s content wait)
     # For longer timeouts, users can wrap this in Task.async_stream with timeouts
     try do
-      System.cmd("node", [script_path, url, output_file],
-        stderr_to_stdout: true
-      )
+      System.cmd("node", [script_path, url, output_file], stderr_to_stdout: true)
     catch
       :exit, reason ->
         IO.puts("[Browser] Script command failed: #{inspect(reason)}")

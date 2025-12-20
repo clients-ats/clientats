@@ -12,7 +12,8 @@ defmodule Clientats.LLM.ErrorHandler do
   @type error_reason :: atom() | {atom(), any()} | String.t()
   @type retry_config :: %{max_retries: integer(), base_delay: integer()}
 
-  @default_base_delay 100  # milliseconds
+  # milliseconds
+  @default_base_delay 100
   @default_max_retries 3
 
   @doc """
@@ -75,9 +76,9 @@ defmodule Clientats.LLM.ErrorHandler do
     - retryable: Custom function to determine if error is retryable
   """
   @spec with_retry(
-    function :: (() -> {:ok, any()} | {:error, any()}),
-    options :: Keyword.t()
-  ) :: {:ok, any()} | {:error, any()}
+          function :: (-> {:ok, any()} | {:error, any()}),
+          options :: Keyword.t()
+        ) :: {:ok, any()} | {:error, any()}
   def with_retry(fun, options \\ []) do
     max_retries = Keyword.get(options, :max_retries, @default_max_retries)
     base_delay = Keyword.get(options, :base_delay, @default_base_delay)
@@ -92,25 +93,56 @@ defmodule Clientats.LLM.ErrorHandler do
   @spec user_friendly_message({atom(), any()} | atom() | String.t()) :: String.t()
   def user_friendly_message(:timeout), do: "Request timed out. Please try again."
   def user_friendly_message({:timeout, _}), do: "Request timed out. Please try again."
-  def user_friendly_message(:rate_limited), do: "Rate limited. Please wait a moment and try again."
-  def user_friendly_message({:rate_limited, _}), do: "Rate limited. Please wait a moment and try again."
+
+  def user_friendly_message(:rate_limited),
+    do: "Rate limited. Please wait a moment and try again."
+
+  def user_friendly_message({:rate_limited, _}),
+    do: "Rate limited. Please wait a moment and try again."
+
   def user_friendly_message(:invalid_api_key), do: "Invalid API key or credentials."
   def user_friendly_message(:auth_error), do: "Authentication failed. Please check your API key."
-  def user_friendly_message({:auth_error, _}), do: "Authentication failed. Please check your API key."
+
+  def user_friendly_message({:auth_error, _}),
+    do: "Authentication failed. Please check your API key."
+
   def user_friendly_message(:invalid_url), do: "Invalid URL format. Please check and try again."
-  def user_friendly_message(:content_too_large), do: "Job posting content is too large. Please try a different page."
-  def user_friendly_message(:invalid_content), do: "Could not extract job data. Page may not be a valid job posting."
-  def user_friendly_message(:unavailable), do: "Service is temporarily unavailable. Please try again shortly."
-  def user_friendly_message({:unavailable, _}), do: "Service is temporarily unavailable. Please try again shortly."
-  def user_friendly_message(:connection_refused), do: "Cannot connect to service. Please check your connection."
+
+  def user_friendly_message(:content_too_large),
+    do: "Job posting content is too large. Please try a different page."
+
+  def user_friendly_message(:invalid_content),
+    do: "Could not extract job data. Page may not be a valid job posting."
+
+  def user_friendly_message(:unavailable),
+    do: "Service is temporarily unavailable. Please try again shortly."
+
+  def user_friendly_message({:unavailable, _}),
+    do: "Service is temporarily unavailable. Please try again shortly."
+
+  def user_friendly_message(:connection_refused),
+    do: "Cannot connect to service. Please check your connection."
+
   def user_friendly_message({:connection_error, _}), do: "Connection error. Please try again."
-  def user_friendly_message(:all_providers_failed), do: "All LLM providers are currently unavailable. Please use the manual entry form below."
+
+  def user_friendly_message(:all_providers_failed),
+    do: "All LLM providers are currently unavailable. Please use the manual entry form below."
+
   def user_friendly_message({:http_error, 404}), do: "Job page not found. Please verify the URL."
-  def user_friendly_message({:http_error, 403}), do: "Access denied. You may need to update cookies or authentication."
+
+  def user_friendly_message({:http_error, 403}),
+    do: "Access denied. You may need to update cookies or authentication."
+
   def user_friendly_message({:http_error, 500}), do: "Server error. Please try again in a moment."
-  def user_friendly_message({:http_error, status}) when status >= 500, do: "Service error (#{status}). Please try again."
+
+  def user_friendly_message({:http_error, status}) when status >= 500,
+    do: "Service error (#{status}). Please try again."
+
   def user_friendly_message({:http_error, status}) when status >= 400, do: "Error: HTTP #{status}"
-  def user_friendly_message({:parse_error, _}), do: "Could not parse job data. The page format may not be supported."
+
+  def user_friendly_message({:parse_error, _}),
+    do: "Could not parse job data. The page format may not be supported."
+
   def user_friendly_message({:exception, msg}), do: "Unexpected error: #{msg}"
   def user_friendly_message(msg) when is_binary(msg), do: msg
   def user_friendly_message(other), do: "An unexpected error occurred: #{inspect(other)}"
@@ -159,6 +191,7 @@ defmodule Clientats.LLM.ErrorHandler do
       "Check the LLM Configuration page to update your settings"
     ]
   end
+
   defp recovery_steps(:invalid_api_key) do
     [
       "Visit the LLM Configuration page",
@@ -166,6 +199,7 @@ defmodule Clientats.LLM.ErrorHandler do
       "Make sure the API key has not expired"
     ]
   end
+
   defp recovery_steps(:connection_refused) do
     [
       "Check if Ollama is running (if using local provider)",
@@ -173,6 +207,7 @@ defmodule Clientats.LLM.ErrorHandler do
       "Try a different provider if available"
     ]
   end
+
   defp recovery_steps(:timeout) do
     [
       "The provider was too slow to respond",
@@ -180,6 +215,7 @@ defmodule Clientats.LLM.ErrorHandler do
       "Or use the manual form to enter details directly"
     ]
   end
+
   defp recovery_steps(:unsupported_page) do
     [
       "This page might not be a valid job posting",
@@ -187,6 +223,7 @@ defmodule Clientats.LLM.ErrorHandler do
       "Or check if the job board is supported"
     ]
   end
+
   defp recovery_steps(_) do
     [
       "Try again in a moment",
@@ -199,9 +236,9 @@ defmodule Clientats.LLM.ErrorHandler do
   Create detailed error context for logging.
   """
   @spec error_context(
-    error :: {atom(), any()} | atom() | String.t(),
-    context :: map()
-  ) :: map()
+          error :: {atom(), any()} | atom() | String.t(),
+          context :: map()
+        ) :: map()
   def error_context(error, context \\ %{}) do
     Map.merge(context, %{
       error: error,
@@ -225,7 +262,8 @@ defmodule Clientats.LLM.ErrorHandler do
 
   # Private functions
 
-  defp do_retry(fun, attempt, max_retries, _base_delay, _retryable_fn) when attempt > max_retries do
+  defp do_retry(fun, attempt, max_retries, _base_delay, _retryable_fn)
+       when attempt > max_retries do
     fun.()
   end
 

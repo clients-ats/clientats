@@ -70,20 +70,20 @@ defmodule ClientatsWeb.ResumeLive.Index do
                 <div class="flex justify-between items-start">
                   <div class="flex-1">
                     <div class="flex items-center gap-2">
-                      <h3 class="text-lg font-semibold text-gray-900"><%= resume.name %></h3>
+                      <h3 class="text-lg font-semibold text-gray-900">{resume.name}</h3>
                       <%= if resume.is_default do %>
                         <span class="badge badge-primary badge-sm">Default</span>
                       <% end %>
                     </div>
                     <%= if resume.description do %>
-                      <p class="text-sm text-gray-600 mt-1"><%= resume.description %></p>
+                      <p class="text-sm text-gray-600 mt-1">{resume.description}</p>
                     <% end %>
                     <div class="flex items-center gap-4 mt-2 text-sm text-gray-500">
-                      <span><%= resume.original_filename %></span>
+                      <span>{resume.original_filename}</span>
                       <%= if resume.file_size do %>
-                        <span><%= format_file_size(resume.file_size) %></span>
+                        <span>{format_file_size(resume.file_size)}</span>
                       <% end %>
-                      <span>Uploaded <%= Calendar.strftime(resume.inserted_at, "%b %d, %Y") %></span>
+                      <span>Uploaded {Calendar.strftime(resume.inserted_at, "%b %d, %Y")}</span>
                     </div>
                   </div>
                   <div class="flex gap-2">

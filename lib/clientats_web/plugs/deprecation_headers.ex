@@ -55,6 +55,7 @@ defmodule ClientatsWeb.Plugs.DeprecationHeaders do
       conn
     end
   end
+
   defp get_next_version("v1"), do: "v2"
   defp get_next_version(_), do: nil
 

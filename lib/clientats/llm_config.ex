@@ -140,7 +140,7 @@ defmodule Clientats.LLMConfig do
   def get_provider_status(user_id) do
     Setting
     |> where(user_id: ^user_id)
-    |> order_by([s], [asc: s.sort_order, asc: s.provider])
+    |> order_by([s], asc: s.sort_order, asc: s.provider)
     |> Repo.all()
     |> Enum.map(&format_provider_status/1)
   end
@@ -157,7 +157,7 @@ defmodule Clientats.LLMConfig do
   def list_providers(user_id) do
     Setting
     |> where(user_id: ^user_id)
-    |> order_by([s], [asc: s.sort_order, asc: s.provider])
+    |> order_by([s], asc: s.sort_order, asc: s.provider)
     |> Repo.all()
   end
 
@@ -270,7 +270,8 @@ defmodule Clientats.LLMConfig do
       },
       ollama: %{
         base_url: System.get_env("OLLAMA_BASE_URL") || "http://localhost:11434",
-        default_model: System.get_env("OLLAMA_MODEL") || "hf.co/unsloth/Magistral-Small-2509-GGUF:UD-Q4_K_XL",
+        default_model:
+          System.get_env("OLLAMA_MODEL") || "hf.co/unsloth/Magistral-Small-2509-GGUF:UD-Q4_K_XL",
         vision_model: System.get_env("OLLAMA_VISION_MODEL") || "qwen2.5vl:7b",
         enabled: true
       }
@@ -316,7 +317,9 @@ defmodule Clientats.LLMConfig do
     configured =
       case setting.provider do
         "ollama" ->
-          setting.provider_status != "unconfigured" and setting.base_url != nil and setting.base_url != ""
+          setting.provider_status != "unconfigured" and setting.base_url != nil and
+            setting.base_url != ""
+
         _ ->
           setting.provider_status != "unconfigured" and setting.api_key != nil
       end
@@ -343,6 +346,7 @@ defmodule Clientats.LLMConfig do
         is_map(config) and Map.has_key?(config, :base_url) -> config[:base_url]
         true -> nil
       end
+
     base_url = base_url || "http://localhost:11434"
 
     try do
@@ -361,7 +365,11 @@ defmodule Clientats.LLMConfig do
           {:ok, "connected"}
 
         %{status: status} ->
-          Logger.warning("Ollama test: Connection failed", status: status, body: inspect(response.body))
+          Logger.warning("Ollama test: Connection failed",
+            status: status,
+            body: inspect(response.body)
+          )
+
           {:error, "Connection failed with status #{status}"}
       end
     rescue
@@ -386,10 +394,17 @@ defmodule Clientats.LLMConfig do
 
     model =
       cond do
-        is_struct(config) -> config.default_model || "gemini-2.5-flash"
-        is_map(config) and Map.has_key?(config, "default_model") -> config["default_model"] || "gemini-2.5-flash"
-        is_map(config) and Map.has_key?(config, :default_model) -> config[:default_model] || "gemini-2.5-flash"
-        true -> "gemini-2.5-flash"
+        is_struct(config) ->
+          config.default_model || "gemini-2.5-flash"
+
+        is_map(config) and Map.has_key?(config, "default_model") ->
+          config["default_model"] || "gemini-2.5-flash"
+
+        is_map(config) and Map.has_key?(config, :default_model) ->
+          config[:default_model] || "gemini-2.5-flash"
+
+        true ->
+          "gemini-2.5-flash"
       end
 
     if is_nil(api_key) or api_key == "" do
@@ -406,12 +421,13 @@ defmodule Clientats.LLMConfig do
         Logger.info("Headers: #{inspect(headers, pretty: true)}")
         Logger.info("Request Body: #{inspect(body, pretty: true)}")
 
-        response = Req.post!(
-          url,
-          headers: headers,
-          json: body,
-          receive_timeout: 5000
-        )
+        response =
+          Req.post!(
+            url,
+            headers: headers,
+            json: body,
+            receive_timeout: 5000
+          )
 
         Logger.info("=== GEMINI RESPONSE ===")
         Logger.info("Status: #{response.status}")
@@ -446,7 +462,12 @@ defmodule Clientats.LLMConfig do
   defp handle_gemini_response(%{status: 401, body: body}) do
     require Logger
     error_detail = extract_gemini_error_message(body)
-    Logger.warning("Gemini authentication failed: #{error_detail}", provider: "gemini", status: 401)
+
+    Logger.warning("Gemini authentication failed: #{error_detail}",
+      provider: "gemini",
+      status: 401
+    )
+
     {:error, "Authentication failed: Invalid API key or expired credentials"}
   end
 
@@ -454,27 +475,44 @@ defmodule Clientats.LLMConfig do
     require Logger
     error_detail = extract_gemini_error_message(body)
     Logger.warning("Gemini access denied: #{error_detail}", provider: "gemini", status: 403)
-    {:error, "Access denied: Generative AI API may not be enabled in your Google Cloud project. Enable it at console.cloud.google.com"}
+
+    {:error,
+     "Access denied: Generative AI API may not be enabled in your Google Cloud project. Enable it at console.cloud.google.com"}
   end
 
   defp handle_gemini_response(%{status: 429, body: body}) do
     require Logger
     error_detail = extract_gemini_error_message(body)
-    Logger.warning("Gemini rate limited", provider: "gemini", status: 429, error_detail: error_detail, full_body: inspect(body))
-    {:error, "Rate limited: Too many requests. Please wait before trying again. Details: #{error_detail}"}
+
+    Logger.warning("Gemini rate limited",
+      provider: "gemini",
+      status: 429,
+      error_detail: error_detail,
+      full_body: inspect(body)
+    )
+
+    {:error,
+     "Rate limited: Too many requests. Please wait before trying again. Details: #{error_detail}"}
   end
 
   defp handle_gemini_response(%{status: 500, body: body}) do
     require Logger
     error_detail = extract_gemini_error_message(body)
     Logger.error("Gemini server error: #{error_detail}", provider: "gemini", status: 500)
-    {:error, "Server error: Google Generative AI service is temporarily unavailable. Please try again later."}
+
+    {:error,
+     "Server error: Google Generative AI service is temporarily unavailable. Please try again later."}
   end
 
   defp handle_gemini_response(%{status: status, body: body}) do
     require Logger
     error_detail = extract_gemini_error_message(body)
-    Logger.error("Gemini connection failed (#{status}): #{error_detail}", provider: "gemini", status: status)
+
+    Logger.error("Gemini connection failed (#{status}): #{error_detail}",
+      provider: "gemini",
+      status: status
+    )
+
     {:error, "Connection failed with status #{status}: #{error_detail}"}
   end
 

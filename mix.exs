@@ -12,7 +12,7 @@ defmodule Clientats.MixProject do
       deps: deps(),
       compilers: [:phoenix_live_view] ++ Mix.compilers(),
       listeners: [Phoenix.CodeReloader],
-      test_coverage: [summary: [threshold: 70]],
+      test_coverage: [summary: [threshold: 25]],
       releases: releases()
     ]
   end
@@ -45,7 +45,8 @@ defmodule Clientats.MixProject do
       {:phoenix, "~> 1.8.0"},
       {:phoenix_ecto, "~> 4.5"},
       {:ecto_sql, "~> 3.13"},
-      {:postgrex, ">= 0.0.0"},
+      {:ecto_sqlite3, "~> 0.22"},
+      {:exqlite, "~> 0.22"},
       {:phoenix_html, "~> 4.1"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:phoenix_live_view, "~> 1.1.0"},

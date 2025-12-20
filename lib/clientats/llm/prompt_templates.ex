@@ -1,10 +1,10 @@
 defmodule Clientats.LLM.PromptTemplates do
   @moduledoc """
   LLM prompt templates for job data extraction.
-  
+
   Provides optimized prompts for different extraction modes and job board types.
   """
-  
+
   @doc """
   Build a job extraction prompt based on content, URL, and mode.
   """
@@ -33,7 +33,7 @@ defmodule Clientats.LLM.PromptTemplates do
       :generic -> image_generic_mode_prompt(source)
     end
   end
-  
+
   @doc """
   System prompt for job extraction tasks.
   """
@@ -42,7 +42,7 @@ defmodule Clientats.LLM.PromptTemplates do
     You are an expert job posting analysis system. Your task is to extract structured 
     information from job postings with high accuracy. Always return valid JSON 
     with the specified fields. If information is not available, use null values.
-    
+
     Guidelines:
     - Extract exact text when possible
     - Normalize job titles and company names
@@ -51,21 +51,21 @@ defmodule Clientats.LLM.PromptTemplates do
     - Return clean, well-formatted JSON only
     """
   end
-  
+
   @doc """
   Specific mode prompt optimized for known job boards.
   """
   def specific_mode_prompt(content, source) do
     job_board = job_board_name(source)
-    
+
     """
     Extract job posting information from this #{job_board} content.
-    
+
     Content:
     ```
     #{truncate_content(content)}
     ```
-    
+
     Extract the following fields:
     - company_name (required)
     - position_title (required) 
@@ -81,23 +81,25 @@ defmodule Clientats.LLM.PromptTemplates do
     - application_deadline (YYYY-MM-DD format if available)
     - employment_type (full_time, part_time, contract, internship)
     - seniority_level (entry, mid, senior, executive if available)
-    
+
     Important: Return ONLY valid JSON with the extracted data.
     """
   end
-  
+
   @doc """
   Generic mode prompt for any job posting content.
   """
   def generic_mode_prompt(content, source) do
+    job_board = job_board_name(source)
+
     """
-    Extract job posting information from this content. The source is: #{source}
-    
+    Extract job posting information from this content. The source is: #{job_board}
+
     Content:
     ```
     #{truncate_content(content)}
     ```
-    
+
     Extract the following fields:
     - company_name (required) - The hiring company name
     - position_title (required) - The job title
@@ -113,7 +115,7 @@ defmodule Clientats.LLM.PromptTemplates do
     - application_deadline - Application deadline (YYYY-MM-DD if available)
     - employment_type - full_time, part_time, contract, or internship
     - seniority_level - entry, mid, senior, or executive if mentioned
-    
+
     Important rules:
     1. Always return valid JSON
     2. Required fields must be present
@@ -122,16 +124,16 @@ defmodule Clientats.LLM.PromptTemplates do
     5. Normalize company names and job titles
     """
   end
-  
+
   @doc """
   Prompt for extracting company information from job postings.
   """
   def company_info_prompt(content) do
     """
     Extract detailed company information from this job posting:
-    
+
     #{truncate_content(content)}
-    
+
     Fields to extract:
     - company_name
     - industry
@@ -141,32 +143,32 @@ defmodule Clientats.LLM.PromptTemplates do
     - company_description
     - benefits (array)
     - culture_highlights (array)
-    
+
     Return only JSON.
     """
   end
-  
+
   @doc """
   Prompt for salary analysis and benchmarking.
   """
   def salary_analysis_prompt(job_data, location) do
     """
     Analyze this job posting salary information:
-    
+
     Job: #{job_data.position_title}
     Location: #{location}
     Description: #{truncate_content(job_data.job_description)}
-    
+
     Provide:
     - salary_range_analysis (low/medium/high for this role and location)
     - market_comparison (how this compares to market rates)
     - salary_negotiation_tips (3-5 bullet points)
     - additional_benefits_analysis
-    
+
     Return only JSON.
     """
   end
-  
+
   @doc """
   Image-specific mode prompt for known job boards.
   """
@@ -241,7 +243,7 @@ defmodule Clientats.LLM.PromptTemplates do
       true -> :unknown
     end
   end
-  
+
   defp job_board_name(:linkedin), do: "LinkedIn"
   defp job_board_name(:indeed), do: "Indeed"
   defp job_board_name(:glassdoor), do: "Glassdoor"
@@ -249,10 +251,11 @@ defmodule Clientats.LLM.PromptTemplates do
   defp job_board_name(:lever), do: "Lever"
   defp job_board_name(:greenhouse), do: "Greenhouse"
   defp job_board_name(_), do: "unknown job board"
-  
+
   defp truncate_content(content) when byte_size(content) > 8000 do
     truncated = String.slice(content, 0, 8000)
     truncated <> "... [truncated]"
   end
+
   defp truncate_content(content), do: content
 end
