@@ -64,7 +64,7 @@ fi
 
 # Start Tauri in dev mode
 echo "📱 Starting Tauri dev mode..."
-cd src-tauri && cargo tauri dev
+cd src-tauri && cargo run
 
 # Cleanup Phoenix if we started it
 if [ -n "${PHOENIX_PID:-}" ]; then
