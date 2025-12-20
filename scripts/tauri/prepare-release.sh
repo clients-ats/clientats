@@ -6,9 +6,6 @@ set -euo pipefail
 
 echo "🔨 Preparing Phoenix release for Tauri..."
 
-# Clean any existing release
-rm -rf src-tauri/phoenix
-
 # Set production environment
 export MIX_ENV=prod
 
@@ -28,10 +25,22 @@ mix assets.deploy
 echo "🚀 Creating Phoenix release..."
 mix release --overwrite
 
-# Copy the release to src-tauri directory
+# Copy the release to src-tauri directory (force overwrite on Windows)
 echo "📋 Copying release to Tauri resources..."
-mkdir -p src-tauri/phoenix
-cp -r _build/prod/rel/clientats/* src-tauri/phoenix/
+if [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "win32" ]] || [[ "$OSTYPE" == "cygwin" ]]; then
+  # Windows: Remove directory with PowerShell if it exists, then copy
+  if [ -d "src-tauri/phoenix" ]; then
+    echo "🗑️  Removing existing release (Windows)..."
+    powershell.exe -Command "if (Test-Path 'src-tauri/phoenix') { Remove-Item -Path 'src-tauri/phoenix' -Recurse -Force -ErrorAction SilentlyContinue }"
+  fi
+  mkdir -p src-tauri/phoenix
+  cp -r _build/prod/rel/clientats/* src-tauri/phoenix/
+else
+  # Unix/macOS: Standard rm and copy
+  rm -rf src-tauri/phoenix
+  mkdir -p src-tauri/phoenix
+  cp -r _build/prod/rel/clientats/* src-tauri/phoenix/
+fi
 
 echo "✅ Phoenix release prepared successfully!"
 echo "📍 Release location: src-tauri/phoenix"
