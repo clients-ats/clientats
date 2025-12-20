@@ -73,11 +73,6 @@ jobs:
       - name: Install Node dependencies
         run: npm install
 
-      - name: Deploy assets
-        run: mix assets.deploy
-        env:
-          MIX_ENV: prod
-
       # Install Rust
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
