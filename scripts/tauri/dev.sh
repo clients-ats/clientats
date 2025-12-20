@@ -20,6 +20,14 @@ echo "🗄️  Ensuring database is ready..."
 mix ecto.create --quiet 2>/dev/null || true
 mix ecto.migrate --quiet
 
+# Create placeholder phoenix directory for Tauri (not used in dev mode)
+if [ ! -d "src-tauri/phoenix" ]; then
+    echo "📁 Creating placeholder phoenix directory for Tauri..."
+    mkdir -p src-tauri/phoenix/bin
+    # Create a dummy script so Tauri build doesn't complain
+    touch src-tauri/phoenix/bin/clientats
+fi
+
 # Check if Phoenix server is already running
 if lsof -Pi :4000 -sTCP:LISTEN -t >/dev/null 2>&1 ; then
     echo "⚠️  Phoenix server is already running on port 4000"
@@ -39,6 +47,12 @@ else
         exit 1
     }
     echo "✅ Phoenix server is ready!"
+fi
+
+# Install Tauri CLI if not present
+if ! command -v cargo-tauri &> /dev/null; then
+    echo "📥 Installing Tauri CLI (this may take a few minutes on first run)..."
+    cargo install tauri-cli --version "^2.0.0" --locked
 fi
 
 # Start Tauri in dev mode
