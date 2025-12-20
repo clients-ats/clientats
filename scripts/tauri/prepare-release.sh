@@ -16,7 +16,11 @@ export MIX_ENV=prod
 echo "📦 Installing dependencies..."
 mix deps.get --only prod
 
-# Compile assets
+# Compile the application first (generates phoenix-colocated hooks)
+echo "⚙️ Compiling application..."
+mix compile
+
+# Compile assets (needs phoenix-colocated hooks to be generated first)
 echo "🎨 Building assets..."
 mix assets.deploy
 

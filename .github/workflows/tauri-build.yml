@@ -104,6 +104,11 @@ jobs:
             libssl-dev \
             pkg-config
 
+      # Windows specific: Set up MSVC build tools
+      - name: Setup MSVC (Windows)
+        if: matrix.os == 'windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
       # Build Phoenix release
       - name: Build Phoenix release
         run: bash scripts/tauri/prepare-release.sh
