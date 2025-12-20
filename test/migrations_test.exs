@@ -52,12 +52,13 @@ defmodule Clientats.MigrationsTest do
     test "users table columns have correct types" do
       # Check email column is string and not nullable
       {:ok, email_info} = Helper.get_column_info("users", "email")
-      assert email_info.data_type =~ "character"
+      # SQLite uses TEXT, PostgreSQL uses character/varchar
+      assert email_info.data_type =~ ~r/(character|TEXT)/
       assert email_info.nullable == false
 
       # Check hashed_password is not nullable
       {:ok, pwd_info} = Helper.get_column_info("users", "hashed_password")
-      assert pwd_info.data_type =~ "character"
+      assert pwd_info.data_type =~ ~r/(character|TEXT)/
       assert pwd_info.nullable == false
 
       # Check resume_path is nullable
@@ -377,7 +378,8 @@ defmodule Clientats.MigrationsTest do
 
       {:ok, result} = SQL.query(Repo, "SELECT is_default FROM resumes LIMIT 1", [])
       [[is_default]] = result.rows
-      assert is_default == false
+      # SQLite stores booleans as 0/1, PostgreSQL as true/false
+      assert is_default == false or is_default == 0
     end
 
     test "deleting user cascades to resumes", %{user_id: user_id} do
@@ -434,7 +436,8 @@ defmodule Clientats.MigrationsTest do
 
       {:ok, result} = SQL.query(Repo, "SELECT is_default FROM cover_letter_templates LIMIT 1", [])
       [[is_default]] = result.rows
-      assert is_default == false
+      # SQLite stores booleans as 0/1, PostgreSQL as true/false
+      assert is_default == false or is_default == 0
     end
 
     test "deleting user cascades to templates", %{user_id: user_id} do
@@ -492,7 +495,8 @@ defmodule Clientats.MigrationsTest do
 
       {:ok, result} = SQL.query(Repo, "SELECT enabled FROM llm_settings LIMIT 1", [])
       [[enabled]] = result.rows
-      assert enabled == false
+      # SQLite stores booleans as 0/1, PostgreSQL as true/false
+      assert enabled == false or enabled == 0
     end
 
     test "unique constraint on user_id and provider", %{user_id: user_id} do
