@@ -2,9 +2,11 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use tauri::Manager;
-use std::process::Command;
 use std::time::Duration;
 use port_check::is_port_reachable;
+
+#[cfg(not(debug_assertions))]
+use std::process::Command;
 
 const DEFAULT_PORT: u16 = 4000;
 const MAX_STARTUP_WAIT_SECS: u64 = 30;
