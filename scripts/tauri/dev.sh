@@ -6,6 +6,24 @@ set -euo pipefail
 
 echo "🚀 Starting ClientATS in development mode..."
 
+# Check if dependencies are installed
+if [ ! -d "deps/phoenix" ]; then
+    echo "📦 Installing Elixir dependencies..."
+    mix deps.get
+fi
+
+if [ ! -d "node_modules" ]; then
+    echo "📦 Installing Node dependencies..."
+    npm install
+fi
+
+# Ensure database exists
+if [ ! -f "dev.db" ]; then
+    echo "🗄️  Creating database..."
+    mix ecto.create
+    mix ecto.migrate
+fi
+
 # Check if Phoenix server is already running
 if lsof -Pi :4000 -sTCP:LISTEN -t >/dev/null 2>&1 ; then
     echo "⚠️  Phoenix server is already running on port 4000"
