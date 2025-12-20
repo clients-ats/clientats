@@ -44,8 +44,11 @@ if config_env() == :prod do
   # to check this value into version control, so we use an environment
   # variable instead.
   # For desktop app deployments, we generate a stable key based on the machine
+  # We need at least 64 bytes for the secret, so we hash twice and concatenate
   generate_secret = fn ->
-    :crypto.hash(:sha256, "clientats-desktop-#{:erlang.system_info(:system_version)}")
+    hash1 = :crypto.hash(:sha256, "clientats-desktop-#{:erlang.system_info(:system_version)}")
+    hash2 = :crypto.hash(:sha256, hash1)
+    (hash1 <> hash2)
     |> Base.encode64(padding: false)
     |> binary_part(0, 64)
   end
