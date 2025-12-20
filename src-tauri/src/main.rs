@@ -3,11 +3,11 @@
 
 use std::time::Duration;
 use port_check::is_port_reachable;
+use tauri::Manager;
 
 #[cfg(not(debug_assertions))]
-use tauri::Manager;
-#[cfg(not(debug_assertions))]
 use std::process::Command;
+
 
 const DEFAULT_PORT: u16 = 4000;
 const MAX_STARTUP_WAIT_SECS: u64 = 30;
@@ -48,6 +48,9 @@ fn main() {
             #[cfg(debug_assertions)]
             {
                 println!("Dev mode: Window will load from devUrl in config");
+                let window = _app.get_webview_window("main").expect("Failed to get main window");
+                let url = "http://localhost:4000";
+                window.navigate(url.parse().unwrap()).expect("Failed to navigate to Phoenix");
                 return Ok(());
             }
 
