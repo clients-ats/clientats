@@ -25,7 +25,9 @@ if [ ! -d "src-tauri/phoenix" ]; then
     echo "📁 Creating placeholder phoenix directory for Tauri..."
     mkdir -p src-tauri/phoenix/bin
     # Create a dummy script so Tauri build doesn't complain
-    touch src-tauri/phoenix/bin/clientats
+    echo '#!/bin/bash' > src-tauri/phoenix/bin/clientats
+    echo 'echo "Placeholder phoenix script - not used in dev mode"' >> src-tauri/phoenix/bin/clientats
+    chmod +x src-tauri/phoenix/bin/clientats
 fi
 
 # Generate placeholder icons if they don't exist

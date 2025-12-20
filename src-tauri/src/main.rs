@@ -32,41 +32,59 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .setup(move |app| {
-            // Get the Phoenix release path
-            let phoenix_path = if cfg!(target_os = "macos") {
-                app.path().resource_dir()
-                    .expect("Failed to get resource dir")
-                    .join("phoenix")
-                    .join("bin")
-                    .join("clientats")
-            } else if cfg!(target_os = "windows") {
-                app.path().resource_dir()
-                    .expect("Failed to get resource dir")
-                    .join("phoenix")
-                    .join("bin")
-                    .join("clientats.bat")
-            } else {
-                app.path().resource_dir()
-                    .expect("Failed to get resource dir")
-                    .join("phoenix")
-                    .join("bin")
-                    .join("clientats")
-            };
+            // In dev mode, Phoenix is already running separately
+            // Skip the embedded server startup
+            #[cfg(debug_assertions)]
+            {
+                println!("Development mode: Assuming Phoenix is running on port {}...", port);
+                // Just wait for the existing server
+                if !wait_for_server(port) {
+                    panic!("Phoenix server not reachable on port {}. Start it with 'mix phx.server'", port);
+                }
 
-            println!("Phoenix executable path: {:?}", phoenix_path);
+                let window = app.get_webview_window("main").unwrap();
+                window.navigate(url.parse().unwrap()).unwrap();
+                return Ok(());
+            }
 
-            // Get database directory in user's home
-            let db_dir = app.path().app_data_dir()
-                .expect("Failed to get app data dir");
+            // Production mode: Start embedded Phoenix server
+            #[cfg(not(debug_assertions))]
+            {
+                // Get the Phoenix release path
+                let phoenix_path = if cfg!(target_os = "macos") {
+                    app.path().resource_dir()
+                        .expect("Failed to get resource dir")
+                        .join("phoenix")
+                        .join("bin")
+                        .join("clientats")
+                } else if cfg!(target_os = "windows") {
+                    app.path().resource_dir()
+                        .expect("Failed to get resource dir")
+                        .join("phoenix")
+                        .join("bin")
+                        .join("clientats.bat")
+                } else {
+                    app.path().resource_dir()
+                        .expect("Failed to get resource dir")
+                        .join("phoenix")
+                        .join("bin")
+                        .join("clientats")
+                };
 
-            std::fs::create_dir_all(&db_dir)
-                .expect("Failed to create app data directory");
+                println!("Phoenix executable path: {:?}", phoenix_path);
 
-            let db_path = db_dir.join("clientats.db");
-            println!("Database path: {:?}", db_path);
+                // Get database directory in user's home
+                let db_dir = app.path().app_data_dir()
+                    .expect("Failed to get app data dir");
 
-            // Step 1: Run migrations synchronously
-            println!("Running database migrations...");
+                std::fs::create_dir_all(&db_dir)
+                    .expect("Failed to create app data directory");
+
+                let db_path = db_dir.join("clientats.db");
+                println!("Database path: {:?}", db_path);
+
+                // Step 1: Run migrations synchronously
+                println!("Running database migrations...");
             let migrate_result = if cfg!(target_os = "windows") {
                 Command::new(&phoenix_path)
                     .arg("eval")
@@ -118,11 +136,12 @@ fn main() {
                 panic!("Phoenix server failed to start");
             }
 
-            // Step 4: Create window and load the app
-            let window = app.get_webview_window("main").unwrap();
-            window.navigate(url.parse().unwrap()).unwrap();
+                // Step 4: Create window and load the app
+                let window = app.get_webview_window("main").unwrap();
+                window.navigate(url.parse().unwrap()).unwrap();
 
-            Ok(())
+                Ok(())
+            }
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
