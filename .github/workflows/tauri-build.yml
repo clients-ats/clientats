@@ -130,24 +130,13 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: v__VERSION__
-          releaseName: 'ClientATS v__VERSION__'
-          releaseBody: |
-            See the assets below to download the app for your platform.
-
-            ## Installation
-
-            ### macOS
-            Download the `.dmg` file, open it, and drag ClientATS to your Applications folder.
-
-            ### Windows
-            Download the `.msi` installer and run it.
-
-            ### Linux
-            Download the `.AppImage` file, make it executable (`chmod +x`), and run it.
-            Or download the `.deb` package and install with `sudo dpkg -i clientats_*.deb`.
-          releaseDraft: true
+          # Only create releases for tags, not PRs
+          tagName: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+          releaseName: ${{ github.ref_type == 'tag' && format('ClientATS {0}', github.ref_name) || '' }}
+          releaseBody: ${{ github.ref_type == 'tag' && 'See the assets below to download the app for your platform.' || '' }}
+          releaseDraft: ${{ github.ref_type == 'tag' }}
           prerelease: false
+          args: --target ${{ matrix.build_target }}
 
       # Upload artifacts for non-release builds
       - name: Upload artifacts
