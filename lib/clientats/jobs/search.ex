@@ -172,16 +172,16 @@ defmodule Clientats.Jobs.Search do
   defp maybe_search(query, ""), do: query
 
   defp maybe_search(query, search_term) do
-    search_pattern = "%#{search_term}%"
+    search_pattern = "%#{String.downcase(search_term)}%"
 
     query
     |> where(
       [j],
-      ilike(j.company_name, ^search_pattern) or
-        ilike(j.position_title, ^search_pattern) or
-        ilike(j.location, ^search_pattern) or
-        ilike(j.job_description, ^search_pattern) or
-        ilike(j.notes, ^search_pattern)
+      like(fragment("lower(?)", j.company_name), ^search_pattern) or
+        like(fragment("lower(?)", j.position_title), ^search_pattern) or
+        like(fragment("lower(?)", j.location), ^search_pattern) or
+        like(fragment("lower(?)", j.job_description), ^search_pattern) or
+        like(fragment("lower(?)", j.notes), ^search_pattern)
     )
   end
 
@@ -189,15 +189,15 @@ defmodule Clientats.Jobs.Search do
   defp maybe_search_application(query, ""), do: query
 
   defp maybe_search_application(query, search_term) do
-    search_pattern = "%#{search_term}%"
+    search_pattern = "%#{String.downcase(search_term)}%"
 
     query
     |> where(
       [a],
-      ilike(a.company_name, ^search_pattern) or
-        ilike(a.position_title, ^search_pattern) or
-        ilike(a.job_description, ^search_pattern) or
-        ilike(a.notes, ^search_pattern)
+      like(fragment("lower(?)", a.company_name), ^search_pattern) or
+        like(fragment("lower(?)", a.position_title), ^search_pattern) or
+        like(fragment("lower(?)", a.job_description), ^search_pattern) or
+        like(fragment("lower(?)", a.notes), ^search_pattern)
     )
   end
 
@@ -241,8 +241,8 @@ defmodule Clientats.Jobs.Search do
   defp maybe_filter_location(query, ""), do: query
 
   defp maybe_filter_location(query, location) do
-    search_pattern = "%#{location}%"
-    where(query, [j], ilike(j.location, ^search_pattern))
+    search_pattern = "%#{String.downcase(location)}%"
+    where(query, [j], like(fragment("lower(?)", j.location), ^search_pattern))
   end
 
   defp maybe_filter_date_range(query, nil, nil), do: query

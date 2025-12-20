@@ -9,7 +9,7 @@ defmodule ClientatsWeb.AuthenticationLiveViewTest do
   - Accessibility compliance (WCAG 2.1)
   """
 
-  use ClientatsWeb.ConnCase, async: true
+  use ClientatsWeb.ConnCase, async: false
   import Phoenix.LiveViewTest
   import ClientatsWeb.LiveViewTestHelpers
 
