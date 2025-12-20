@@ -54,3 +54,9 @@ npm-debug.log
 *.db
 *.db-shm
 *.db-wal
+
+# Tauri build artifacts
+/src-tauri/target/
+/src-tauri/phoenix/
+/src-tauri/Cargo.lock
+/src-tauri/WixTools/

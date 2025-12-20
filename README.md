@@ -1,6 +1,8 @@
 # Clientats - Job Scraping & Management Platform
 
-A Phoenix-based web application for intelligent job posting scraping, data extraction, and job interest tracking using multiple LLM providers.
+A Phoenix-based application for intelligent job posting scraping, data extraction, and job interest tracking using multiple LLM providers.
+
+**Available as both a web application and standalone desktop app** for macOS, Windows, and Linux.
 
 ## 🎯 Features
 
@@ -46,7 +48,16 @@ The application works with many major job boards including:
 - Workday
 - And many more generic job posting sites
 
-## 🚀 Quick Start
+## 💻 Desktop Application
+
+**Prefer a desktop app?** ClientATS is available as a standalone desktop application:
+
+- **Download pre-built apps** from [GitHub Actions artifacts](../../actions) or [Releases](../../releases)
+- **Supported platforms**: macOS (Intel + Apple Silicon), Windows, Linux
+- **Fully self-contained**: No dependencies, embedded database, works offline
+- **See the [Tauri documentation](docs/TAURI.md)** for installation and build instructions
+
+## 🚀 Quick Start (Web Development)
 
 ### Prerequisites
 - Elixir 1.19.4+
