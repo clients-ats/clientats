@@ -15,24 +15,24 @@ import struct
 import zlib
 import os
 
-def create_png(width, height, color_rgb, output_path):
-    """Create a minimal valid PNG file"""
+def create_png(width, height, color_rgba, output_path):
+    """Create a minimal valid PNG file with RGBA"""
     # PNG signature
     png_signature = b'\x89PNG\r\n\x1a\n'
 
-    # IHDR chunk (image header)
-    ihdr_data = struct.pack('>IIBBBBB', width, height, 8, 2, 0, 0, 0)
+    # IHDR chunk (image header) - color type 6 = RGBA
+    ihdr_data = struct.pack('>IIBBBBB', width, height, 8, 6, 0, 0, 0)
     ihdr_chunk = b'IHDR' + ihdr_data
     ihdr_crc = struct.pack('>I', zlib.crc32(ihdr_chunk) & 0xffffffff)
     ihdr = struct.pack('>I', len(ihdr_data)) + ihdr_chunk + ihdr_crc
 
-    # IDAT chunk (image data) - solid color
+    # IDAT chunk (image data) - solid color with alpha
     pixels = bytearray()
-    r, g, b = color_rgb
+    r, g, b, a = color_rgba
     for y in range(height):
         pixels.append(0)  # filter type
         for x in range(width):
-            pixels.extend([r, g, b])
+            pixels.extend([r, g, b, a])
 
     compressed = zlib.compress(bytes(pixels), 9)
     idat_chunk = b'IDAT' + compressed
@@ -52,8 +52,8 @@ def create_png(width, height, color_rgb, output_path):
 icons_dir = 'src-tauri/icons'
 os.makedirs(icons_dir, exist_ok=True)
 
-# Create icons with blue color (37, 99, 235) - Tailwind blue-600
-blue = (37, 99, 235)
+# Create icons with blue color (37, 99, 235, 255) - Tailwind blue-600 with full opacity
+blue = (37, 99, 235, 255)
 
 create_png(32, 32, blue, f'{icons_dir}/32x32.png')
 print(f'✓ Created {icons_dir}/32x32.png')
