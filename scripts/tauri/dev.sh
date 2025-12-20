@@ -28,6 +28,11 @@ if [ ! -d "src-tauri/phoenix" ]; then
     touch src-tauri/phoenix/bin/clientats
 fi
 
+# Generate placeholder icons if they don't exist
+if [ ! -f "src-tauri/icons/32x32.png" ]; then
+    bash scripts/tauri/generate-icons-simple.sh
+fi
+
 # Check if Phoenix server is already running
 if lsof -Pi :4000 -sTCP:LISTEN -t >/dev/null 2>&1 ; then
     echo "⚠️  Phoenix server is already running on port 4000"
