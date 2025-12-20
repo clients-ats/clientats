@@ -1,10 +1,11 @@
 // Prevents additional console window on Windows in release
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use tauri::Manager;
 use std::time::Duration;
 use port_check::is_port_reachable;
 
+#[cfg(not(debug_assertions))]
+use tauri::Manager;
 #[cfg(not(debug_assertions))]
 use std::process::Command;
 
@@ -28,45 +29,49 @@ fn wait_for_server(port: u16) -> bool {
 }
 
 fn main() {
-    let port = DEFAULT_PORT;
-    let url = format!("http://127.0.0.1:{}", port);
+    // In dev mode, just verify Phoenix is running - Tauri uses devUrl from config
+    #[cfg(debug_assertions)]
+    {
+        println!("Development mode: Checking Phoenix on port {}...", DEFAULT_PORT);
+        if !wait_for_server(DEFAULT_PORT) {
+            eprintln!("ERROR: Phoenix server not running on port {}!", DEFAULT_PORT);
+            eprintln!("Start it with: mix phx.server");
+            std::process::exit(1);
+        }
+        println!("Phoenix is ready! Launching Tauri window...");
+    }
 
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
-        .setup(move |app| {
-            // In dev mode, Phoenix is already running separately
-            // Skip the embedded server startup
+        .setup(move |_app| {
+            // In dev mode, window loads devUrl automatically from tauri.conf.json
             #[cfg(debug_assertions)]
             {
-                println!("Development mode: Assuming Phoenix is running on port {}...", port);
-                // Just wait for the existing server
-                if !wait_for_server(port) {
-                    panic!("Phoenix server not reachable on port {}. Start it with 'mix phx.server'", port);
-                }
-
-                let window = app.get_webview_window("main").unwrap();
-                window.navigate(url.parse().unwrap()).unwrap();
+                println!("Dev mode: Window will load from devUrl in config");
                 return Ok(());
             }
 
             // Production mode: Start embedded Phoenix server
             #[cfg(not(debug_assertions))]
             {
+                let port = DEFAULT_PORT;
+                let url = format!("http://127.0.0.1:{}", port);
+
                 // Get the Phoenix release path
                 let phoenix_path = if cfg!(target_os = "macos") {
-                    app.path().resource_dir()
+                    _app.path().resource_dir()
                         .expect("Failed to get resource dir")
                         .join("phoenix")
                         .join("bin")
                         .join("clientats")
                 } else if cfg!(target_os = "windows") {
-                    app.path().resource_dir()
+                    _app.path().resource_dir()
                         .expect("Failed to get resource dir")
                         .join("phoenix")
                         .join("bin")
                         .join("clientats.bat")
                 } else {
-                    app.path().resource_dir()
+                    _app.path().resource_dir()
                         .expect("Failed to get resource dir")
                         .join("phoenix")
                         .join("bin")
@@ -76,7 +81,7 @@ fn main() {
                 println!("Phoenix executable path: {:?}", phoenix_path);
 
                 // Get database directory in user's home
-                let db_dir = app.path().app_data_dir()
+                let db_dir = _app.path().app_data_dir()
                     .expect("Failed to get app data dir");
 
                 std::fs::create_dir_all(&db_dir)
@@ -87,60 +92,44 @@ fn main() {
 
                 // Step 1: Run migrations synchronously
                 println!("Running database migrations...");
-            let migrate_result = if cfg!(target_os = "windows") {
-                Command::new(&phoenix_path)
+                let migrate_result = Command::new(&phoenix_path)
                     .arg("eval")
                     .arg("Clientats.Release.migrate()")
                     .env("DATABASE_PATH", db_path.to_str().unwrap())
                     .env("MIX_ENV", "prod")
-                    .output()
-            } else {
-                Command::new(&phoenix_path)
-                    .arg("eval")
-                    .arg("Clientats.Release.migrate()")
-                    .env("DATABASE_PATH", db_path.to_str().unwrap())
-                    .env("MIX_ENV", "prod")
-                    .output()
-            };
+                    .output();
 
-            match migrate_result {
-                Ok(output) => {
-                    if !output.status.success() {
-                        eprintln!("Migration warning: {:?}", String::from_utf8_lossy(&output.stderr));
-                    } else {
-                        println!("Migrations completed successfully");
+                match migrate_result {
+                    Ok(output) => {
+                        if !output.status.success() {
+                            eprintln!("Migration warning: {:?}", String::from_utf8_lossy(&output.stderr));
+                        } else {
+                            println!("Migrations completed successfully");
+                        }
                     }
+                    Err(e) => eprintln!("Failed to run migrations: {}", e),
                 }
-                Err(e) => eprintln!("Failed to run migrations: {}", e),
-            }
 
-            // Step 2: Start Phoenix server
-            println!("Starting Phoenix server...");
-            #[cfg(target_os = "windows")]
-            let mut cmd = Command::new(&phoenix_path);
+                // Step 2: Start Phoenix server
+                println!("Starting Phoenix server...");
+                let mut cmd = Command::new(&phoenix_path);
+                cmd.arg("start");
 
-            #[cfg(not(target_os = "windows"))]
-            let mut cmd = {
-                let mut c = Command::new(&phoenix_path);
-                c.arg("start");
-                c
-            };
+                cmd.env("PORT", port.to_string())
+                   .env("MIX_ENV", "prod")
+                   .env("PHX_SERVER", "true")
+                   .env("DATABASE_PATH", db_path.to_str().unwrap())
+                   .spawn()
+                   .expect("Failed to start Phoenix server");
 
-            cmd.env("PORT", port.to_string())
-               .env("MIX_ENV", "prod")
-               .env("PHX_SERVER", "true")
-               .env("DATABASE_PATH", db_path.to_str().unwrap())
-               .spawn()
-               .expect("Failed to start Phoenix server");
+                // Step 3: Wait for port to be reachable
+                if !wait_for_server(port) {
+                    panic!("Phoenix server failed to start");
+                }
 
-            // Step 3: Wait for port to be reachable
-            if !wait_for_server(port) {
-                panic!("Phoenix server failed to start");
-            }
-
-                // Step 4: Create window and load the app
-                let window = app.get_webview_window("main").unwrap();
-                window.navigate(url.parse().unwrap()).unwrap();
+                // Step 4: Navigate the window to Phoenix
+                let window = _app.get_webview_window("main").expect("Failed to get main window");
+                window.navigate(url.parse().unwrap()).expect("Failed to navigate to Phoenix");
 
                 Ok(())
             }
