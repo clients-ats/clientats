@@ -14,12 +14,18 @@ defmodule Clientats.Help.HelpInteraction do
 
   schema "help_interactions" do
     field :user_id, :string
-    field :interaction_type, :string  # :help_view, :tutorial_start, :tutorial_complete, :tutorial_dismiss, :recovery_used
-    field :feature, :string           # :job_interests, :applications, :documents, :dashboard
-    field :element, :string           # :search_bar, :priority_filter, etc.
-    field :context, :map              # Additional context data
-    field :feedback, :string          # Optional user feedback
-    field :helpful, :boolean          # Was this helpful? true/false/nil
+    # :help_view, :tutorial_start, :tutorial_complete, :tutorial_dismiss, :recovery_used
+    field :interaction_type, :string
+    # :job_interests, :applications, :documents, :dashboard
+    field :feature, :string
+    # :search_bar, :priority_filter, etc.
+    field :element, :string
+    # Additional context data
+    field :context, :map
+    # Optional user feedback
+    field :feedback, :string
+    # Was this helpful? true/false/nil
+    field :helpful, :boolean
 
     timestamps(type: :utc_datetime)
   end

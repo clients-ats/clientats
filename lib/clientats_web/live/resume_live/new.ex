@@ -89,11 +89,25 @@ defmodule ClientatsWeb.ResumeLive.New do
         <div class="bg-white rounded-lg shadow p-6">
           <div class="mb-6">
             <h2 class="text-2xl font-bold text-gray-900">Upload Resume</h2>
-            <p class="text-sm text-gray-600 mt-1">Upload a new resume version (PDF, DOC, DOCX - max 5MB)</p>
+            <p class="text-sm text-gray-600 mt-1">
+              Upload a new resume version (PDF, DOC, DOCX - max 5MB)
+            </p>
           </div>
 
-          <.form for={@form} id="resume-form" phx-change="validate" phx-submit="save" class="space-y-4">
-            <.input field={@form[:name]} type="text" label="Resume Name" placeholder="e.g., Software Engineer 2024" required />
+          <.form
+            for={@form}
+            id="resume-form"
+            phx-change="validate"
+            phx-submit="save"
+            class="space-y-4"
+          >
+            <.input
+              field={@form[:name]}
+              type="text"
+              label="Resume Name"
+              placeholder="e.g., Software Engineer 2024"
+              required
+            />
 
             <.input
               field={@form[:description]}
@@ -129,9 +143,9 @@ defmodule ClientatsWeb.ResumeLive.New do
                       <div class="flex items-center gap-3">
                         <.icon name="hero-document" class="w-6 h-6 text-blue-600" />
                         <div>
-                          <p class="text-sm font-medium text-gray-900"><%= entry.client_name %></p>
+                          <p class="text-sm font-medium text-gray-900">{entry.client_name}</p>
                           <p class="text-xs text-gray-500">
-                            <%= Float.round(entry.client_size / 1024 / 1024, 2) %> MB
+                            {Float.round(entry.client_size / 1024 / 1024, 2)} MB
                           </p>
                         </div>
                       </div>
@@ -157,7 +171,7 @@ defmodule ClientatsWeb.ResumeLive.New do
                 <% end %>
 
                 <%= for err <- upload_errors(@uploads.resume_file) do %>
-                  <p class="text-sm text-red-600 mt-2"><%= error_to_string(err) %></p>
+                  <p class="text-sm text-red-600 mt-2">{error_to_string(err)}</p>
                 <% end %>
               </div>
             </div>

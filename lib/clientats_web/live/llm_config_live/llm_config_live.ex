@@ -50,6 +50,7 @@ defmodule ClientatsWeb.LLMConfigLive do
           else
             config
           end
+
         assign(socket, :provider_config, config)
 
       {:error, :not_found} ->
@@ -75,6 +76,7 @@ defmodule ClientatsWeb.LLMConfigLive do
     # API keys should be valid UTF-8 and not contain too many non-printable characters
     String.valid?(api_key) && String.length(api_key) > 0
   end
+
   defp is_valid_api_key(_), do: false
 
   @impl true
@@ -93,16 +95,18 @@ defmodule ClientatsWeb.LLMConfigLive do
       <div class="container mx-auto px-4 py-8">
         <%= if @save_success do %>
           <div class="alert alert-success mb-4">
-            <span><%= @save_success %></span>
+            <span>{@save_success}</span>
           </div>
         <% end %>
-
-        <!-- Provider List Section (List-First) -->
+        
+    <!-- Provider List Section (List-First) -->
         <div class="mb-8">
           <div class="flex items-center justify-between mb-4">
             <div>
               <h2 class="text-2xl font-bold text-gray-900">Your Providers</h2>
-              <p class="text-sm text-gray-600">Manage your LLM providers. Drag to reorder, click Edit to modify.</p>
+              <p class="text-sm text-gray-600">
+                Manage your LLM providers. Drag to reorder, click Edit to modify.
+              </p>
             </div>
             <.link navigate={~p"/dashboard/llm-setup"} class="btn btn-primary btn-sm">
               + Add Provider
@@ -128,24 +132,30 @@ defmodule ClientatsWeb.LLMConfigLive do
                         else
                           "border-gray-300"
                         end
-                    }>
+                    }
+                  >
                     <!-- Header Row -->
                     <div class="flex items-center justify-between mb-3">
                       <div class="flex items-center gap-3">
                         <!-- Drag Handle -->
                         <div class="drag-handle cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0">
-                          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z"/>
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="h-5 w-5"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                          >
+                            <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z" />
                           </svg>
                         </div>
 
                         <div class="text-2xl">
-                          <%= provider_icon(status.provider) %>
+                          {provider_icon(status.provider)}
                         </div>
                         <div>
                           <div class="flex items-center gap-2">
                             <p class="font-semibold text-gray-900">
-                              <%= String.capitalize(status.provider) %>
+                              {String.capitalize(status.provider)}
                             </p>
                             <%= if status.provider == @primary_provider do %>
                               <span class="badge badge-sm badge-primary">Primary</span>
@@ -154,37 +164,40 @@ defmodule ClientatsWeb.LLMConfigLive do
                         </div>
                       </div>
                       <span class={status_badge_class(status)}>
-                        <%= status_label(status) %>
+                        {status_label(status)}
                       </span>
                     </div>
-
-                    <!-- Status Info Row -->
+                    
+    <!-- Status Info Row -->
                     <div class="space-y-2 mb-3">
                       <!-- Last Tested -->
                       <div class="text-sm text-gray-600">
                         <%= if status.last_tested_at do %>
-                          Last tested: <span class="font-medium"><%= format_relative_time(status.last_tested_at) %></span>
+                          Last tested:
+                          <span class="font-medium">
+                            {format_relative_time(status.last_tested_at)}
+                          </span>
                         <% else %>
                           <span class="text-gray-500">Not tested yet</span>
                         <% end %>
                       </div>
-
-                      <!-- Model Info -->
+                      
+    <!-- Model Info -->
                       <%= if status.model do %>
                         <div class="text-sm text-gray-600">
-                          Model: <span class="font-medium"><%= status.model %></span>
+                          Model: <span class="font-medium">{status.model}</span>
                         </div>
                       <% end %>
-
-                      <!-- Error Message -->
+                      
+    <!-- Error Message -->
                       <%= if status.last_error do %>
                         <div class="alert alert-error alert-sm py-2">
-                          <span class="text-sm"><%= status.last_error %></span>
+                          <span class="text-sm">{status.last_error}</span>
                         </div>
                       <% end %>
                     </div>
-
-                    <!-- Action Buttons Row -->
+                    
+    <!-- Action Buttons Row -->
                     <div class="flex flex-wrap gap-2">
                       <button
                         type="button"
@@ -218,9 +231,19 @@ defmodule ClientatsWeb.LLMConfigLive do
                               "btn-outline"
                             end
                         }
-                        title={if status.enabled do "Disable this provider" else "Enable this provider" end}
+                        title={
+                          if status.enabled do
+                            "Disable this provider"
+                          else
+                            "Enable this provider"
+                          end
+                        }
                       >
-                        <%= if status.enabled do "Disable" else "Enable" end %>
+                        {if status.enabled do
+                          "Disable"
+                        else
+                          "Enable"
+                        end}
                       </button>
 
                       <%= if status.provider != @primary_provider do %>
@@ -278,7 +301,10 @@ defmodule ClientatsWeb.LLMConfigLive do
          socket
          |> assign(:primary_provider, provider)
          |> assign(:provider_statuses, provider_statuses)
-         |> assign(:save_success, "#{String.capitalize(provider)} is now your primary LLM provider")}
+         |> assign(
+           :save_success,
+           "#{String.capitalize(provider)} is now your primary LLM provider"
+         )}
 
       {:error, _} ->
         {:noreply, assign(socket, test_result: {:error, "Failed to set primary provider"})}
@@ -316,7 +342,14 @@ defmodule ClientatsWeb.LLMConfigLive do
         {:noreply,
          socket
          |> assign(:provider_statuses, provider_statuses)
-         |> assign(:save_success, "#{String.capitalize(provider)} has been #{if updated_status.enabled do "enabled" else "disabled" end}")}
+         |> assign(
+           :save_success,
+           "#{String.capitalize(provider)} has been #{if updated_status.enabled do
+             "enabled"
+           else
+             "disabled"
+           end}"
+         )}
 
       {:error, _} ->
         {:noreply, assign(socket, :test_result, {:error, "Failed to toggle provider"})}
@@ -348,21 +381,23 @@ defmodule ClientatsWeb.LLMConfigLive do
     case LLMConfig.delete_provider(user_id, provider) do
       {:ok, _deleted_setting} ->
         # If we deleted the primary provider, promote another or reset to default
-        new_primary = if provider == primary_provider do
-          promote_next_provider(user_id)
-        else
-          primary_provider
-        end
+        new_primary =
+          if provider == primary_provider do
+            promote_next_provider(user_id)
+          else
+            primary_provider
+          end
 
         # Update primary provider if it changed
-        :ok = if new_primary != primary_provider do
-          case LLMConfig.set_primary_provider(user_id, new_primary) do
-            {:ok, _} -> :ok
-            {:error, _} -> :ok
+        :ok =
+          if new_primary != primary_provider do
+            case LLMConfig.set_primary_provider(user_id, new_primary) do
+              {:ok, _} -> :ok
+              {:error, _} -> :ok
+            end
+          else
+            :ok
           end
-        else
-          :ok
-        end
 
         # Reload provider statuses
         provider_statuses = LLMConfig.get_provider_status(user_id)
@@ -436,12 +471,14 @@ defmodule ClientatsWeb.LLMConfigLive do
     case Ollama.list_models(base_url) do
       {:ok, response} ->
         models = response["models"] || []
-        ollama_models = Enum.map(models, fn model ->
-          %{
-            name: model["name"],
-            vision: has_vision_capability(model["name"])
-          }
-        end)
+
+        ollama_models =
+          Enum.map(models, fn model ->
+            %{
+              name: model["name"],
+              vision: has_vision_capability(model["name"])
+            }
+          end)
 
         {:noreply,
          socket
@@ -456,9 +493,9 @@ defmodule ClientatsWeb.LLMConfigLive do
     end
   end
 
-
   defp has_vision_capability(model_name) do
     vision_indicators = ["vision", "llava", "qwen", "vl", "multimodal", "image", "gpt-4v"]
+
     String.downcase(model_name)
     |> (fn name -> Enum.any?(vision_indicators, &String.contains?(name, &1)) end).()
   end
@@ -476,10 +513,13 @@ defmodule ClientatsWeb.LLMConfigLive do
     cond do
       status_info.enabled && status_info.last_tested_at ->
         "Connected"
+
       status_info.enabled ->
         "Configured"
+
       status_info.last_error ->
         "Error"
+
       true ->
         "Disabled"
     end
@@ -489,10 +529,13 @@ defmodule ClientatsWeb.LLMConfigLive do
     cond do
       status_info.enabled && status_info.last_tested_at ->
         "badge badge-success badge-lg"
+
       status_info.enabled ->
         "badge badge-warning badge-lg"
+
       status_info.last_error ->
         "badge badge-error badge-lg"
+
       true ->
         "badge badge-ghost badge-lg"
     end
@@ -508,8 +551,8 @@ defmodule ClientatsWeb.LLMConfigLive do
       seconds_ago < 60 -> "Just now"
       seconds_ago < 3600 -> "#{div(seconds_ago, 60)} minutes ago"
       seconds_ago < 86400 -> "#{div(seconds_ago, 3600)} hours ago"
-      seconds_ago < 604800 -> "#{div(seconds_ago, 86400)} days ago"
-      true -> "#{div(seconds_ago, 604800)} weeks ago"
+      seconds_ago < 604_800 -> "#{div(seconds_ago, 86400)} days ago"
+      true -> "#{div(seconds_ago, 604_800)} weeks ago"
     end
   end
 

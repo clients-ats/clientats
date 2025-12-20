@@ -64,7 +64,13 @@ defmodule ClientatsWeb.ResumeLive.Edit do
             <p class="text-sm text-gray-600 mt-1">Update resume details</p>
           </div>
 
-          <.form for={@form} id="resume-form" phx-change="validate" phx-submit="save" class="space-y-4">
+          <.form
+            for={@form}
+            id="resume-form"
+            phx-change="validate"
+            phx-submit="save"
+            class="space-y-4"
+          >
             <.input
               field={@form[:name]}
               type="text"
@@ -83,7 +89,7 @@ defmodule ClientatsWeb.ResumeLive.Edit do
 
             <div class="p-4 bg-gray-50 rounded-lg">
               <p class="text-sm font-medium text-gray-700">Current File</p>
-              <p class="text-sm text-gray-600 mt-1"><%= @resume.original_filename %></p>
+              <p class="text-sm text-gray-600 mt-1">{@resume.original_filename}</p>
               <p class="text-xs text-gray-500 mt-1">
                 To change the file, delete this resume and upload a new one
               </p>

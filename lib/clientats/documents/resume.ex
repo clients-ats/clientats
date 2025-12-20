@@ -17,7 +17,15 @@ defmodule Clientats.Documents.Resume do
 
   def changeset(resume, attrs) do
     resume
-    |> cast(attrs, [:user_id, :name, :description, :file_path, :original_filename, :file_size, :is_default])
+    |> cast(attrs, [
+      :user_id,
+      :name,
+      :description,
+      :file_path,
+      :original_filename,
+      :file_size,
+      :is_default
+    ])
     |> validate_required([:user_id, :name, :file_path, :original_filename])
     |> foreign_key_constraint(:user_id)
   end

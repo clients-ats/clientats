@@ -18,7 +18,9 @@ defmodule Clientats.Logging.LogCleanup do
   Returns: {:ok, %{deleted: count, archived: count}} or {:error, reason}
   """
   def cleanup_logs(days_to_keep \\ 7, archive \\ true) do
-    Logger.info("Starting log cleanup (keeping logs from last #{days_to_keep} days, archive=#{archive})")
+    Logger.info(
+      "Starting log cleanup (keeping logs from last #{days_to_keep} days, archive=#{archive})"
+    )
 
     cutoff_time = DateTime.utc_now() |> DateTime.add(-days_to_keep * 24 * 3600)
 
@@ -41,6 +43,7 @@ defmodule Clientats.Logging.LogCleanup do
         Logger.info(
           "Cleanup completed: deleted #{stats.deleted} files, archived #{stats.archived} files"
         )
+
         {:ok, stats}
 
       errors ->
@@ -74,7 +77,10 @@ defmodule Clientats.Logging.LogCleanup do
 
           case File.stat(filepath) do
             {:ok, stat} ->
-              DateTime.compare(DateTime.from_unix!(stat.mtime, :second), cutoff_time) in [:eq, :lt]
+              DateTime.compare(DateTime.from_unix!(stat.mtime, :second), cutoff_time) in [
+                :eq,
+                :lt
+              ]
 
             {:error, _} ->
               false
@@ -114,7 +120,10 @@ defmodule Clientats.Logging.LogCleanup do
 
             case File.stat(filepath) do
               {:ok, stat} ->
-                if DateTime.compare(DateTime.from_unix!(stat.mtime, :second), cutoff_time) in [:eq, :lt] do
+                if DateTime.compare(DateTime.from_unix!(stat.mtime, :second), cutoff_time) in [
+                     :eq,
+                     :lt
+                   ] do
                   File.rm!(filepath)
                   Logger.debug("Deleted old log: #{filepath}")
                   count + 1
@@ -165,7 +174,10 @@ defmodule Clientats.Logging.LogCleanup do
 
             case File.stat(filepath) do
               {:ok, stat} ->
-                if DateTime.compare(DateTime.from_unix!(stat.mtime, :second), cutoff_time) in [:eq, :lt] do
+                if DateTime.compare(DateTime.from_unix!(stat.mtime, :second), cutoff_time) in [
+                     :eq,
+                     :lt
+                   ] do
                   if archive do
                     case archive_file(filepath, category) do
                       :ok ->
@@ -276,9 +288,10 @@ defmodule Clientats.Logging.LogCleanup do
         if stats.oldest_file do
           # stat.mtime is an Erlang universal_time tuple {{Y,M,D},{H,M,S}}
           case stats.oldest_file do
-            {{_,_,_},{_,_,_}} = erl_datetime ->
+            {{_, _, _}, {_, _, _}} = erl_datetime ->
               DateTime.from_naive!(NaiveDateTime.from_erl!(erl_datetime), "Etc/UTC")
               |> DateTime.to_iso8601()
+
             _other ->
               nil
           end

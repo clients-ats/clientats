@@ -1,36 +1,41 @@
 defmodule Clientats.LLM.Cache do
   @moduledoc """
   Simple in-memory cache for LLM extraction results.
-  
+
   In production, this should be replaced with a distributed cache like Redis.
   """
-  
+
   @agent __MODULE__
-  
+
   @type cache_key :: String.t()
   @type cache_value :: map()
   @type cache_entry :: {%{inserted_at: DateTime.t(), ttl: integer(), data: cache_value}}
-  
-  @default_ttl 86400 # 24 hours in seconds
-  
+
+  # 24 hours in seconds
+  @default_ttl 86400
+
   @doc """
   Get cached value by URL.
   """
   def get(url) do
     ttl = Application.get_env(:req_llm, :cache_ttl, @default_ttl)
-    
+
     case get_cache_entry(url) do
-      nil -> :not_found
+      nil ->
+        :not_found
+
       %{inserted_at: inserted_at, ttl: _ttl, data: data} ->
         if DateTime.diff(DateTime.utc_now(), inserted_at, :second) < ttl do
           {:ok, data}
         else
           :not_found
         end
-      _ -> :not_found
+
+      _ ->
+        :not_found
     end
   end
-  
+
   @doc """
   Put value in cache.
   """
@@ -40,39 +45,39 @@ defmodule Clientats.LLM.Cache do
     put_cache_entry(url, entry)
     :ok
   end
-  
+
   @doc """
   Clear cache entry.
   """
   def delete(url), do: delete_cache_entry(url)
-  
+
   @doc """
   Clear entire cache.
   """
   def clear(), do: clear_cache()
-  
+
   # In-memory cache implementation (replace with Redis in production)
   defp get_cache_entry(url) do
     Agent.get(@agent, fn map -> Map.get(map, url) end)
   end
-  
+
   defp put_cache_entry(url, entry) do
     Agent.update(@agent, fn map -> Map.put(map, url, entry) end)
   end
-  
+
   defp delete_cache_entry(url) do
     Agent.update(@agent, fn map -> Map.delete(map, url) end)
   end
-  
+
   defp clear_cache() do
     Agent.update(@agent, fn _ -> Map.new() end)
   end
-  
+
   # Start the cache agent
   def start_link(_) do
     Agent.start_link(fn -> Map.new() end, name: __MODULE__)
   end
-  
+
   def child_spec(_) do
     %{
       id: __MODULE__,

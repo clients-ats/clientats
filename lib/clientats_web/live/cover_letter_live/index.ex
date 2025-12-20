@@ -79,16 +79,16 @@ defmodule ClientatsWeb.CoverLetterLive.Index do
                 <div class="flex justify-between items-start">
                   <div class="flex-1">
                     <div class="flex items-center gap-2">
-                      <h3 class="text-lg font-semibold text-gray-900"><%= template.name %></h3>
+                      <h3 class="text-lg font-semibold text-gray-900">{template.name}</h3>
                       <%= if template.is_default do %>
                         <span class="badge badge-primary badge-sm">Default</span>
                       <% end %>
                     </div>
                     <%= if template.description do %>
-                      <p class="text-sm text-gray-600 mt-1"><%= template.description %></p>
+                      <p class="text-sm text-gray-600 mt-1">{template.description}</p>
                     <% end %>
                     <p class="text-sm text-gray-500 mt-2">
-                      Created <%= Calendar.strftime(template.inserted_at, "%b %d, %Y") %>
+                      Created {Calendar.strftime(template.inserted_at, "%b %d, %Y")}
                     </p>
                   </div>
                   <div class="flex gap-2">

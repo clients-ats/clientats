@@ -1,6 +1,8 @@
 defmodule Clientats.JobImportWizardIntegrationTest do
   use ExUnit.Case
 
+  @moduletag :feature
+
   describe "job import wizard happy path" do
     test "complete successful job import workflow" do
       # Step 1: Initialize wizard
@@ -13,7 +15,11 @@ defmodule Clientats.JobImportWizardIntegrationTest do
           llm_response = LLMResponseMock.generate_response(:successful)
 
           # Step 4: Process through wizard
-          case Clientats.JobImportWizard.process_screenshot(wizard_state, screenshot_file, llm_response) do
+          case Clientats.JobImportWizard.process_screenshot(
+                 wizard_state,
+                 screenshot_file,
+                 llm_response
+               ) do
             {:ok, extracted_data} ->
               # Verify extracted data
               assert extracted_data.company_name != nil
@@ -38,7 +44,11 @@ defmodule Clientats.JobImportWizardIntegrationTest do
           screenshot_file = ScreenshotMock.generate_mock_screenshot(:indeed)
           llm_response = LLMResponseMock.generate_response(:successful)
 
-          case Clientats.JobImportWizard.process_screenshot(wizard_state, screenshot_file, llm_response) do
+          case Clientats.JobImportWizard.process_screenshot(
+                 wizard_state,
+                 screenshot_file,
+                 llm_response
+               ) do
             {:ok, extracted_data} ->
               assert is_map(extracted_data)
               ScreenshotMock.cleanup_screenshot(screenshot_file)
@@ -58,7 +68,11 @@ defmodule Clientats.JobImportWizardIntegrationTest do
           screenshot_file = ScreenshotMock.generate_mock_screenshot(:glassdoor)
           llm_response = LLMResponseMock.generate_response(:successful)
 
-          case Clientats.JobImportWizard.process_screenshot(wizard_state, screenshot_file, llm_response) do
+          case Clientats.JobImportWizard.process_screenshot(
+                 wizard_state,
+                 screenshot_file,
+                 llm_response
+               ) do
             {:ok, extracted_data} ->
               assert is_map(extracted_data)
               ScreenshotMock.cleanup_screenshot(screenshot_file)
@@ -80,13 +94,19 @@ defmodule Clientats.JobImportWizardIntegrationTest do
           screenshot_file = ScreenshotMock.generate_mock_screenshot(:generic)
           malformed_response = LLMResponseMock.generate_response(:malformed_json)
 
-          result = Clientats.JobImportWizard.process_screenshot(wizard_state, screenshot_file, malformed_response)
+          result =
+            Clientats.JobImportWizard.process_screenshot(
+              wizard_state,
+              screenshot_file,
+              malformed_response
+            )
 
           # Should either handle error or attempt recovery
           case result do
             {:error, :malformed_json} -> assert true
             {:error, _reason} -> assert true
-            {:ok, _data} -> assert true  # Might have fallback mechanism
+            # Might have fallback mechanism
+            {:ok, _data} -> assert true
           end
 
           ScreenshotMock.cleanup_screenshot(screenshot_file)
@@ -102,7 +122,12 @@ defmodule Clientats.JobImportWizardIntegrationTest do
           screenshot_file = ScreenshotMock.generate_mock_screenshot(:indeed)
           missing_fields = LLMResponseMock.generate_response(:missing_fields)
 
-          result = Clientats.JobImportWizard.process_screenshot(wizard_state, screenshot_file, missing_fields)
+          result =
+            Clientats.JobImportWizard.process_screenshot(
+              wizard_state,
+              screenshot_file,
+              missing_fields
+            )
 
           case result do
             {:error, :missing_required_fields} -> assert true
@@ -123,7 +148,12 @@ defmodule Clientats.JobImportWizardIntegrationTest do
           screenshot_file = ScreenshotMock.generate_mock_screenshot(:generic)
           empty_response = LLMResponseMock.generate_response(:empty_response)
 
-          result = Clientats.JobImportWizard.process_screenshot(wizard_state, screenshot_file, empty_response)
+          result =
+            Clientats.JobImportWizard.process_screenshot(
+              wizard_state,
+              screenshot_file,
+              empty_response
+            )
 
           case result do
             {:error, _reason} -> assert true
@@ -143,7 +173,12 @@ defmodule Clientats.JobImportWizardIntegrationTest do
           screenshot_file = ScreenshotMock.generate_mock_screenshot(:linkedin)
           error_response = LLMResponseMock.generate_response(:error)
 
-          result = Clientats.JobImportWizard.process_screenshot(wizard_state, screenshot_file, error_response)
+          result =
+            Clientats.JobImportWizard.process_screenshot(
+              wizard_state,
+              screenshot_file,
+              error_response
+            )
 
           case result do
             {:error, _reason} -> assert true
@@ -163,7 +198,8 @@ defmodule Clientats.JobImportWizardIntegrationTest do
           invalid_path = "/nonexistent/screenshot.png"
           llm_response = LLMResponseMock.generate_response(:successful)
 
-          result = Clientats.JobImportWizard.process_screenshot(wizard_state, invalid_path, llm_response)
+          result =
+            Clientats.JobImportWizard.process_screenshot(wizard_state, invalid_path, llm_response)
 
           case result do
             {:error, :screenshot_not_found} -> assert true
@@ -191,7 +227,11 @@ defmodule Clientats.JobImportWizardIntegrationTest do
               screenshot2 = ScreenshotMock.generate_mock_screenshot(:indeed)
               response2 = LLMResponseMock.generate_response(:partial_data)
 
-              case Clientats.JobImportWizard.process_screenshot(wizard_state, screenshot2, response2) do
+              case Clientats.JobImportWizard.process_screenshot(
+                     wizard_state,
+                     screenshot2,
+                     response2
+                   ) do
                 {:ok, _extracted2} ->
                   assert true
 
@@ -221,7 +261,8 @@ defmodule Clientats.JobImportWizardIntegrationTest do
               screenshot = ScreenshotMock.generate_mock_screenshot(board)
               response = LLMResponseMock.generate_response(:successful)
 
-              result = Clientats.JobImportWizard.process_screenshot(wizard_state, screenshot, response)
+              result =
+                Clientats.JobImportWizard.process_screenshot(wizard_state, screenshot, response)
 
               ScreenshotMock.cleanup_screenshot(screenshot)
               result
@@ -243,12 +284,21 @@ defmodule Clientats.JobImportWizardIntegrationTest do
           screenshot_file = ScreenshotMock.generate_mock_screenshot(:generic)
           llm_response = LLMResponseMock.generate_response(:successful)
 
-          case Clientats.JobImportWizard.process_screenshot(wizard_state, screenshot_file, llm_response) do
+          case Clientats.JobImportWizard.process_screenshot(
+                 wizard_state,
+                 screenshot_file,
+                 llm_response
+               ) do
             {:ok, extracted} ->
               # Verify key fields are present
-              assert Map.has_key?(extracted, :company_name) || Map.has_key?(extracted, "company_name")
-              assert Map.has_key?(extracted, :position_title) || Map.has_key?(extracted, "position_title")
-              assert Map.has_key?(extracted, :job_description) || Map.has_key?(extracted, "job_description")
+              assert Map.has_key?(extracted, :company_name) ||
+                       Map.has_key?(extracted, "company_name")
+
+              assert Map.has_key?(extracted, :position_title) ||
+                       Map.has_key?(extracted, "position_title")
+
+              assert Map.has_key?(extracted, :job_description) ||
+                       Map.has_key?(extracted, "job_description")
 
               ScreenshotMock.cleanup_screenshot(screenshot_file)
 
@@ -267,7 +317,11 @@ defmodule Clientats.JobImportWizardIntegrationTest do
           screenshot_file = ScreenshotMock.generate_mock_screenshot(:minimal)
           invalid_salary = LLMResponseMock.generate_response(:invalid_salary)
 
-          case Clientats.JobImportWizard.process_screenshot(wizard_state, screenshot_file, invalid_salary) do
+          case Clientats.JobImportWizard.process_screenshot(
+                 wizard_state,
+                 screenshot_file,
+                 invalid_salary
+               ) do
             {:ok, extracted} ->
               # Should handle invalid salary gracefully
               assert is_map(extracted)
@@ -289,7 +343,11 @@ defmodule Clientats.JobImportWizardIntegrationTest do
           screenshot_file = ScreenshotMock.generate_mock_screenshot(:linkedin)
           llm_response = LLMResponseMock.generate_response(:successful)
 
-          case Clientats.JobImportWizard.process_screenshot(wizard_state, screenshot_file, llm_response) do
+          case Clientats.JobImportWizard.process_screenshot(
+                 wizard_state,
+                 screenshot_file,
+                 llm_response
+               ) do
             {:ok, extracted} ->
               # Verify data structure
               assert is_map(extracted)
@@ -338,7 +396,11 @@ defmodule Clientats.JobImportWizardIntegrationTest do
               screenshot2 = ScreenshotMock.generate_mock_screenshot(:indeed)
               response2 = LLMResponseMock.generate_response(:minimal)
 
-              case Clientats.JobImportWizard.process_screenshot(wizard_state1, screenshot2, response2) do
+              case Clientats.JobImportWizard.process_screenshot(
+                     wizard_state1,
+                     screenshot2,
+                     response2
+                   ) do
                 {:ok, _} -> assert true
                 {:error, _} -> true
               end
@@ -379,7 +441,12 @@ defmodule Clientats.JobImportWizardIntegrationTest do
           # First attempt with error response
           error_response = LLMResponseMock.generate_response(:error)
 
-          result = Clientats.JobImportWizard.process_screenshot(wizard_state, screenshot_file, error_response)
+          result =
+            Clientats.JobImportWizard.process_screenshot(
+              wizard_state,
+              screenshot_file,
+              error_response
+            )
 
           case result do
             {:ok, _extracted} ->
@@ -411,7 +478,11 @@ defmodule Clientats.JobImportWizardIntegrationTest do
             Enum.reduce_while(fallback_chain, :error, fn response_tuple, _acc ->
               case response_tuple do
                 {:ok, response} ->
-                  case Clientats.JobImportWizard.process_screenshot(wizard_state, screenshot_file, response) do
+                  case Clientats.JobImportWizard.process_screenshot(
+                         wizard_state,
+                         screenshot_file,
+                         response
+                       ) do
                     {:ok, extracted} ->
                       {:halt, {:ok, extracted}}
 
@@ -596,7 +667,8 @@ defmodule Clientats.JobImportWizardIntegrationTest do
             {:ok, stats} ->
               assert is_map(stats)
               # Should track number of imports
-              assert Map.has_key?(stats, :total_processed) || Map.has_key?(stats, "total_processed") ||
+              assert Map.has_key?(stats, :total_processed) ||
+                       Map.has_key?(stats, "total_processed") ||
                        Map.has_key?(stats, :count)
 
             {:error, _reason} ->

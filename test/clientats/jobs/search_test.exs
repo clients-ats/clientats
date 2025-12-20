@@ -77,10 +77,7 @@ defmodule Clientats.Jobs.SearchTest do
         status: "applied"
       })
 
-    {:ok,
-     user: user,
-     interests: [interest1, interest2, interest3],
-     applications: [app1, app2]}
+    {:ok, user: user, interests: [interest1, interest2, interest3], applications: [app1, app2]}
   end
 
   describe "search_job_interests/2" do
@@ -135,10 +132,11 @@ defmodule Clientats.Jobs.SearchTest do
       results = Search.search_job_interests(user.id, search: "React")
 
       assert length(results) >= 1
+
       assert Enum.any?(results, fn i ->
-        String.contains?(i.position_title, "React") or
-          String.contains?(i.job_description || "", "React")
-      end)
+               String.contains?(i.position_title, "React") or
+                 String.contains?(i.job_description || "", "React")
+             end)
     end
 
     test "sorts by company name ascending", %{user: user} do
@@ -178,9 +176,10 @@ defmodule Clientats.Jobs.SearchTest do
         )
 
       assert length(results) >= 1
+
       assert Enum.all?(results, fn i ->
-        i.work_model == "remote" and i.priority == "high" and i.salary_min >= 100_000
-      end)
+               i.work_model == "remote" and i.priority == "high" and i.salary_min >= 100_000
+             end)
     end
 
     test "returns empty list for non-matching search", %{user: user} do
@@ -238,10 +237,11 @@ defmodule Clientats.Jobs.SearchTest do
       results = Search.search_job_applications(user.id, from_date: from_date, to_date: to_date)
 
       assert length(results) >= 1
+
       assert Enum.all?(results, fn a ->
-        Date.compare(a.application_date, from_date) in [:eq, :gt] and
-          Date.compare(a.application_date, to_date) in [:eq, :lt]
-      end)
+               Date.compare(a.application_date, from_date) in [:eq, :gt] and
+                 Date.compare(a.application_date, to_date) in [:eq, :lt]
+             end)
     end
 
     test "sorts applications by date descending", %{user: user} do

@@ -174,7 +174,10 @@ defmodule Clientats.DocumentsTest do
       user = user_fixture()
       template = cover_letter_fixture(user_id: user.id)
       assert {:ok, _} = Documents.delete_cover_letter_template(template)
-      assert_raise Ecto.NoResultsError, fn -> Documents.get_cover_letter_template!(template.id) end
+
+      assert_raise Ecto.NoResultsError, fn ->
+        Documents.get_cover_letter_template!(template.id)
+      end
     end
 
     test "set_default_cover_letter_template/1 sets template as default and unsets others" do

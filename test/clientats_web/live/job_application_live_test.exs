@@ -142,7 +142,7 @@ defmodule ClientatsWeb.JobApplicationLiveTest do
 
     test "displays salary range", %{conn: conn} do
       user = user_fixture()
-      app = job_application_fixture(user_id: user.id, salary_min: 80000, salary_max: 120000)
+      app = job_application_fixture(user_id: user.id, salary_min: 80000, salary_max: 120_000)
       conn = log_in_user(conn, user)
 
       {:ok, _lv, html} = live(conn, ~p"/dashboard/applications/#{app}")

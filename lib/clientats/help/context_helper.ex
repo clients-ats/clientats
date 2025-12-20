@@ -203,7 +203,8 @@ defmodule Clientats.Help.ContextHelper do
   defp search_help(:intermediate) do
     %{
       title: "Advanced Search",
-      text: "Combine search with filters for precise results. Full-text search across all fields.",
+      text:
+        "Combine search with filters for precise results. Full-text search across all fields.",
       example: "Search \"React\" with Priority: High and Salary: $120k+",
       tips: [
         "Search is case-insensitive",
@@ -329,7 +330,8 @@ defmodule Clientats.Help.ContextHelper do
   defp application_date_help(_level) do
     %{
       title: "Date Range Filter",
-      text: "Filter applications by date range to focus on recent or specific period applications.",
+      text:
+        "Filter applications by date range to focus on recent or specific period applications.",
       tips: ["Useful for tracking monthly applications"]
     }
   end

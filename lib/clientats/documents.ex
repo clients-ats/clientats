@@ -9,7 +9,7 @@ defmodule Clientats.Documents do
   def list_resumes(user_id) do
     Resume
     |> where(user_id: ^user_id)
-    |> order_by([r], [desc: r.is_default, desc: r.inserted_at])
+    |> order_by([r], desc: r.is_default, desc: r.inserted_at)
     |> Repo.all()
   end
 
@@ -52,7 +52,7 @@ defmodule Clientats.Documents do
   def list_cover_letter_templates(user_id) do
     CoverLetterTemplate
     |> where(user_id: ^user_id)
-    |> order_by([c], [desc: c.is_default, desc: c.inserted_at])
+    |> order_by([c], desc: c.is_default, desc: c.inserted_at)
     |> Repo.all()
   end
 

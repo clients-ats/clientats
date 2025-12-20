@@ -91,7 +91,9 @@ defmodule ClientatsWeb.CoverLetterLiveTest do
       )
       |> render_submit()
 
-      template = Clientats.Repo.get_by(Clientats.Documents.CoverLetterTemplate, name: "New Template")
+      template =
+        Clientats.Repo.get_by(Clientats.Documents.CoverLetterTemplate, name: "New Template")
+
       assert template != nil
       assert template.content =~ "Dear Hiring Manager"
     end
