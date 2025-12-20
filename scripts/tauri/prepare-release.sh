@@ -42,5 +42,16 @@ else
   cp -r _build/prod/rel/clientats/* src-tauri/phoenix/
 fi
 
+# Fix permissions and remove macOS extended attributes
+echo "🔧 Fixing file permissions and attributes..."
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  # macOS: Remove extended attributes and fix permissions
+  chmod -R u+w src-tauri/phoenix
+  xattr -cr src-tauri/phoenix 2>/dev/null || true
+elif [[ "$OSTYPE" != "msys" ]] && [[ "$OSTYPE" != "win32" ]] && [[ "$OSTYPE" != "cygwin" ]]; then
+  # Linux/Other Unix: Just fix permissions
+  chmod -R u+w src-tauri/phoenix
+fi
+
 echo "✅ Phoenix release prepared successfully!"
 echo "📍 Release location: src-tauri/phoenix"
