@@ -43,24 +43,30 @@ if config_env() == :prod do
   # want to use a different value for prod and you most likely don't want
   # to check this value into version control, so we use an environment
   # variable instead.
+  # For desktop app deployments, we generate a stable key based on the machine
+  generate_secret = fn ->
+    :crypto.hash(:sha256, "clientats-desktop-#{:erlang.system_info(:system_version)}")
+    |> Base.encode64(padding: false)
+    |> binary_part(0, 64)
+  end
+
   secret_key_base =
-    System.get_env("SECRET_KEY_BASE") ||
-      raise """
-      environment variable SECRET_KEY_BASE is missing.
-      You can generate one by calling: mix phx.gen.secret
-      """
+    System.get_env("SECRET_KEY_BASE") || generate_secret.()
 
   host = System.get_env("PHX_HOST") || "example.com"
   port = String.to_integer(System.get_env("PORT") || "4000")
 
   config :clientats, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
+  # Generate a stable encryption key for desktop deployments
+  generate_encryption_key = fn ->
+    :crypto.hash(:sha256, "clientats-llm-#{:erlang.system_info(:system_version)}")
+    |> Base.encode64(padding: false)
+    |> binary_part(0, 32)
+  end
+
   llm_encryption_key =
-    System.get_env("LLM_ENCRYPTION_KEY") ||
-      raise """
-      environment variable LLM_ENCRYPTION_KEY is missing.
-      This is used to encrypt API keys in the database.
-      """
+    System.get_env("LLM_ENCRYPTION_KEY") || generate_encryption_key.()
 
   config :clientats,
     llm_encryption_key: llm_encryption_key
