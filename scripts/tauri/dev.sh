@@ -6,11 +6,9 @@ set -euo pipefail
 
 echo "🚀 Starting ClientATS in development mode..."
 
-# Check if dependencies are installed
-if [ ! -d "deps/phoenix" ]; then
-    echo "📦 Installing Elixir dependencies..."
-    mix deps.get
-fi
+# Ensure dependencies are installed (fast if already present)
+echo "📦 Ensuring Elixir dependencies are up to date..."
+mix deps.get
 
 if [ ! -d "node_modules" ]; then
     echo "📦 Installing Node dependencies..."
