@@ -213,7 +213,7 @@ defmodule ClientatsWeb.CoreComponents do
         <select
           id={@id}
           name={@name}
-          class={[@class || "w-full select", @errors != [] && (@error_class || "select-error")]}
+          class={[@class || "w-full select select-bordered", @errors != [] && (@error_class || "select-error")]}
           multiple={@multiple}
           {@rest}
         >
@@ -235,7 +235,7 @@ defmodule ClientatsWeb.CoreComponents do
           id={@id}
           name={@name}
           class={[
-            @class || "w-full textarea",
+            @class || "w-full textarea textarea-bordered",
             @errors != [] && (@error_class || "textarea-error")
           ]}
           {@rest}
@@ -258,7 +258,7 @@ defmodule ClientatsWeb.CoreComponents do
           id={@id}
           value={Phoenix.HTML.Form.normalize_value(@type, @value)}
           class={[
-            @class || "w-full input",
+            @class || "w-full input input-bordered",
             @errors != [] && (@error_class || "input-error")
           ]}
           {@rest}
