@@ -14,7 +14,7 @@ Start the application in development mode with hot-reloading.
 ```
 
 **What it does:**
-- Checks and starts the PostgreSQL database container
+- Sets up the SQLite database
 - Creates and migrates the database
 - Installs dependencies
 - Sets up assets
@@ -47,7 +47,7 @@ Start the production release.
 **Prerequisites:** Run `build-prod.sh` first
 
 #### `package-prod.sh`
-Build a complete production package with Docker deployment.
+Build a complete production package with Docker deployment (SQLite based).
 
 ```bash
 ./scripts/package-prod.sh
@@ -56,7 +56,7 @@ Build a complete production package with Docker deployment.
 **What it does:**
 - Builds production release
 - Creates Dockerfile for containerization
-- Generates docker-compose.yml (runs on port 4001, postgres on 5433)
+- Generates docker-compose.yml (runs on port 4001, uses SQLite volume)
 - Includes deployment scripts and documentation
 - Packages everything into a `.tar.gz` file in `build/` directory
 
@@ -118,19 +118,10 @@ Run the test suite with various options.
 ### 🗄️ Database Management
 
 #### `db.sh`
-Manage the PostgreSQL database container and migrations.
+Manage the SQLite database and migrations.
 
 ```bash
-# Start database container
-./scripts/db.sh start
-
-# Stop database container
-./scripts/db.sh stop
-
-# Restart database container
-./scripts/db.sh restart
-
-# Show database status
+# Show database path
 ./scripts/db.sh status
 
 # Run migrations
@@ -141,12 +132,6 @@ Manage the PostgreSQL database container and migrations.
 
 # Reset database (deletes all data!)
 ./scripts/db.sh reset
-
-# Show database logs
-./scripts/db.sh logs
-
-# Remove database container
-./scripts/db.sh remove
 ```
 
 ---
@@ -194,11 +179,8 @@ Manage the PostgreSQL database container and migrations.
 ## Database Management Examples
 
 ```bash
-# Check if database is running
+# Check database path
 ./scripts/db.sh status
-
-# View database logs
-./scripts/db.sh logs
 
 # Reset database to clean slate (careful!)
 ./scripts/db.sh reset
@@ -209,60 +191,12 @@ Manage the PostgreSQL database container and migrations.
 
 ---
 
-## Troubleshooting
-
-### Database Won't Start
-```bash
-# Check container status
-./scripts/db.sh status
-
-# Try restarting
-./scripts/db.sh restart
-
-# If all else fails, remove and recreate
-./scripts/db.sh remove
-./scripts/db.sh start
-```
-
-### Port Already in Use
-If port 4000 or 5432 is already in use:
-```bash
-# Find what's using the port
-lsof -i :4000  # or :5432
-
-# Stop the conflicting process or change the port in config
-```
-
-### Asset Build Failures
-```bash
-# Clean and rebuild
-rm -rf deps _build node_modules assets/node_modules
-./scripts/start-dev.sh
-```
-
----
-
-## CI/CD Integration
-
-These scripts are designed to work in CI/CD pipelines:
-
-```yaml
-# Example GitHub Actions
-- name: Run tests with coverage
-  run: ./scripts/test.sh --coverage
-
-- name: Build production
-  run: ./scripts/build-prod.sh
-```
-
----
-
 ## Environment Variables
 
 You can customize behavior with environment variables:
 
 - `MIX_ENV` - Set environment (dev/test/prod)
-- `DATABASE_URL` - Override database connection
+- `DATABASE_PATH` - Override SQLite database path
 - `PORT` - Override web server port
 - `SECRET_KEY_BASE` - Set secret key for production
 
