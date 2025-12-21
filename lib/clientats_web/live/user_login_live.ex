@@ -5,19 +5,19 @@ defmodule ClientatsWeb.UserLoginLive do
 
   def render(assigns) do
     ~H"""
-    <div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-12 px-4 sm:px-6 lg:px-8">
       <div class="max-w-md mx-auto">
         <div class="text-center mb-8">
           <h2 class="text-3xl font-bold text-gray-900">Sign in to your account</h2>
           <p class="mt-2 text-sm text-gray-600">
             Don't have an account?
-            <.link navigate={~p"/register"} class="font-medium text-blue-600 hover:text-blue-500">
+            <.link navigate={~p"/register"} class="font-medium text-primary hover:text-primary/80">
               Sign up
             </.link>
           </p>
         </div>
 
-        <div class="bg-white py-8 px-6 shadow-xl rounded-lg">
+        <div class="bg-white py-8 px-6 shadow-xl rounded-lg border border-gray-100">
           <%= if @error_message do %>
             <div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
               <p class="text-sm text-red-700">{@error_message}</p>

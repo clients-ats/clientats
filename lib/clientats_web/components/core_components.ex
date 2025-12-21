@@ -89,27 +89,23 @@ defmodule ClientatsWeb.CoreComponents do
       <.button navigate={~p"/"}>Home</.button>
   """
   attr :rest, :global, include: ~w(href navigate patch method download name value disabled)
-  attr :class, :string
-  attr :variant, :string, values: ~w(primary)
+  attr :class, :string, default: nil
+  attr :variant, :string, values: ["primary", nil], default: nil
   slot :inner_block, required: true
 
-  def button(%{rest: rest} = assigns) do
-    variants = %{"primary" => "btn-primary", nil => "btn-primary btn-soft"}
+  def button(assigns) do
+    variant_class = if assigns[:variant] == "primary" || is_nil(assigns[:variant]), do: "btn-primary", else: ""
+    assigns = assign(assigns, :variant_class, variant_class)
 
-    assigns =
-      assign_new(assigns, :class, fn ->
-        ["btn", Map.fetch!(variants, assigns[:variant])]
-      end)
-
-    if rest[:href] || rest[:navigate] || rest[:patch] do
+    if assigns.rest[:href] || assigns.rest[:navigate] || assigns.rest[:patch] do
       ~H"""
-      <.link class={@class} {@rest}>
+      <.link class={["btn", @variant_class, @class]} {@rest}>
         {render_slot(@inner_block)}
       </.link>
       """
     else
       ~H"""
-      <button class={@class} {@rest}>
+      <button class={["btn", @variant_class, @class]} {@rest}>
         {render_slot(@inner_block)}
       </button>
       """
@@ -195,7 +191,7 @@ defmodule ClientatsWeb.CoreComponents do
             name={@name}
             value="true"
             checked={@checked}
-            class={@class || "checkbox checkbox-sm"}
+            class={["checkbox checkbox-sm", @class]}
             {@rest}
           />{@label}
         </span>
@@ -213,7 +209,11 @@ defmodule ClientatsWeb.CoreComponents do
         <select
           id={@id}
           name={@name}
-          class={[@class || "w-full select select-bordered", @errors != [] && (@error_class || "select-error")]}
+          class={[
+            "w-full select select-bordered",
+            @errors != [] && (@error_class || "select-error"),
+            @class
+          ]}
           multiple={@multiple}
           {@rest}
         >
@@ -235,8 +235,9 @@ defmodule ClientatsWeb.CoreComponents do
           id={@id}
           name={@name}
           class={[
-            @class || "w-full textarea textarea-bordered",
-            @errors != [] && (@error_class || "textarea-error")
+            "w-full textarea textarea-bordered",
+            @errors != [] && (@error_class || "textarea-error"),
+            @class
           ]}
           {@rest}
         >{Phoenix.HTML.Form.normalize_value("textarea", @value)}</textarea>
@@ -258,8 +259,9 @@ defmodule ClientatsWeb.CoreComponents do
           id={@id}
           value={Phoenix.HTML.Form.normalize_value(@type, @value)}
           class={[
-            @class || "w-full input input-bordered",
-            @errors != [] && (@error_class || "input-error")
+            "w-full input input-bordered",
+            @errors != [] && (@error_class || "input-error"),
+            @class
           ]}
           {@rest}
         />

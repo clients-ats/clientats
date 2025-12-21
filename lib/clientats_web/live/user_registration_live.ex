@@ -8,19 +8,19 @@ defmodule ClientatsWeb.UserRegistrationLive do
 
   def render(assigns) do
     ~H"""
-    <div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-12 px-4 sm:px-6 lg:px-8">
       <div class="max-w-md mx-auto">
         <div class="text-center mb-8">
           <h2 class="text-3xl font-bold text-gray-900">Create your account</h2>
           <p class="mt-2 text-sm text-gray-600">
             Already have an account?
-            <.link navigate={~p"/login"} class="font-medium text-blue-600 hover:text-blue-500">
+            <.link navigate={~p"/login"} class="font-medium text-primary hover:text-primary/80">
               Sign in
             </.link>
           </p>
         </div>
 
-        <div class="bg-white py-8 px-6 shadow-xl rounded-lg">
+        <div class="bg-white py-8 px-6 shadow-xl rounded-lg border border-gray-100">
           <.form
             for={@form}
             id="registration_form"
