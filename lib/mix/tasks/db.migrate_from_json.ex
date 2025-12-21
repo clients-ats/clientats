@@ -22,7 +22,10 @@ defmodule Mix.Tasks.Db.MigrateFromJson do
     Mix.Task.run("app.start")
 
     IO.puts("Reading data from #{input_file}...")
-    data = File.read!(input_file) |> Jason.decode!()
+    json_data = File.read!(input_file) |> Jason.decode!()
+
+    # Support both new versioned format and old raw format
+    data = if Map.has_key?(json_data, "tables"), do: json_data["tables"], else: json_data
 
     repo = Clientats.Repo
     
