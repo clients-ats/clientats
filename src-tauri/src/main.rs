@@ -183,12 +183,39 @@ fn main() {
                     panic!("Phoenix server failed to start");
                 }
 
-                // Step 4: Navigate the window to Phoenix
-                log_to_file(&log_path, &format!("Navigating window to {}", url));
-                let window = _app.get_webview_window("main").expect("Failed to get main window");
-                match window.navigate(url.parse().unwrap()) {
-                    Ok(_) => log_to_file(&log_path, "Successfully navigated to Phoenix URL"),
-                    Err(e) => log_to_file(&log_path, &format!("Failed to navigate: {}", e)),
+                // Step 4: Create window with URL
+                log_to_file(&log_path, &format!("Creating window with URL: {}", url));
+
+                use tauri::WebviewUrl;
+                use tauri::WebviewWindowBuilder;
+
+                let window_builder = WebviewWindowBuilder::new(_app, "main", WebviewUrl::External(url.parse().unwrap()))
+                    .title("ClientATS - Job Scraping & Management")
+                    .inner_size(1280.0, 900.0)
+                    .min_inner_size(800.0, 600.0)
+                    .resizable(true);
+
+                // Enable devtools for debugging in production
+                #[cfg(debug_assertions)]
+                let window_builder = window_builder.devtools(true);
+
+                match window_builder.build() {
+                    Ok(window) => {
+                        log_to_file(&log_path, "Window created successfully");
+
+                        // Open devtools in debug builds
+                        #[cfg(debug_assertions)]
+                        window.open_devtools();
+
+                        match window.show() {
+                            Ok(_) => log_to_file(&log_path, "Window shown"),
+                            Err(e) => log_to_file(&log_path, &format!("Failed to show window: {}", e)),
+                        }
+                    }
+                    Err(e) => {
+                        log_to_file(&log_path, &format!("Failed to create window: {}", e));
+                        panic!("Failed to create window");
+                    }
                 }
 
                 log_to_file(&log_path, "Tauri setup complete");

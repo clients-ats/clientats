@@ -8,18 +8,7 @@
     "devUrl": "http://localhost:4000"
   },
   "app": {
-    "windows": [
-      {
-        "label": "main",
-        "title": "ClientATS - Job Scraping & Management",
-        "width": 1280,
-        "height": 900,
-        "resizable": true,
-        "fullscreen": false,
-        "minWidth": 800,
-        "minHeight": 600
-      }
-    ],
+    "windows": [],
     "security": {
       "csp": null
     }
