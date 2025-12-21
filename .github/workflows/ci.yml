@@ -39,7 +39,7 @@ jobs:
           mix ecto.migrate
 
       - name: Run tests
-        run: mix test --cover
+        run: mix test --exclude ollama --cover
 
       - name: Upload coverage reports
         uses: codecov/codecov-action@v3
