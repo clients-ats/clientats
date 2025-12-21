@@ -6,6 +6,7 @@ use std::fs::OpenOptions;
 use std::io::Write;
 use port_check::is_port_reachable;
 use tauri::Manager;
+use tauri::menu::{Menu, Submenu, MenuItem, PredefinedMenuItem};
 
 #[cfg(not(debug_assertions))]
 use std::net::TcpListener;
@@ -99,6 +100,68 @@ fn main() {
     builder
         .plugin(tauri_plugin_shell::init())
         .setup(move |app| {
+            // Create menu
+            let handle = app.handle();
+            
+            let quit_i = MenuItem::with_id(handle, "quit", "Quit", true, None::<&str>)?;
+            let close_i = MenuItem::with_id(handle, "close", "Close", true, None::<&str>)?;
+            
+            let file_menu = Submenu::with_items(
+                handle,
+                "File",
+                true,
+                &[
+                    &PredefinedMenuItem::about(handle, None, None)?,
+                    &PredefinedMenuItem::separator(handle)?,
+                    &PredefinedMenuItem::services(handle, None)?,
+                    &PredefinedMenuItem::separator(handle)?,
+                    &PredefinedMenuItem::hide(handle, None)?,
+                    &PredefinedMenuItem::hide_others(handle, None)?,
+                    &PredefinedMenuItem::show_all(handle, None)?,
+                    &PredefinedMenuItem::separator(handle)?,
+                    &quit_i,
+                ],
+            )?;
+
+            let edit_menu = Submenu::with_items(
+                handle,
+                "Edit",
+                true,
+                &[
+                    &PredefinedMenuItem::undo(handle, None)?,
+                    &PredefinedMenuItem::redo(handle, None)?,
+                    &PredefinedMenuItem::separator(handle)?,
+                    &PredefinedMenuItem::cut(handle, None)?,
+                    &PredefinedMenuItem::copy(handle, None)?,
+                    &PredefinedMenuItem::paste(handle, None)?,
+                    &PredefinedMenuItem::select_all(handle, None)?,
+                ],
+            )?;
+
+            let window_menu = Submenu::with_items(
+                handle,
+                "Window",
+                true,
+                &[
+                    &PredefinedMenuItem::minimize(handle, None)?,
+                    &PredefinedMenuItem::separator(handle)?,
+                    &close_i,
+                ],
+            )?;
+
+            let menu = Menu::with_items(handle, &[&file_menu, &edit_menu, &window_menu])?;
+            app.set_menu(menu)?;
+
+            app.on_menu_event(move |app, event| {
+                if event.id == quit_i.id() {
+                    app.exit(0);
+                } else if event.id == close_i.id() {
+                    if let Some(window) = app.get_webview_window("main") {
+                        let _ = window.close();
+                    }
+                }
+            });
+
             // In dev mode, window loads devUrl automatically from tauri.conf.json
             #[cfg(debug_assertions)]
             {
