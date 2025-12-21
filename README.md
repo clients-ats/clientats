@@ -62,7 +62,7 @@ The application works with many major job boards including:
 ### Prerequisites
 - Elixir 1.19.4+
 - Erlang/OTP 26.0+
-- PostgreSQL 12+
+- SQLite 3
 - Node.js 18+ (for assets)
 
 ### Installation
@@ -80,7 +80,7 @@ mix setup
 
 This will:
 - Install Hex dependencies
-- Create the PostgreSQL database
+- Create the SQLite database
 - Run database migrations
 - Compile the application
 
@@ -121,7 +121,7 @@ Create a `.env` file or set environment variables:
 
 ```bash
 # Database
-DATABASE_URL=ecto://postgres:postgres@localhost/clientats_dev
+DATABASE_PATH=clientats_dev.db
 
 # Phoenix
 SECRET_KEY_BASE=<generated-secret>
@@ -259,24 +259,25 @@ Privacy: 100% local, no data sent anywhere
 
 ### Database Backup
 
-#### Manual PostgreSQL Dump
+#### Manual SQLite Backup
+Since ClientATS uses SQLite, backing up is as simple as copying the database file.
+
 ```bash
 # Create a backup
-pg_dump -U postgres clientats_dev > backup.sql
+cp clientats_dev.db backups/clientats_dev_backup.db
 
 # Restore from backup
-psql -U postgres -d clientats_dev < backup.sql
+cp backups/clientats_dev_backup.db clientats_dev.db
 ```
 
 #### Full Application Backup
 ```bash
 # Backup database and configuration
 mkdir -p backups
-pg_dump -U postgres clientats_dev > backups/clientats_$(date +%Y%m%d_%H%M%S).sql
+cp clientats_dev.db backups/clientats_$(date +%Y%m%d_%H%M%S).db
 
 # Backup configuration files
 cp -r config/runtime.exs backups/
-cp -r lib/clientats/llm backups/
 ```
 
 ### Restore from Backup
