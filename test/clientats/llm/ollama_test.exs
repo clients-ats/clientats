@@ -1,6 +1,8 @@
 defmodule Clientats.LLM.OllamaTest do
   use ExUnit.Case, async: true
 
+  @moduletag :ollama
+
   alias Clientats.LLM.Providers.Ollama
 
   describe "ping/1" do
