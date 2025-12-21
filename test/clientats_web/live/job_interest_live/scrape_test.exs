@@ -3,6 +3,8 @@ defmodule ClientatsWeb.JobInterestLive.ScrapeTest do
 
   import Phoenix.LiveViewTest
 
+  @moduletag :ollama
+
   alias Clientats.Accounts
   alias Clientats.LLMConfig
 

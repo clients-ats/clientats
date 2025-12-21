@@ -104,6 +104,7 @@ defmodule Clientats.LLMConfigTest do
       {:ok, user: user}
     end
 
+    @tag :ollama
     test "returns list of enabled providers", %{user: user} do
       LLMConfig.save_provider_config(user.id, :gemini, %{
         "provider" => "gemini",
@@ -151,6 +152,7 @@ defmodule Clientats.LLMConfigTest do
   end
 
   describe "validate_api_key/2" do
+    @tag :ollama
     test "allows nil or no API key for Ollama" do
       assert :ok = LLMConfig.validate_api_key(:ollama, nil)
       assert :ok = LLMConfig.validate_api_key(:ollama, "")
@@ -168,6 +170,7 @@ defmodule Clientats.LLMConfigTest do
   end
 
   describe "test_connection/2" do
+    @tag :ollama
     test "handles Ollama local connection" do
       # This test might fail if Ollama is not running, which is expected
       config = %{base_url: "http://localhost:11434"}

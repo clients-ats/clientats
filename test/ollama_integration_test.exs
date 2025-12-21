@@ -1,6 +1,8 @@
 defmodule OllamaIntegrationTest do
   use ExUnit.Case, async: true
 
+  @moduletag :ollama
+
   describe "Ollama Integration" do
     test "check if req_llm supports Ollama" do
       # Try to see if Ollama provider is available
