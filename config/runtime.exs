@@ -56,8 +56,14 @@ if config_env() == :prod do
   secret_key_base =
     System.get_env("SECRET_KEY_BASE") || generate_secret.()
 
-  host = System.get_env("PHX_HOST") || "example.com"
+  # For desktop app deployments, we default to localhost if PHX_HOST is not set
+  host = System.get_env("PHX_HOST") || "localhost"
   port = String.to_integer(System.get_env("PORT") || "4000")
+
+  # For the desktop app, we want the URL to match the local address
+  # If scheme is https and port is 443, it will cause issues with local connections
+  url_port = if System.get_env("PHX_HOST"), do: 443, else: port
+  url_scheme = if System.get_env("PHX_HOST"), do: "https", else: "http"
 
   config :clientats, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
@@ -121,7 +127,8 @@ if config_env() == :prod do
     cache_ttl: 86400
 
   config :clientats, ClientatsWeb.Endpoint,
-    url: [host: host, port: 443, scheme: "https"],
+    url: [host: host, port: url_port, scheme: url_scheme],
+    check_origin: ["//localhost", "//127.0.0.1", "//localhost:#{port}", "//127.0.0.1:#{port}"],
     http: [
       # For desktop/Tauri app: bind to IPv4 loopback (127.0.0.1)
       # This ensures the app can connect via http://127.0.0.1:4000

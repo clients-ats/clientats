@@ -8,11 +8,18 @@ use port_check::is_port_reachable;
 use tauri::Manager;
 
 #[cfg(not(debug_assertions))]
-use std::process::Command;
+use std::net::TcpListener;
+#[cfg(not(debug_assertions))]
+use std::sync::{Arc, Mutex};
+#[cfg(not(debug_assertions))]
+use std::process::{Command, Child};
 
 
 const DEFAULT_PORT: u16 = 4000;
 const MAX_STARTUP_WAIT_SECS: u64 = 30;
+
+#[cfg(not(debug_assertions))]
+struct PhoenixProcess(Arc<Mutex<Option<Child>>>);
 
 // Helper function to write logs to a file
 fn log_to_file(log_path: &std::path::Path, message: &str) {
@@ -26,6 +33,14 @@ fn log_to_file(log_path: &std::path::Path, message: &str) {
     }
     // Also print to stdout for dev mode
     println!("{}", message);
+}
+
+#[cfg(not(debug_assertions))]
+fn get_free_port() -> Option<u16> {
+    TcpListener::bind("127.0.0.1:0")
+        .and_then(|listener| listener.local_addr())
+        .map(|addr| addr.port())
+        .ok()
 }
 
 fn wait_for_server(port: u16, log_path: &std::path::Path) -> bool {
@@ -47,13 +62,20 @@ fn wait_for_server(port: u16, log_path: &std::path::Path) -> bool {
 fn main() {
     // Create log file path
     #[cfg(debug_assertions)]
-    let log_path = std::path::PathBuf::from("/tmp/clientats-tauri-dev.log");
+    let log_path_val = std::path::PathBuf::from("/tmp/clientats-tauri-dev.log");
 
     #[cfg(not(debug_assertions))]
-    let log_path = {
+    let log_path_val = {
         let temp_dir = std::env::temp_dir();
         temp_dir.join("clientats-tauri.log")
     };
+
+    let log_path = log_path_val.clone();
+    
+    #[cfg(not(debug_assertions))]
+    let phoenix_child: Arc<Mutex<Option<Child>>> = Arc::new(Mutex::new(None));
+    #[cfg(not(debug_assertions))]
+    let phoenix_child_clone = Arc::clone(&phoenix_child);
 
     // In dev mode, just verify Phoenix is running - Tauri uses devUrl from config
     #[cfg(debug_assertions)]
@@ -63,20 +85,26 @@ fn main() {
         if !wait_for_server(DEFAULT_PORT, &log_path) {
             log_to_file(&log_path, &format!("ERROR: Phoenix server not running on port {}!", DEFAULT_PORT));
             log_to_file(&log_path, "Start it with: mix phx.server");
-            std::process::exit(1);
+            // In dev mode we don't exit, maybe it will start later or user will start it
+        } else {
+            log_to_file(&log_path, "Phoenix is ready! Launching Tauri window...");
         }
-        log_to_file(&log_path, "Phoenix is ready! Launching Tauri window...");
     }
 
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+    
+    #[cfg(not(debug_assertions))]
+    let builder = builder.manage(PhoenixProcess(phoenix_child_clone));
+
+    builder
         .plugin(tauri_plugin_shell::init())
-        .setup(move |_app| {
+        .setup(move |app| {
             // In dev mode, window loads devUrl automatically from tauri.conf.json
             #[cfg(debug_assertions)]
             {
                 log_to_file(&log_path, "Dev mode: Window will load from devUrl in config");
-                let window = _app.get_webview_window("main").expect("Failed to get main window");
-                let url = "http://localhost:4000";
+                let window = app.get_webview_window("main").expect("Failed to get main window");
+                let url = format!("http://localhost:{}", DEFAULT_PORT);
                 window.navigate(url.parse().unwrap()).expect("Failed to navigate to Phoenix");
                 return Ok(());
             }
@@ -87,24 +115,25 @@ fn main() {
                 log_to_file(&log_path, "Production mode: Starting embedded Phoenix server");
                 log_to_file(&log_path, &format!("Log file location: {}", log_path.display()));
 
-                let port = DEFAULT_PORT;
+                let port = get_free_port().unwrap_or(DEFAULT_PORT);
                 let url = format!("http://127.0.0.1:{}", port);
+                log_to_file(&log_path, &format!("Selected port: {}", port));
 
                 // Get the Phoenix release path
                 let phoenix_path = if cfg!(target_os = "macos") {
-                    _app.path().resource_dir()
+                    app.path().resource_dir()
                         .expect("Failed to get resource dir")
                         .join("phoenix")
                         .join("bin")
                         .join("clientats")
                 } else if cfg!(target_os = "windows") {
-                    _app.path().resource_dir()
+                    app.path().resource_dir()
                         .expect("Failed to get resource dir")
                         .join("phoenix")
                         .join("bin")
                         .join("clientats.bat")
                 } else {
-                    _app.path().resource_dir()
+                    app.path().resource_dir()
                         .expect("Failed to get resource dir")
                         .join("phoenix")
                         .join("bin")
@@ -121,7 +150,7 @@ fn main() {
                 log_to_file(&log_path, "Phoenix executable found");
 
                 // Get database directory in user's home
-                let db_dir = _app.path().app_data_dir()
+                let db_dir = app.path().app_data_dir()
                     .expect("Failed to get app data dir");
 
                 std::fs::create_dir_all(&db_dir)
@@ -158,8 +187,22 @@ fn main() {
 
                 // Step 2: Start Phoenix server
                 log_to_file(&log_path, "Starting Phoenix server...");
-                let mut cmd = Command::new(&phoenix_path);
-                cmd.arg("start");
+                
+                // Use "exec" to replace the shell process with the Phoenix process.
+                // This ensures that child.kill() kills the Phoenix server directly
+                // rather than just the wrapper script.
+                let mut cmd = if cfg!(target_os = "windows") {
+                    let mut c = Command::new(&phoenix_path);
+                    c.arg("start");
+                    c
+                } else {
+                    let mut c = Command::new("sh");
+                    c.arg("-c");
+                    c.arg(format!("exec \"$1\" start"));
+                    c.arg("--");
+                    c.arg(&phoenix_path);
+                    c
+                };
 
                 cmd.env("PORT", port.to_string())
                    .env("MIX_ENV", "prod")
@@ -169,6 +212,8 @@ fn main() {
                 match cmd.spawn() {
                     Ok(child) => {
                         log_to_file(&log_path, &format!("Phoenix server process started with PID: {}", child.id()));
+                        let mut phoenix_child_lock = phoenix_child.lock().unwrap();
+                        *phoenix_child_lock = Some(child);
                     }
                     Err(e) => {
                         log_to_file(&log_path, &format!("Failed to spawn Phoenix server: {}", e));
@@ -189,24 +234,15 @@ fn main() {
                 use tauri::WebviewUrl;
                 use tauri::WebviewWindowBuilder;
 
-                let window_builder = WebviewWindowBuilder::new(_app, "main", WebviewUrl::External(url.parse().unwrap()))
+                let window_builder = WebviewWindowBuilder::new(app, "main", WebviewUrl::External(url.parse().unwrap()))
                     .title("ClientATS - Job Scraping & Management")
                     .inner_size(1280.0, 900.0)
                     .min_inner_size(800.0, 600.0)
                     .resizable(true);
 
-                // Enable devtools for debugging in production
-                #[cfg(debug_assertions)]
-                let window_builder = window_builder.devtools(true);
-
                 match window_builder.build() {
                     Ok(window) => {
                         log_to_file(&log_path, "Window created successfully");
-
-                        // Open devtools in debug builds
-                        #[cfg(debug_assertions)]
-                        window.open_devtools();
-
                         match window.show() {
                             Ok(_) => log_to_file(&log_path, "Window shown"),
                             Err(e) => log_to_file(&log_path, &format!("Failed to show window: {}", e)),
@@ -222,6 +258,19 @@ fn main() {
                 Ok(())
             }
         })
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(move |_app_handle, event| {
+            if let tauri::RunEvent::Exit = event {
+                #[cfg(not(debug_assertions))]
+                {
+                    let phoenix_process = _app_handle.state::<PhoenixProcess>();
+                    let mut child_lock = phoenix_process.0.lock().unwrap();
+                    if let Some(mut child) = child_lock.take() {
+                        println!("Killing Phoenix server process...");
+                        let _ = child.kill();
+                    }
+                }
+            }
+        });
 }
