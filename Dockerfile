@@ -7,8 +7,7 @@ WORKDIR /app
 # Install build dependencies
 RUN apk add --no-cache \
     build-base \
-    git \
-    postgresql-client
+    git
 
 # Copy dependency files
 COPY mix.exs mix.lock ./
@@ -42,7 +41,6 @@ WORKDIR /app
 RUN apk add --no-cache \
     libssl3 \
     ca-certificates \
-    postgresql-client \
     curl
 
 # Copy release from builder

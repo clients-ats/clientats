@@ -68,9 +68,9 @@ ENV MIX_ENV=prod
 # Prepare build dir
 WORKDIR /app
 
-# Install hex + rebar (skip rebar if download fails - will install from deps if needed)
+# Install hex + rebar
 RUN mix local.hex --force && \
-    (mix local.rebar --force || echo "Rebar will be installed from dependencies if needed")
+    mix local.rebar --force
 
 # Copy dependency files
 COPY mix.exs mix.lock ./
@@ -85,10 +85,10 @@ COPY lib lib
 COPY priv priv
 COPY assets assets
 
-# Compile the application first (generates phoenix-colocated hooks)
+# Compile the application first
 RUN mix compile
 
-# Compile assets (needs phoenix-colocated hooks to be generated first)
+# Compile assets
 RUN mix assets.deploy
 
 # Runtime stage
@@ -116,15 +116,20 @@ COPY --from=build --chown=app:app /app/lib /app/lib
 COPY --from=build --chown=app:app /app/priv /app/priv
 COPY --from=build --chown=app:app /app/mix.exs /app/mix.lock ./
 
+# Create directory for SQLite database
+RUN mkdir -p /app/db && chown app:app /app/db
+VOLUME /app/db
+
 # Switch to app user
 USER app
 
-# Install hex for app user (needed for mix commands)
+# Install hex for app user
 RUN mix local.hex --force
 
 # Set environment
 ENV MIX_ENV=prod \
-    PORT=4000
+    PORT=4000 \
+    DATABASE_PATH=/app/db/clientats.db
 
 # Expose port
 EXPOSE 4000
@@ -140,34 +145,13 @@ cat > "${BUILD_DIR}/docker-compose.yml" << 'EOF'
 version: '3.8'
 
 services:
-  db:
-    image: postgres:16-alpine
-    container_name: clientats-prod-db
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: clientats_prod
-    volumes:
-      - clientats_prod_data:/var/lib/postgresql/data
-    ports:
-      - "6433:5432"
-    networks:
-      - clientats-prod
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   app:
     build: .
     container_name: clientats-prod-app
-    depends_on:
-      db:
-        condition: service_healthy
+    volumes:
+      - clientats_prod_data:/app/db
     environment:
-      DATABASE_URL: ecto://postgres:postgres@db:5432/clientats_prod
+      DATABASE_PATH: /app/db/clientats.db
       SECRET_KEY_BASE: ${SECRET_KEY_BASE}
       PHX_HOST: ${PHX_HOST:-localhost}
       PHX_PORT: ${PHX_PORT:-4001}
@@ -213,9 +197,9 @@ EOF
 echo ""
 echo "📝 Creating README..."
 cat > "${BUILD_DIR}/README.md" << 'EOF'
-# Clientats Production Deployment
+# Clientats Production Deployment (SQLite)
 
-This package contains a production-ready build of Clientats.
+This package contains a production-ready build of Clientats using SQLite.
 
 ## Prerequisites
 
@@ -270,14 +254,6 @@ podman-compose down -v
 podman-compose restart
 ```
 
-### Update to a new version
-```bash
-podman-compose down
-# Replace files with new version
-podman-compose up -d --build
-podman-compose exec app mix ecto.migrate
-```
-
 ## Configuration
 
 ### Ports
@@ -285,44 +261,15 @@ The application runs on port 4001 by default (to avoid conflicts with dev).
 Change `PHX_PORT` in `.env` to use a different port.
 
 ### Database
-PostgreSQL runs on port 6433 (to avoid conflicts with dev).
-Data is persisted in a Docker volume named `clientats_prod_data`.
-
-### Backup Database
-```bash
-podman-compose exec db pg_dump -U postgres clientats_prod > backup.sql
-```
-
-### Restore Database
-```bash
-cat backup.sql | podman-compose exec -T db psql -U postgres clientats_prod
-```
+This version uses SQLite. Data is persisted in a volume named `clientats_prod_data`.
+The database file is located at `/app/db/clientats.db` inside the container.
 
 ## Architecture
 
 - **app**: Clientats application (Phoenix/Elixir)
-- **db**: PostgreSQL 16 database
+- **Database**: SQLite 3 (embedded)
 - **Network**: Isolated `clientats-prod` network
 - **Volumes**: `clientats_prod_data` for database persistence
-
-## Troubleshooting
-
-### Application won't start
-```bash
-podman-compose logs app
-```
-
-### Database connection issues
-```bash
-podman-compose exec db psql -U postgres -c "SELECT 1"
-```
-
-### Reset everything
-```bash
-podman-compose down -v
-rm -rf clientats_prod_data
-podman-compose up -d --build
-```
 EOF
 
 # Create migration helper script
@@ -373,12 +320,8 @@ if grep -q "CHANGE_ME" .env 2>/dev/null; then
     fi
 fi
 
-echo "🐳 Building and starting containers..."
+echo "🐳 Building and starting container..."
 podman-compose up -d --build
-
-echo ""
-echo "⏳ Waiting for database to be ready..."
-sleep 5
 
 echo ""
 echo "🔄 Running migrations..."
