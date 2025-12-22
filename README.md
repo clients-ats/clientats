@@ -120,8 +120,11 @@ Open your browser and navigate to `http://localhost:4000`
 Create a `.env` file or set environment variables:
 
 ```bash
-# Database
-DATABASE_PATH=clientats_dev.db
+# Database (optional - uses platform-specific location if not set)
+# Linux: ~/.config/clientats/db/clientats.db
+# macOS: ~/Library/Application Support/clientats/db/clientats.db
+# Windows: %APPDATA%/clientats/db/clientats.db
+DATABASE_PATH=/custom/path/clientats.db  # Override default location
 
 # Phoenix
 SECRET_KEY_BASE=<generated-secret>
@@ -131,6 +134,8 @@ PHX_PORT=4000
 # LLM Encryption (optional)
 LLM_ENCRYPTION_KEY=<your-encryption-key>
 ```
+
+**Note:** In production, the database will automatically be stored in a platform-appropriate directory unless `DATABASE_PATH` is explicitly set. Development and test environments use local database files in the project directory.
 
 ### 🚀 LLM Provider Setup Guide
 
@@ -262,12 +267,30 @@ Privacy: 100% local, no data sent anywhere
 #### Manual SQLite Backup
 Since ClientATS uses SQLite, backing up is as simple as copying the database file.
 
+**Development:**
 ```bash
-# Create a backup
+# Create a backup (development database in project directory)
 cp clientats_dev.db backups/clientats_dev_backup.db
 
 # Restore from backup
 cp backups/clientats_dev_backup.db clientats_dev.db
+```
+
+**Production:**
+```bash
+# Find your database location (platform-specific)
+# Linux: ~/.config/clientats/db/clientats.db
+# macOS: ~/Library/Application Support/clientats/db/clientats.db
+# Windows: %APPDATA%/clientats/db/clientats.db
+
+# Create a backup (Linux example)
+cp ~/.config/clientats/db/clientats.db backups/clientats_backup_$(date +%Y%m%d_%H%M%S).db
+
+# Or use DATABASE_PATH if you set a custom location
+cp $DATABASE_PATH backups/clientats_backup_$(date +%Y%m%d_%H%M%S).db
+
+# Restore from backup
+cp backups/clientats_backup_20240101_120000.db ~/.config/clientats/db/clientats.db
 ```
 
 #### Full Application Backup
@@ -510,13 +533,15 @@ This project is provided as-is. See LICENSE file for details.
 
 ### Production Checklist
 - [ ] Set strong `SECRET_KEY_BASE`
-- [ ] Configure production database URL
+- [ ] (Optional) Configure `DATABASE_PATH` if not using default platform directory
 - [ ] Set up LLM provider keys in environment variables
 - [ ] Enable HTTPS/TLS
 - [ ] Configure backup strategy
 - [ ] Set up monitoring and logging
 - [ ] Test all LLM providers
 - [ ] Create database backups before deploying
+
+**Note:** The database will automatically be stored in a platform-specific directory (e.g., `~/.config/clientats/db/` on Linux) unless `DATABASE_PATH` is explicitly set.
 
 ### Docker Deployment
 See `Dockerfile` for containerized deployment instructions.

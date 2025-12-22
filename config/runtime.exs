@@ -21,12 +21,12 @@ if System.get_env("PHX_SERVER") do
 end
 
 if config_env() == :prod do
-  database_path =
-    System.get_env("DATABASE_PATH") ||
-      raise """
-      environment variable DATABASE_PATH is missing.
-      For example: /var/lib/clientats/production.db
-      """
+  # Use platform-specific config directory for database unless DATABASE_PATH is set
+  # This will use:
+  # - Linux: ~/.config/clientats/db/clientats.db
+  # - macOS: ~/Library/Application Support/clientats/db/clientats.db
+  # - Windows: %APPDATA%/clientats/db/clientats.db
+  database_path = Clientats.Platform.database_path(ensure_dir: true)
 
   config :clientats, Clientats.Repo,
     database: database_path,
