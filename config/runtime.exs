@@ -9,14 +9,15 @@ import Config
 
 # ## Using releases
 #
-# If you use `mix release`, you need to explicitly enable the server
-# by passing the PHX_SERVER=true when you start it:
-#
-#     PHX_SERVER=true bin/clientats start
-#
-# Alternatively, you can use `mix phx.gen.release` to generate a `bin/server`
-# script that automatically sets the env var above.
-if System.get_env("PHX_SERVER") do
+# For production releases (desktop app, docker, etc), we enable the server by default.
+# You can disable it by setting PHX_SERVER=false if needed (e.g., for specific deployment scenarios).
+# In development and test, the server is controlled by the respective config files.
+if config_env() == :prod do
+  # Enable server by default in production unless explicitly disabled
+  server_enabled = System.get_env("PHX_SERVER", "true") != "false"
+  config :clientats, ClientatsWeb.Endpoint, server: server_enabled
+elsif System.get_env("PHX_SERVER") do
+  # In dev/test, only enable if PHX_SERVER is explicitly set
   config :clientats, ClientatsWeb.Endpoint, server: true
 end
 

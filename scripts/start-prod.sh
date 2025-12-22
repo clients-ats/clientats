@@ -23,6 +23,11 @@ echo "Starting production server..."
 echo "The server will start in the foreground."
 echo "Press Ctrl+C to stop."
 echo ""
+echo "Server will be available at: http://localhost:4000"
+echo "(Port can be changed with PORT environment variable)"
+echo ""
 
 # Start the release
+# Note: PHX_SERVER is enabled by default in production.
+# To disable, set PHX_SERVER=false before running this script.
 _build/prod/rel/clientats/bin/clientats start
