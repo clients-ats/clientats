@@ -89,6 +89,8 @@ This will:
 mix phx.server
 ```
 
+**Note:** Database migrations run automatically on startup, so you don't need to run `mix ecto.migrate` manually. The application will ensure your database schema is always up to date.
+
 4. **Access the application**
 Open your browser and navigate to `http://localhost:4000`
 
@@ -367,11 +369,14 @@ mix coveralls
 ```
 
 ### Database Migrations
+
+**Note:** Migrations run automatically on application startup, so you typically don't need to run them manually. However, these commands are available for development tasks:
+
 ```bash
 # Create new migration
 mix ecto.gen.migration migration_name
 
-# Run migrations
+# Run migrations manually (optional - they run automatically on startup)
 mix ecto.migrate
 
 # Rollback last migration
