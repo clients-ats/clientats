@@ -7,6 +7,13 @@ defmodule Clientats.Application do
 
   @impl true
   def start(_type, _args) do
+    # Run migrations automatically on startup to ensure database schema is up to date
+    # This is especially important when using platform-specific directories where the
+    # database may be created fresh on first run. Migrations are idempotent, so they
+    # won't re-apply if already completed. This provides a better user experience as
+    # the application "just works" without requiring manual migration commands.
+    migrate()
+
     children = [
       ClientatsWeb.Telemetry,
       Clientats.Repo,
@@ -29,6 +36,17 @@ defmodule Clientats.Application do
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Clientats.Supervisor]
     Supervisor.start_link(children, opts)
+  end
+
+  defp migrate do
+    # Load the application to ensure all modules are available
+    Application.load(:clientats)
+
+    # Run migrations for all configured repos
+    # Ecto.Migrator.with_repo will start the repo, run migrations, then stop it
+    for repo <- Application.fetch_env!(:clientats, :ecto_repos) do
+      {:ok, _, _} = Ecto.Migrator.with_repo(repo, &Ecto.Migrator.run(&1, :up, all: true))
+    end
   end
 
   defp oban_config do
