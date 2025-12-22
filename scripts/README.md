@@ -46,6 +46,12 @@ Start the production release.
 
 **Prerequisites:** Run `build-prod.sh` first
 
+**Notes:**
+- The Phoenix server is enabled by default in production
+- Database migrations run automatically on startup
+- Server will be available at http://localhost:4000 by default
+- Use `PORT` environment variable to change the port
+
 #### `package-prod.sh`
 Build a complete production package with Docker deployment (SQLite based).
 

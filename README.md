@@ -546,7 +546,10 @@ This project is provided as-is. See LICENSE file for details.
 - [ ] Test all LLM providers
 - [ ] Create database backups before deploying
 
-**Note:** The database will automatically be stored in a platform-specific directory (e.g., `~/.config/clientats/db/` on Linux) unless `DATABASE_PATH` is explicitly set.
+**Notes:**
+- The database will automatically be stored in a platform-specific directory (e.g., `~/.config/clientats/db/` on Linux) unless `DATABASE_PATH` is explicitly set.
+- The Phoenix server is **enabled by default** in production mode. To disable, set `PHX_SERVER=false`.
+- Database migrations run automatically on startup.
 
 ### Docker Deployment
 See `Dockerfile` for containerized deployment instructions.
