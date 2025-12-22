@@ -196,7 +196,12 @@ Manage the SQLite database and migrations.
 You can customize behavior with environment variables:
 
 - `MIX_ENV` - Set environment (dev/test/prod)
-- `DATABASE_PATH` - Override SQLite database path
+- `DATABASE_PATH` - Override SQLite database path (optional in production)
+  - If not set in production, uses platform-specific directory:
+    - Linux: `~/.config/clientats/db/clientats.db`
+    - macOS: `~/Library/Application Support/clientats/db/clientats.db`
+    - Windows: `%APPDATA%/clientats/db/clientats.db`
+  - Development/test always use local project directory
 - `PORT` - Override web server port
 - `SECRET_KEY_BASE` - Set secret key for production
 
