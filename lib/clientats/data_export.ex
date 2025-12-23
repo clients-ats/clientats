@@ -59,7 +59,7 @@ defmodule Clientats.DataExport do
   defp export_job_applications(user_id) do
     JobApplication
     |> where(user_id: ^user_id)
-    |> preload(:application_events)
+    |> preload(:events)
     |> order_by([j], desc: j.application_date)
     |> Repo.all()
     |> Enum.map(&serialize_job_application/1)
@@ -96,8 +96,8 @@ defmodule Clientats.DataExport do
       status: job_interest.status,
       priority: job_interest.priority,
       notes: job_interest.notes,
-      inserted_at: DateTime.to_iso8601(job_interest.inserted_at),
-      updated_at: DateTime.to_iso8601(job_interest.updated_at)
+      inserted_at: to_iso8601(job_interest.inserted_at),
+      updated_at: to_iso8601(job_interest.updated_at)
     }
   end
 
@@ -117,9 +117,9 @@ defmodule Clientats.DataExport do
       resume_path: job_application.resume_path,
       notes: job_application.notes,
       application_events:
-        Enum.map(job_application.application_events, &serialize_application_event/1),
-      inserted_at: DateTime.to_iso8601(job_application.inserted_at),
-      updated_at: DateTime.to_iso8601(job_application.updated_at)
+        Enum.map(job_application.events, &serialize_application_event/1),
+      inserted_at: to_iso8601(job_application.inserted_at),
+      updated_at: to_iso8601(job_application.updated_at)
     }
   end
 
@@ -132,8 +132,8 @@ defmodule Clientats.DataExport do
       contact_phone: event.contact_phone,
       notes: event.notes,
       follow_up_date: date_to_string(event.follow_up_date),
-      inserted_at: DateTime.to_iso8601(event.inserted_at),
-      updated_at: DateTime.to_iso8601(event.updated_at)
+      inserted_at: to_iso8601(event.inserted_at),
+      updated_at: to_iso8601(event.updated_at)
     }
   end
 
@@ -145,8 +145,8 @@ defmodule Clientats.DataExport do
       original_filename: resume.original_filename,
       file_size: resume.file_size,
       is_default: resume.is_default,
-      inserted_at: DateTime.to_iso8601(resume.inserted_at),
-      updated_at: DateTime.to_iso8601(resume.updated_at)
+      inserted_at: to_iso8601(resume.inserted_at),
+      updated_at: to_iso8601(resume.updated_at)
     }
   end
 
@@ -156,13 +156,17 @@ defmodule Clientats.DataExport do
       description: template.description,
       content: template.content,
       is_default: template.is_default,
-      inserted_at: DateTime.to_iso8601(template.inserted_at),
-      updated_at: DateTime.to_iso8601(template.updated_at)
+      inserted_at: to_iso8601(template.inserted_at),
+      updated_at: to_iso8601(template.updated_at)
     }
   end
 
   defp date_to_string(nil), do: nil
   defp date_to_string(date), do: Date.to_iso8601(date)
+
+  defp to_iso8601(nil), do: nil
+  defp to_iso8601(%NaiveDateTime{} = ndt), do: NaiveDateTime.to_iso8601(ndt)
+  defp to_iso8601(%DateTime{} = dt), do: DateTime.to_iso8601(dt)
 
   # Private functions for import
 

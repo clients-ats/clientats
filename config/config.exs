@@ -17,7 +17,11 @@ config :clientats, Oban,
   engine: Oban.Engines.Lite,
   repo: Clientats.Repo,
   plugins: [
-    {Oban.Plugins.Pruner, interval: :timer.hours(12), limit: 5000}
+    {Oban.Plugins.Pruner, interval: :timer.hours(12), limit: 5000},
+    {Oban.Plugins.Cron,
+     crontab: [
+       {"0 2 * * *", Clientats.Workers.BackupWorker}
+     ]}
   ],
   queues: [
     scrape: [limit: 10],
