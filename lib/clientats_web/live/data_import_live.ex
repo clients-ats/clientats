@@ -59,7 +59,10 @@ defmodule ClientatsWeb.DataImportLive do
         end
 
       [] ->
-        {:noreply, put_flash(socket, :error, "Please select a file to import")}
+        {:noreply,
+         socket
+         |> assign(:import_result, {:error, "Please select a file to import"})
+         |> put_flash(:error, "Please select a file to import")}
     end
   end
 
@@ -115,7 +118,7 @@ defmodule ClientatsWeb.DataImportLive do
             </div>
           <% end %>
 
-          <.form for={%{}} id="import-form" phx-submit="import" class="space-y-4">
+          <.form for={%{}} id="import-form" phx-change="validate" phx-submit="import" class="space-y-4">
             <div>
               <label class="label">
                 <span class="label-text font-medium">Import File *</span>

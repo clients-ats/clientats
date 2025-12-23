@@ -16,9 +16,11 @@ if config_env() == :prod do
   # Enable server by default in production unless explicitly disabled
   server_enabled = System.get_env("PHX_SERVER", "true") != "false"
   config :clientats, ClientatsWeb.Endpoint, server: server_enabled
-elsif System.get_env("PHX_SERVER") do
-  # In dev/test, only enable if PHX_SERVER is explicitly set
-  config :clientats, ClientatsWeb.Endpoint, server: true
+else
+  if System.get_env("PHX_SERVER") do
+    # In dev/test, only enable if PHX_SERVER is explicitly set
+    config :clientats, ClientatsWeb.Endpoint, server: true
+  end
 end
 
 if config_env() == :prod do
