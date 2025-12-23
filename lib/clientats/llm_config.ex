@@ -312,24 +312,31 @@ defmodule Clientats.LLMConfig do
   defp decrypt_setting(setting), do: setting
 
   defp format_provider_status(%Setting{} = setting) do
-    # For Ollama, we don't need an API key, so just check provider_status
-    # For other providers, check both provider_status and api_key
-    configured =
+    # Check if essential configuration is present
+    has_config =
       case setting.provider do
         "ollama" ->
-          setting.provider_status != "unconfigured" and setting.base_url != nil and
-            setting.base_url != ""
+          setting.base_url != nil and setting.base_url != ""
 
         _ ->
-          setting.provider_status != "unconfigured" and setting.api_key != nil
+          setting.api_key != nil and setting.api_key != ""
+      end
+
+    # If DB says unconfigured but we have config, report "configured"
+    status =
+      if (is_nil(setting.provider_status) or setting.provider_status == "unconfigured") and
+           has_config do
+        "configured"
+      else
+        setting.provider_status || "unconfigured"
       end
 
     %{
       provider: setting.provider,
       enabled: setting.enabled,
-      status: setting.provider_status || "unconfigured",
+      status: status,
       model: setting.default_model,
-      configured: configured,
+      configured: has_config,
       last_tested_at: setting.last_tested_at,
       last_error: setting.last_error,
       updated_at: setting.updated_at

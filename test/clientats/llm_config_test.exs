@@ -149,6 +149,24 @@ defmodule Clientats.LLMConfigTest do
       gemini_status = Enum.find(statuses, &(&1[:provider] == "gemini"))
       assert gemini_status[:enabled] == true
     end
+
+    test "returns status 'configured' when provider has config but DB status is unconfigured", %{
+      user: user
+    } do
+      # Create a setting with unconfigured status but valid API key
+      LLMConfig.save_provider_config(user.id, :gemini, %{
+        "provider" => "gemini",
+        "api_key" => "AIza123456789abcdefghijklmnop",
+        "enabled" => true
+        # Default status is unconfigured
+      })
+
+      statuses = LLMConfig.get_provider_status(user.id)
+      gemini_status = Enum.find(statuses, &(&1[:provider] == "gemini"))
+
+      assert gemini_status[:status] == "configured"
+      assert gemini_status[:configured] == true
+    end
   end
 
   describe "validate_api_key/2" do
