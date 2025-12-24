@@ -277,6 +277,8 @@ defmodule ClientatsWeb.JobApplicationLive.CoverLetterEditor do
                           class="h-96 font-mono text-sm"
                           rows="20"
                           placeholder="Your cover letter will appear here..."
+                          phx-hook="CoverLetterAutoSave"
+                          data-job-application-id={@job_application.id}
                         />
                       <% end %>
                       <div class="mt-2 text-sm text-gray-600">
@@ -405,7 +407,10 @@ defmodule ClientatsWeb.JobApplicationLive.CoverLetterEditor do
     case Jobs.update_job_application(socket.assigns.job_application, params) do
       {:ok, job_application} ->
         notify_parent({:saved, job_application})
-        {:noreply, socket}
+
+        {:noreply,
+         socket
+         |> push_event("draft_saved_to_server", %{})}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :form, to_form(changeset))}
