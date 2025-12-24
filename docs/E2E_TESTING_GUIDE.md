@@ -15,12 +15,11 @@ ClientATS has three main areas for E2E testing:
 ### Local Setup
 
 ```bash
-# Start Docker services
-docker-compose up -d
+# Install dependencies
+mix deps.get
 
-# Create and migrate database
-mix ecto.create
-mix ecto.migrate
+# Setup database (SQLite)
+mix setup
 
 # Start development server
 mix phx.server
@@ -31,10 +30,8 @@ Application runs on http://localhost:4000
 ### Optional Services
 
 For full LLM testing:
-```bash
-docker-compose --profile llm up -d
-# Then pull a model: ollama pull mistral
-```
+- **Ollama**: Install locally from [ollama.ai](https://ollama.ai) and run `ollama serve`.
+- **Gemini**: Obtain an API key from Google AI Studio.
 
 ## Test Scenarios
 
@@ -266,6 +263,81 @@ docker-compose --profile llm up -d
 
 ---
 
+### 6. Resumes & Cover Letters
+
+#### Test Case 6.1: Upload Resume
+
+**Steps:**
+1. From dashboard, click "Resumes"
+2. Click "Upload Resume"
+3. Select a PDF, DOC, or DOCX file
+4. Enter name: "John Doe - Senior Backend"
+5. Click "Upload Resume"
+
+**Expected Result:**
+- ✅ File uploaded successfully and stored in database
+- ✅ Resume listed in "My Resumes"
+- ✅ "Download" button is active
+
+#### Test Case 6.2: Invalid Resume Handling (Migration Test)
+
+**Steps:**
+1. *Simulate corruption*: Manually set `is_valid` to `false` in database or mock a missing file scenario during migration.
+   (For manual testing: Look for any pre-existing resumes from before the DB storage migration that might have missing files)
+2. View "Resumes" list.
+
+**Expected Result:**
+- ✅ Resume marked with "Invalid File" badge
+- ✅ Warning message displayed
+- ✅ "Download" button disabled
+- ✅ User can still Edit/Delete the record
+
+#### Test Case 6.3: Create Cover Letter Template
+
+**Steps:**
+1. From dashboard, click "Cover Letters"
+2. Click "New Template"
+3. Enter template name: "Tech Company Template"
+4. Fill in template:
+   ```
+   Dear [Company],
+
+   I am interested in the [Position] role...
+   ```
+5. Click "Save"
+
+**Expected Result:**
+- ✅ Template created
+- ✅ Listed in templates
+- ✅ Can be edited/deleted
+
+#### Test Case 6.4: Job Application Conversion Wizard
+
+**Steps:**
+1. Go to "Job Interests"
+2. Click "Convert to Application" on an interest
+3. **Step 1:** Confirm details (Company, Title) -> Click "Next"
+4. **Step 2:** Select Resume -> Choose an uploaded resume -> Click "Next"
+5. **Step 3:** Cover Letter -> Select a template -> Click "Generate with AI" (optional) -> Click "Next"
+6. **Step 4:** Review -> Click "Create Application"
+
+**Expected Result:**
+- ✅ Application created with status "Applied"
+- ✅ Resume and Cover Letter attached
+- ✅ Redirected to Application Details page
+
+#### Test Case 6.5: Download Cover Letter PDF
+
+**Steps:**
+1. View a Job Application detail page
+2. Click "Download PDF" button next to Cover Letter
+
+**Expected Result:**
+- ✅ PDF file downloads
+- ✅ PDF contains correctly formatted cover letter text
+
+---
+
 ### 5. Database & Health Checks
 
 #### Test Case 5.1: Simple Health Check
@@ -348,43 +420,6 @@ docker-compose --profile llm up -d
 
 ---
 
-### 6. Resumes & Cover Letters
-
-#### Test Case 6.1: Upload Resume
-
-**Steps:**
-1. From dashboard, click "Resumes"
-2. Click "Add Resume"
-3. Click file input and select a PDF
-4. Enter name: "John Doe - Senior Backend"
-5. Click "Upload"
-
-**Expected Result:**
-- ✅ File uploaded successfully
-- ✅ Resume listed
-- ✅ Download link available
-
-#### Test Case 6.2: Create Cover Letter Template
-
-**Steps:**
-1. From dashboard, click "Cover Letters"
-2. Click "New Template"
-3. Enter template name: "Tech Company Template"
-4. Fill in template:
-   ```
-   Dear [Company],
-
-   I am interested in the [Position] role...
-   ```
-5. Click "Save"
-
-**Expected Result:**
-- ✅ Template created
-- ✅ Listed in templates
-- ✅ Can be edited/deleted
-
----
-
 ### 7. Job Applications Tracking
 
 #### Test Case 7.1: Create Application Record
@@ -417,6 +452,32 @@ docker-compose --profile llm up -d
 - ✅ Status updated
 - ✅ Notes saved
 - ✅ Timeline event created
+
+---
+
+### 8. Data Management
+
+#### Test Case 8.1: Export User Data
+
+**Steps:**
+1. Navigate to "Settings" (or `localhost:4000/export` if no UI link)
+2. Click "Export Data"
+
+**Expected Result:**
+- ✅ JSON file downloads (`clientats_export_....json`)
+- ✅ File contains user profile, job interests, applications, and resumes (base64 encoded)
+
+#### Test Case 8.2: Import User Data
+
+**Steps:**
+1. Navigate to `/import` (or via Settings)
+2. Select a previously exported JSON file
+3. Click "Import"
+
+**Expected Result:**
+- ✅ Data imported successfully
+- ✅ Dashboard reflects imported items
+- ✅ Resumes are restored and downloadable
 
 ---
 
@@ -498,13 +559,10 @@ docker-compose --profile llm up -d
 
 ## Error Scenarios
 
-### Test Case: Database Connection Down
+### Test Case: Database Error
 
 **Steps:**
-1. Stop PostgreSQL:
-   ```bash
-   docker-compose down
-   ```
+1. *Simulate error*: Rename the database file `clientats_dev.db` to something else temporarily while app is running, or change permissions to read-only.
 2. Try accessing dashboard
 3. Try health check:
    ```bash
@@ -512,9 +570,9 @@ docker-compose --profile llm up -d
    ```
 
 **Expected Result:**
-- ✅ Dashboard shows error
+- ✅ Dashboard shows error or 500 page
 - ✅ Health check returns 503
-- ✅ Error message is helpful
+- ✅ Error message is helpful (logs check)
 
 ### Test Case: Invalid Form Data
 
@@ -554,6 +612,9 @@ docker-compose --profile llm up -d
 - [ ] Delete job interest
 - [ ] Web scraping (if LLM available)
 - [ ] Health checks working
+- [ ] Resume upload & invalid file handling
+- [ ] Job application conversion
+- [ ] Data export & import
 
 ### Data Integrity
 - [ ] Data persists after page reload
@@ -680,11 +741,11 @@ mix ecto.migrate
 # Check Ollama is running
 curl http://localhost:11434/api/tags
 
-# Restart Ollama
+# Restart Ollama (if running via Docker profile)
 docker-compose restart ollama
 
-# Pull a model if needed
-docker-compose exec ollama ollama pull mistral
+# Or if running locally:
+# Ensure "ollama serve" is running in a terminal
 ```
 
 ---
