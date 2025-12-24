@@ -550,21 +550,42 @@ defmodule Clientats.LLM.Service do
 
     with {:ok, _} <- validate_content(job_description),
          {:ok, provider} <- determine_provider(provider_option) do
-      prompt = PromptTemplates.build_cover_letter_prompt(job_description, user_context)
+      
+      resume_text = user_context[:resume_text]
+      resume_data = user_context[:resume_data]
+      resume_mime = user_context[:resume_mime] || "application/pdf"
 
-      IO.puts("[Service] Generating cover letter with provider: #{inspect(provider)}")
+      multimodal? = (is_nil(resume_text) or resume_text == "") and not is_nil(resume_data)
+
+      prompt = 
+        if multimodal? do
+          PromptTemplates.build_multimodal_cover_letter_prompt(job_description, user_context)
+        else
+          PromptTemplates.build_cover_letter_prompt(job_description, user_context)
+        end
+
+      IO.puts("[Service] Generating cover letter with provider: #{inspect(provider)} (Multimodal: #{multimodal?})")
 
       try do
         result =
-          case provider do
-            :ollama ->
+          case {provider, multimodal?} do
+            {:ollama, false} ->
               call_ollama(prompt, options)
 
-            :google ->
+            {:google, false} ->
               call_google_gemini(prompt, options)
 
-            :gemini ->
+            {:gemini, false} ->
               call_google_gemini(prompt, options)
+
+            {:google, true} ->
+              call_google_gemini_multimodal(prompt, resume_data, resume_mime, options)
+
+            {:gemini, true} ->
+              call_google_gemini_multimodal(prompt, resume_data, resume_mime, options)
+
+            {_, true} ->
+              {:error, :unsupported_multimodal_provider}
 
             _ ->
               # Fallback for now until other providers integrated
@@ -591,6 +612,83 @@ defmodule Clientats.LLM.Service do
       end
     else
       error -> error
+    end
+  end
+
+  defp call_google_gemini_multimodal(prompt, file_data, mime_type, options) do
+    # Get user_id from options to fetch user-specific API key
+    user_id = Keyword.get(options, :user_id)
+
+    # Get Google configuration - first try user-specific config, then fall back to app config
+    api_key =
+      if user_id do
+        case LLMConfig.get_provider_config(user_id, :gemini) do
+          {:ok, setting} -> setting.api_key
+          {:error, :not_found} -> nil
+        end
+      else
+        nil
+      end
+
+    # Fall back to application config if no user-specific config
+    api_key = api_key || Application.get_env(:req_llm, :providers, %{})[:google][:api_key]
+
+    model =
+      if user_id do
+        case LLMConfig.get_provider_config(user_id, :gemini) do
+          {:ok, setting} -> setting.vision_model || "gemini-2.0-flash"
+          {:error, :not_found} -> "gemini-2.0-flash"
+        end
+      else
+        Application.get_env(:req_llm, :providers, %{})[:google][:vision_model] ||
+          "gemini-2.0-flash"
+      end
+
+    api_version =
+      Application.get_env(:req_llm, :providers, %{})[:google][:api_version] || "v1beta"
+
+    if !api_key do
+      {:error, :missing_api_key}
+    else
+      base64_data = Base.encode64(file_data)
+
+      # Build Google Gemini API request with image/file
+      url =
+        "https://generativelanguage.googleapis.com/#{api_version}/models/#{model}:generateContent"
+
+      body = %{
+        "contents" => [
+          %{
+            "parts" => [
+              %{
+                "text" => prompt
+              },
+              %{
+                "inlineData" => %{
+                  "mimeType" => mime_type,
+                  "data" => base64_data
+                }
+              }
+            ]
+          }
+        ]
+      }
+
+      try do
+        response =
+          Req.post!(
+            url,
+            headers: [{"x-goog-api-key", api_key}],
+            json: body,
+            receive_timeout: options[:timeout] || 30_000
+          )
+
+        handle_google_response(response)
+      rescue
+        e ->
+          IO.puts("[ERROR] Google Gemini Multimodal API call failed: #{Exception.message(e)}")
+          {:error, {:llm_error, "Google Gemini Multimodal API call failed: #{Exception.message(e)}"}}
+      end
     end
   end
 

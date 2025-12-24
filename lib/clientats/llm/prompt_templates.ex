@@ -257,6 +257,32 @@ defmodule Clientats.LLM.PromptTemplates do
     """
   end
 
+  @doc """
+  Prompt for generating a cover letter when the resume is provided as a file (multimodal).
+  """
+  def build_multimodal_cover_letter_prompt(job_description, user_context) do
+    """
+    Generate a professional cover letter for the following job. 
+    The candidate's resume is attached as a file.
+
+    Job Description:
+    #{truncate_content(job_description)}
+
+    Candidate Profile:
+    Name: #{user_context.first_name} #{user_context.last_name}
+
+    Instructions:
+    - Analyze the attached resume and write a compelling cover letter tailored to this job and company.
+    - Highlight relevant skills from the attached resume that match the job requirements.
+    - Keep it professional, concise, and engaging.
+    - Use a standard cover letter format.
+    - Do not include placeholders like "[Your Name]" - use the candidate's name provided.
+    - If specific details (like hiring manager name) are missing, use generic professional greetings.
+
+    Return ONLY the cover letter text, no other commentary.
+    """
+  end
+
   # Private helper functions
 
   defp detect_source(url) do

@@ -92,9 +92,17 @@ defmodule Clientats.Documents do
       result =
         case ext do
           ".pdf" ->
-            case System.cmd("pdftotext", [tmp_path, "-"]) do
-              {text, 0} -> {:ok, text}
-              {_output, _} -> {:error, :extraction_failed}
+            if System.find_executable("pdftotext") do
+              try do
+                case System.cmd("pdftotext", [tmp_path, "-"]) do
+                  {text, 0} -> {:ok, text}
+                  {_output, _} -> {:error, :extraction_failed}
+                end
+              rescue
+                e -> {:error, {:extraction_exception, Exception.message(e)}}
+              end
+            else
+              {:error, :pdftotext_missing}
             end
 
           ".txt" ->

@@ -567,20 +567,40 @@ defmodule ClientatsWeb.JobApplicationLive.ConversionWizard do
     user = socket.assigns.current_user
     job_description = socket.assigns.form_data["job_description"] || ""
 
-    # Extract resume text if a resume is selected
-    resume_text =
+    # Try to extract resume text if a resume is selected
+    {resume_text, resume_data, extraction_error} =
       case socket.assigns.selected_resume do
         nil ->
-          ""
+          {"", nil, nil}
 
         resume ->
           case Documents.extract_resume_text(resume) do
-            {:ok, text} -> text
-            {:error, _} -> ""
+            {:ok, text} -> {text, nil, nil}
+            {:error, reason} -> {"", resume.data, reason}
           end
       end
 
+    # Provide feedback if extraction failed
+    socket = 
+      if extraction_error do
+        msg = 
+          case extraction_error do
+            :pdftotext_missing -> "Local PDF tools missing. Attempting direct file analysis with AI..."
+            _ -> "Could not read resume text (#{inspect(extraction_error)}). Attempting direct file analysis with AI..."
+          end
+        put_flash(socket, :info, msg)
+      else
+        socket
+      end
+
     socket = assign(socket, :generating_cover_letter, true)
+
+    resume_mime = 
+      if socket.assigns.selected_resume do
+        MIME.from_path(socket.assigns.selected_resume.original_filename)
+      else
+        nil
+      end
 
     # Start async task to generate cover letter
     socket =
@@ -588,10 +608,13 @@ defmodule ClientatsWeb.JobApplicationLive.ConversionWizard do
         user_context = %{
           first_name: user.first_name || "",
           last_name: user.last_name || "",
-          resume_text: resume_text
+          resume_text: resume_text,
+          resume_data: resume_data,
+          resume_mime: resume_mime
         }
 
-        Service.generate_cover_letter(job_description, user_context)
+        # Pass user_id to service to ensure it uses the user's configured provider
+        Service.generate_cover_letter(job_description, user_context, user_id: user.id)
       end)
 
     {:noreply, socket}
