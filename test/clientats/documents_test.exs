@@ -86,8 +86,8 @@ defmodule Clientats.DocumentsTest do
 
     test "set_default_resume/1 sets resume as default and unsets others" do
       user = user_fixture()
-      resume1 = resume_fixture(user_id: user.id, is_default: true)
-      resume2 = resume_fixture(user_id: user.id, is_default: false)
+      resume1 = resume_fixture(%{user_id: user.id, is_default: true})
+      resume2 = resume_fixture(%{user_id: user.id, is_default: false})
 
       assert {:ok, _} = Documents.set_default_resume(resume2)
 
@@ -96,6 +96,30 @@ defmodule Clientats.DocumentsTest do
 
       refute updated1.is_default
       assert updated2.is_default
+    end
+
+    test "get_default_resume/1 returns the default resume" do
+      user = user_fixture()
+      _resume1 = resume_fixture(%{user_id: user.id, is_default: false})
+      resume2 = resume_fixture(%{user_id: user.id, is_default: true})
+
+      assert Documents.get_default_resume(user.id).id == resume2.id
+    end
+
+    test "extract_resume_text/1 extracts text from txt file" do
+      user = user_fixture()
+      path = "/tmp/test_resume_#{System.unique_integer([:positive])}.txt"
+      File.write!(path, "Resume content")
+      resume = resume_fixture(%{user_id: user.id, file_path: path})
+
+      assert {:ok, "Resume content"} = Documents.extract_resume_text(resume)
+      File.rm(path)
+    end
+
+    test "extract_resume_text/1 returns error if file missing" do
+      user = user_fixture()
+      resume = resume_fixture(%{user_id: user.id, file_path: "/tmp/non_existent.txt"})
+      assert {:error, :file_not_found} = Documents.extract_resume_text(resume)
     end
   end
 

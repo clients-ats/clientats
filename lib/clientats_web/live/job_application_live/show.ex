@@ -2,6 +2,8 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
   use ClientatsWeb, :live_view
 
   alias Clientats.Jobs
+  alias Clientats.LLM.Service
+  alias Clientats.Documents
 
   on_mount {ClientatsWeb.UserAuth, :ensure_authenticated}
 
@@ -10,6 +12,7 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
     {:ok,
      socket
      |> assign(:form_open, false)
+     |> assign(:editing_cover_letter, false)
      |> assign(:editing_event_id, nil)
      |> assign(:changeset, nil)}
   end
@@ -153,6 +156,72 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
      |> put_flash(:info, "Activity deleted successfully")}
   end
 
+  def handle_event("edit_cover_letter", _params, socket) do
+    {:noreply, assign(socket, :editing_cover_letter, true)}
+  end
+
+  @impl true
+  def handle_info({ClientatsWeb.JobApplicationLive.CoverLetterEditor, {:saved, application}}, socket) do
+    {:noreply,
+     socket
+     |> assign(:application, application)
+     |> assign(:editing_cover_letter, false)
+     |> put_flash(:info, "Cover letter updated successfully")}
+  end
+
+  def handle_info({ClientatsWeb.JobApplicationLive.CoverLetterEditor, :cancel_edit}, socket) do
+    {:noreply, assign(socket, :editing_cover_letter, false)}
+  end
+
+  def handle_info({ClientatsWeb.JobApplicationLive.CoverLetterEditor, {:generate_cover_letter, job_desc}}, socket) do
+    user = socket.assigns.current_user
+    
+    # Try to get default resume and extract text
+    resume_text = 
+      case Documents.get_default_resume(user.id) do
+        nil -> nil
+        resume -> 
+          case Documents.extract_resume_text(resume) do
+            {:ok, text} -> text
+            _ -> nil
+          end
+      end
+
+    user_context = %{
+      first_name: user.first_name,
+      last_name: user.last_name,
+      resume_text: resume_text
+    }
+
+    socket = 
+      socket
+      |> start_async(:generate_cover_letter, fn ->
+        Service.generate_cover_letter(job_desc, user_context, user_id: user.id)
+      end)
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_async(:generate_cover_letter, {:ok, {:ok, content}}, socket) do
+    send_update(ClientatsWeb.JobApplicationLive.CoverLetterEditor, id: "cover-letter-editor", generated_content: content)
+    {:noreply, socket}
+  end
+
+  def handle_async(:generate_cover_letter, {:ok, {:error, reason}}, socket) do
+    error_msg = case reason do
+      :unsupported_provider -> "Selected LLM provider is not supported."
+      msg -> "Generation failed: #{inspect(msg)}"
+    end
+    send_update(ClientatsWeb.JobApplicationLive.CoverLetterEditor, id: "cover-letter-editor", generation_error: error_msg)
+    {:noreply, socket}
+  end
+
+  def handle_async(:generate_cover_letter, {:exit, reason}, socket) do
+    send_update(ClientatsWeb.JobApplicationLive.CoverLetterEditor, id: "cover-letter-editor", generation_error: "Generation crashed: #{inspect(reason)}")
+    {:noreply, socket}
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -275,17 +344,33 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
                     <dd class="text-sm text-gray-400">Not specified</dd>
                   </div>
                 <% end %>
-                <%= if @application.cover_letter_path do %>
-                  <div>
-                    <dt class="text-sm text-gray-500">Cover Letter</dt>
-                    <dd class="text-sm text-gray-900">Template #{@application.cover_letter_path}</dd>
-                  </div>
-                <% else %>
-                  <div>
-                    <dt class="text-sm text-gray-500">Cover Letter</dt>
-                    <dd class="text-sm text-gray-400">Not specified</dd>
-                  </div>
-                <% end %>
+                <div>
+                  <dt class="text-sm text-gray-500 flex justify-between items-center">
+                    Cover Letter
+                    <div class="flex gap-1">
+                      <%= if @application.cover_letter_content do %>
+                        <.link
+                          href={~p"/dashboard/applications/#{@application.id}/download-cover-letter"}
+                          class="btn btn-xs btn-primary"
+                        >
+                          <.icon name="hero-document-arrow-down" class="w-3 h-3 mr-1" /> PDF
+                        </.link>
+                      <% end %>
+                      <button id="edit-cover-letter-btn" phx-click="edit_cover_letter" class="btn btn-xs btn-outline">
+                        <.icon name="hero-pencil" class="w-3 h-3 mr-1" /> Edit
+                      </button>
+                    </div>
+                  </dt>
+                  <%= if @application.cover_letter_content do %>
+                    <dd class="text-sm text-gray-900 mt-1 whitespace-pre-wrap line-clamp-3">{@application.cover_letter_content}</dd>
+                  <% else %>
+                    <%= if @application.cover_letter_path do %>
+                      <dd class="text-sm text-gray-900 mt-1">Template: {@application.cover_letter_path}</dd>
+                    <% else %>
+                      <dd class="text-sm text-gray-400 mt-1">Not specified</dd>
+                    <% end %>
+                  <% end %>
+                </div>
               </dl>
             </div>
           </div>
@@ -484,6 +569,15 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
           <% end %>
         </div>
       </div>
+
+      <%= if @editing_cover_letter do %>
+        <.live_component
+          module={ClientatsWeb.JobApplicationLive.CoverLetterEditor}
+          id="cover-letter-editor"
+          job_application={@application}
+          current_user={@current_user}
+        />
+      <% end %>
     </div>
     """
   end
