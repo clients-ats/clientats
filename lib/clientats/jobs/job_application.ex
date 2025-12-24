@@ -18,7 +18,9 @@ defmodule Clientats.Jobs.JobApplication do
     field :status, :string, default: "applied"
     field :cover_letter_path, :string
     field :cover_letter_content, :string
+    field :cover_letter_pdf_path, :string
     field :resume_path, :string
+    field :resume_pdf_path, :string
     field :notes, :string
 
     belongs_to :user, Clientats.Accounts.User
@@ -45,7 +47,9 @@ defmodule Clientats.Jobs.JobApplication do
       :status,
       :cover_letter_path,
       :cover_letter_content,
+      :cover_letter_pdf_path,
       :resume_path,
+      :resume_pdf_path,
       :notes
     ])
     |> validate_required([:user_id, :company_name, :position_title, :application_date])
