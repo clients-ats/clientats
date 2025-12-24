@@ -1,6 +1,7 @@
 defmodule ClientatsWeb.JobApplicationLive.CoverLetterEditor do
   use ClientatsWeb, :live_component
   alias Clientats.Jobs
+  alias Clientats.LLMConfig
 
   @impl true
   def render(assigns) do
@@ -15,19 +16,43 @@ defmodule ClientatsWeb.JobApplicationLive.CoverLetterEditor do
                 <div class="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left w-full">
                   <div class="flex justify-between items-center mb-4">
                     <h3 class="text-xl font-semibold leading-6 text-gray-900" id="modal-title">Edit Cover Letter</h3>
-                    <button
-                      type="button"
-                      phx-click="generate_ai"
-                      phx-target={@myself}
-                      phx-disable-with="Generating..."
-                      disabled={@generating}
-                      class="btn btn-sm btn-primary"
-                    >
-                      <.icon name="hero-sparkles" class="w-4 h-4 mr-2" />
-                      Generate with AI
-                    </button>
+                    <%= if @llm_available do %>
+                      <button
+                        type="button"
+                        phx-click="generate_ai"
+                        phx-target={@myself}
+                        disabled={@generating}
+                        class={"btn btn-sm #{if @generating, do: "btn-disabled loading", else: "btn-primary"}"}
+                      >
+                        <%= if @generating do %>
+                          <span class="loading loading-spinner loading-xs mr-2"></span>
+                          Generating...
+                        <% else %>
+                          <.icon name="hero-sparkles" class="w-4 h-4 mr-2" />
+                          Generate with AI
+                        <% end %>
+                      </button>
+                    <% else %>
+                      <div class="tooltip" data-tip="Configure an LLM provider in settings to use AI generation">
+                        <button
+                          type="button"
+                          disabled
+                          class="btn btn-sm btn-disabled"
+                        >
+                          <.icon name="hero-sparkles" class="w-4 h-4 mr-2" />
+                          Generate with AI
+                        </button>
+                      </div>
+                    <% end %>
                   </div>
-                  
+
+                  <%= if @generating do %>
+                    <div class="alert alert-info mb-4">
+                      <span class="loading loading-spinner loading-sm"></span>
+                      <span>Generating your personalized cover letter... This may take up to 60 seconds.</span>
+                    </div>
+                  <% end %>
+
                   <%= if @error do %>
                     <div class="alert alert-error mb-4">
                       <.icon name="hero-exclamation-circle" class="w-5 h-5" />
@@ -97,11 +122,21 @@ defmodule ClientatsWeb.JobApplicationLive.CoverLetterEditor do
   def update(%{job_application: job_application} = assigns, socket) do
     changeset = Jobs.change_job_application(job_application)
 
+    # Check if user has any enabled LLM providers
+    llm_available =
+      case assigns[:current_user] do
+        nil -> false
+        user ->
+          enabled_providers = LLMConfig.get_enabled_providers(user.id)
+          length(enabled_providers) > 0
+      end
+
     {:ok,
      socket
      |> assign(assigns)
      |> assign(:generating, false)
      |> assign(:error, nil)
+     |> assign(:llm_available, llm_available)
      |> assign(:form, to_form(changeset))}
   end
 

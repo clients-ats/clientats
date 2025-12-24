@@ -175,12 +175,12 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
 
   def handle_info({ClientatsWeb.JobApplicationLive.CoverLetterEditor, {:generate_cover_letter, job_desc}}, socket) do
     user = socket.assigns.current_user
-    
+
     # Try to get default resume and extract text
-    resume_text = 
+    resume_text =
       case Documents.get_default_resume(user.id) do
         nil -> nil
-        resume -> 
+        resume ->
           case Documents.extract_resume_text(resume) do
             {:ok, text} -> text
             _ -> nil
@@ -193,8 +193,12 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
       resume_text: resume_text
     }
 
-    socket = 
+    # Set a timeout of 60 seconds for the generation
+    Process.send_after(self(), {:generation_timeout, :generate_cover_letter}, 60_000)
+
+    socket =
       socket
+      |> assign(:generation_start_time, System.monotonic_time(:millisecond))
       |> start_async(:generate_cover_letter, fn ->
         Service.generate_cover_letter(job_desc, user_context, user_id: user.id)
       end)
@@ -205,7 +209,7 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
   @impl true
   def handle_async(:generate_cover_letter, {:ok, {:ok, content}}, socket) do
     send_update(ClientatsWeb.JobApplicationLive.CoverLetterEditor, id: "cover-letter-editor", generated_content: content)
-    {:noreply, socket}
+    {:noreply, assign(socket, :generation_start_time, nil)}
   end
 
   def handle_async(:generate_cover_letter, {:ok, {:error, reason}}, socket) do
@@ -214,12 +218,23 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
       msg -> "Generation failed: #{inspect(msg)}"
     end
     send_update(ClientatsWeb.JobApplicationLive.CoverLetterEditor, id: "cover-letter-editor", generation_error: error_msg)
-    {:noreply, socket}
+    {:noreply, assign(socket, :generation_start_time, nil)}
   end
 
   def handle_async(:generate_cover_letter, {:exit, reason}, socket) do
     send_update(ClientatsWeb.JobApplicationLive.CoverLetterEditor, id: "cover-letter-editor", generation_error: "Generation crashed: #{inspect(reason)}")
-    {:noreply, socket}
+    {:noreply, assign(socket, :generation_start_time, nil)}
+  end
+
+  def handle_info({:generation_timeout, :generate_cover_letter}, socket) do
+    # Check if generation is still in progress
+    if Map.has_key?(socket.assigns, :generation_start_time) do
+      send_update(ClientatsWeb.JobApplicationLive.CoverLetterEditor, id: "cover-letter-editor", generation_error: "Generation timed out after 60 seconds. Please try again.")
+      {:noreply, assign(socket, :generation_start_time, nil)}
+    else
+      # Generation already completed, ignore timeout
+      {:noreply, socket}
+    end
   end
 
   @impl true
