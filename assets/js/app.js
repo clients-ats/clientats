@@ -24,13 +24,14 @@ import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/clientats"
 import {ProviderReorder} from "./hooks/sortable_hook"
+import {CoverLetterAutoSave} from "./hooks/cover_letter_autosave"
 import topbar from "../vendor/topbar"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, ProviderReorder},
+  hooks: {...colocatedHooks, ProviderReorder, CoverLetterAutoSave},
 })
 
 // Show progress bar on live navigation and form submits
