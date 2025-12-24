@@ -519,6 +519,57 @@ defmodule Clientats.LLM.Service do
   defp extract_google_error_message(_), do: "Unknown error"
 
   @doc """
+  Generate a cover letter based on job description and user context.
+  """
+  def generate_cover_letter(job_description, user_context, options \\ []) do
+    # Validate input
+    with {:ok, _} <- validate_content(job_description),
+         {:ok, provider} <- determine_provider(Keyword.get(options, :provider)) do
+      prompt = PromptTemplates.build_cover_letter_prompt(job_description, user_context)
+
+      IO.puts("[Service] Generating cover letter with provider: #{inspect(provider)}")
+
+      try do
+        result =
+          case provider do
+            :ollama ->
+              call_ollama(prompt, options)
+
+            :google ->
+              call_google_gemini(prompt, options)
+
+            :gemini ->
+              call_google_gemini(prompt, options)
+
+            _ ->
+              # Fallback for now until other providers integrated
+              {:error, :unsupported_provider}
+          end
+
+        case result do
+          {:ok, %{"response" => text}} ->
+            {:ok, text}
+
+          {:ok, text} when is_binary(text) ->
+            {:ok, text}
+
+          {:ok, map} when is_map(map) ->
+            # Some providers/models might return JSON even if we asked for text, or we parsed it
+            # But cover letter is text.
+            {:ok, map["response"] || map["text"] || inspect(map)}
+
+          error ->
+            error
+        end
+      rescue
+        e -> {:error, {:llm_error, Exception.message(e)}}
+      end
+    else
+      error -> error
+    end
+  end
+
+  @doc """
   Get available LLM providers and their status.
   """
   def get_available_providers do

@@ -232,6 +232,35 @@ defmodule ClientatsWeb.JobApplicationLiveTest do
       assert interest != nil
     end
 
+    test "can edit cover letter", %{conn: conn} do
+      user = user_fixture()
+      app = job_application_fixture(user_id: user.id)
+      conn = log_in_user(conn, user)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/applications/#{app}")
+
+      # Open editor
+      lv
+      |> element("#edit-cover-letter-btn")
+      |> render_click()
+
+      assert has_element?(lv, "#cover-letter-editor")
+      assert has_element?(lv, "h3", "Edit Cover Letter")
+
+      # Save content
+      lv
+      |> form("#cover-letter-form", job_application: %{cover_letter_content: "My new cover letter"})
+      |> render_submit()
+
+      assert render(lv) =~ "My new cover letter"
+      assert render(lv) =~ "Cover letter updated successfully"
+      refute has_element?(lv, "#cover-letter-editor")
+
+      # Verify persistence
+      updated_app = Clientats.Jobs.get_job_application!(app.id)
+      assert updated_app.cover_letter_content == "My new cover letter"
+    end
+
     test "deletes application", %{conn: conn} do
       user = user_fixture()
       app = job_application_fixture(user_id: user.id)

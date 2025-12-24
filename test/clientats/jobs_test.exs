@@ -158,6 +158,22 @@ defmodule Clientats.JobsTest do
       assert app.status == "applied"
     end
 
+    test "create_job_application/1 persists cover_letter_content" do
+      user = user_fixture()
+
+      valid_attrs = %{
+        user_id: user.id,
+        company_name: "Tech Corp",
+        position_title: "Software Engineer",
+        application_date: ~D[2024-01-15],
+        status: "applied",
+        cover_letter_content: "Dear Hiring Manager, I love this job."
+      }
+
+      assert {:ok, app} = Jobs.create_job_application(valid_attrs)
+      assert app.cover_letter_content == "Dear Hiring Manager, I love this job."
+    end
+
     test "create_job_application/1 links to job_interest if provided" do
       user = user_fixture()
       interest = job_interest_fixture(user_id: user.id)
@@ -409,7 +425,7 @@ defmodule Clientats.JobsTest do
     user
   end
 
-  defp job_interest_fixture(attrs \\ %{}) do
+  defp job_interest_fixture(attrs) do
     default_attrs = %{
       company_name: "Default Corp",
       position_title: "Software Engineer",
@@ -422,7 +438,7 @@ defmodule Clientats.JobsTest do
     interest
   end
 
-  defp job_application_fixture(attrs \\ %{}) do
+  defp job_application_fixture(attrs) do
     default_attrs = %{
       company_name: "Default Corp",
       position_title: "Software Engineer",
@@ -435,7 +451,7 @@ defmodule Clientats.JobsTest do
     app
   end
 
-  defp application_event_fixture(attrs \\ %{}) do
+  defp application_event_fixture(attrs) do
     default_attrs = %{
       event_type: "applied",
       event_date: Date.utc_today()

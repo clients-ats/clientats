@@ -36,6 +36,7 @@ defmodule ClientatsWeb.Router do
     live "/dashboard/applications", JobApplicationLive.Index
     live "/dashboard/applications/new", JobApplicationLive.New
     live "/dashboard/applications/:id", JobApplicationLive.Show, :show
+    get "/dashboard/applications/:id/download-cover-letter", JobApplicationController, :download_cover_letter
     live "/dashboard/llm-config", LLMConfigLive
     live "/dashboard/llm-setup", LLMWizardLive
     live "/import", DataImportLive

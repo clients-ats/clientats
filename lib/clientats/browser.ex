@@ -37,6 +37,47 @@ defmodule Clientats.Browser do
   end
 
   @doc """
+  Generate a PDF from HTML content and save it to a file.
+
+  ## Parameters
+    - html: The HTML content to convert
+    - options: Additional options (format, margin, etc.)
+
+  ## Returns
+    - {:ok, file_path} where file_path is the path to the saved PDF
+    - {:error, reason} on failure
+  """
+  def generate_pdf(html, _options \\ []) do
+    output_file = "/tmp/clientats_document_#{System.unique_integer([:positive])}.pdf"
+    
+    script_path = Path.join(:code.priv_dir(:clientats), "../../../scripts/generate_pdf.js")
+    script_path = if File.exists?(script_path), do: script_path, else: "scripts/generate_pdf.js"
+
+    case File.exists?(script_path) do
+      false ->
+        IO.puts("[Browser] PDF script not found at #{script_path}")
+        {:error, :script_not_found}
+
+      true ->
+        IO.puts("[Browser] Generating PDF...")
+        
+        try do
+          # We pass HTML as a direct argument. For very large HTML, this might hit command line limits.
+          # In a production app, we might want to write to a temp file first.
+          case System.cmd("node", [script_path, output_file, html], stderr_to_stdout: true) do
+            {_output, 0} ->
+              if File.exists?(output_file), do: {:ok, output_file}, else: {:error, :file_not_created}
+            {error_output, exit_code} ->
+              IO.puts("[Browser] PDF Script failed: #{error_output}")
+              {:error, {:script_error, exit_code}}
+          end
+        rescue
+          e -> {:error, {:exception, Exception.message(e)}}
+        end
+    end
+  end
+
+  @doc """
   Get the path to the Chrome/Chromium executable.
 
   ## Returns

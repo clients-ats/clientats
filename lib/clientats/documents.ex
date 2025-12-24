@@ -35,6 +35,12 @@ defmodule Clientats.Documents do
     Resume.changeset(resume, attrs)
   end
 
+  def get_default_resume(user_id) do
+    Resume
+    |> where(user_id: ^user_id, is_default: true)
+    |> Repo.one()
+  end
+
   def set_default_resume(%Resume{} = resume) do
     Repo.transaction(fn ->
       Resume
@@ -45,6 +51,29 @@ defmodule Clientats.Documents do
       |> Ecto.Changeset.change(is_default: true)
       |> Repo.update!()
     end)
+  end
+
+  def extract_resume_text(%Resume{file_path: path}) do
+    # Check if file exists
+    if File.exists?(path) do
+      # Determine file type
+      case Path.extname(path) |> String.downcase() do
+        ".pdf" ->
+          # Use pdftotext
+          case System.cmd("pdftotext", [path, "-"]) do
+            {text, 0} -> {:ok, text}
+            {_output, _} -> {:error, :extraction_failed}
+          end
+
+        ".txt" ->
+          File.read(path)
+
+        _ ->
+          {:error, :unsupported_format}
+      end
+    else
+      {:error, :file_not_found}
+    end
   end
 
   # Cover Letter Templates

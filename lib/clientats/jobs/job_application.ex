@@ -17,6 +17,7 @@ defmodule Clientats.Jobs.JobApplication do
     field :application_date, :date
     field :status, :string, default: "applied"
     field :cover_letter_path, :string
+    field :cover_letter_content, :string
     field :resume_path, :string
     field :notes, :string
 
@@ -43,6 +44,7 @@ defmodule Clientats.Jobs.JobApplication do
       :application_date,
       :status,
       :cover_letter_path,
+      :cover_letter_content,
       :resume_path,
       :notes
     ])
