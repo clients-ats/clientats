@@ -287,7 +287,7 @@ defmodule ClientatsWeb.JobApplicationLive.ConversionWizard do
                 phx-click="select_resume"
                 phx-value-id={resume.id}
                 class={[
-                  "border rounded-lg p-4 cursor-pointer transition",
+                  "border rounded-lg p-4 cursor-pointer transition relative group",
                   if(@selected_resume && @selected_resume.id == resume.id,
                     do: "border-blue-500 bg-blue-50",
                     else: "border-gray-300 hover:border-gray-400"
@@ -296,7 +296,12 @@ defmodule ClientatsWeb.JobApplicationLive.ConversionWizard do
               >
                 <div class="flex items-center justify-between">
                   <div>
-                    <h3 class="font-medium text-gray-900"><%= resume.name %></h3>
+                    <div class="flex items-center gap-2">
+                      <h3 class="font-medium text-gray-900"><%= resume.name %></h3>
+                      <%= if !resume.is_valid do %>
+                        <span class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">Invalid File</span>
+                      <% end %>
+                    </div>
                     <p class="text-sm text-gray-600">
                       <%= if resume.is_default, do: "Default Resume", else: "" %>
                       <%= if resume.file_path do %>
@@ -304,9 +309,25 @@ defmodule ClientatsWeb.JobApplicationLive.ConversionWizard do
                       <% end %>
                     </p>
                   </div>
-                  <%= if @selected_resume && @selected_resume.id == resume.id do %>
-                    <.icon name="hero-check-circle" class="w-6 h-6 text-blue-500" />
-                  <% end %>
+                  <div class="flex items-center gap-3">
+                    <%= if resume.is_valid do %>
+                      <a
+                        href={~p"/dashboard/resumes/#{resume}/download"}
+                        target="_blank"
+                        class="p-2 text-gray-400 hover:text-blue-600 rounded-full hover:bg-white transition-colors z-10"
+                        title="Download Resume"
+                        onclick="event.stopPropagation()"
+                      >
+                        <.icon name="hero-arrow-down-tray" class="w-5 h-5" />
+                      </a>
+                    <% end %>
+                    
+                    <%= if @selected_resume && @selected_resume.id == resume.id do %>
+                      <.icon name="hero-check-circle" class="w-6 h-6 text-blue-500" />
+                    <% else %>
+                      <div class="w-6 h-6 rounded-full border-2 border-gray-300 group-hover:border-gray-400"></div>
+                    <% end %>
+                  </div>
                 </div>
               </div>
             <% end %>
