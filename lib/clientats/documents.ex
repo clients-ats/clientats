@@ -53,26 +53,60 @@ defmodule Clientats.Documents do
     end)
   end
 
-  def extract_resume_text(%Resume{file_path: path}) do
-    # Check if file exists
-    if File.exists?(path) do
-      # Determine file type
-      case Path.extname(path) |> String.downcase() do
-        ".pdf" ->
-          # Use pdftotext
-          case System.cmd("pdftotext", [path, "-"]) do
-            {text, 0} -> {:ok, text}
-            {_output, _} -> {:error, :extraction_failed}
+  def extract_resume_text(%Resume{is_valid: false}), do: {:error, :invalid_resume}
+
+  def extract_resume_text(%Resume{} = resume) do
+    # Use data from DB if available, otherwise try to resolve from filesystem
+    content_result =
+      cond do
+        resume.data ->
+          {:ok, resume.data}
+
+        String.starts_with?(resume.file_path, "/uploads/") ->
+          case Clientats.Uploads.resolve_path(resume.file_path) do
+            {:ok, path} -> File.read(path)
+            _ -> {:error, :file_not_found}
           end
 
-        ".txt" ->
-          File.read(path)
+        File.exists?(resume.file_path) ->
+          File.read(resume.file_path)
 
-        _ ->
-          {:error, :unsupported_format}
+        true ->
+          {:error, :file_not_found}
       end
-    else
-      {:error, :file_not_found}
+
+    with {:ok, content} <- content_result do
+      # We need a file on disk for pdftotext
+      # Create a temporary file
+      ext = 
+        cond do
+          resume.original_filename -> Path.extname(resume.original_filename)
+          resume.file_path -> Path.extname(resume.file_path)
+          true -> ".pdf"
+        end
+        |> String.downcase()
+
+      tmp_path = Path.join(System.tmp_dir!(), "resume_extract_#{Ecto.UUID.generate()}#{ext}")
+      File.write!(tmp_path, content)
+
+      result =
+        case ext do
+          ".pdf" ->
+            case System.cmd("pdftotext", [tmp_path, "-"]) do
+              {text, 0} -> {:ok, text}
+              {_output, _} -> {:error, :extraction_failed}
+            end
+
+          ".txt" ->
+            {:ok, content}
+
+          _ ->
+            {:error, :unsupported_format}
+        end
+
+      # Clean up
+      File.rm(tmp_path)
+      result
     end
   end
 

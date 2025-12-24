@@ -110,10 +110,17 @@ defmodule Clientats.DocumentsTest do
       user = user_fixture()
       path = "/tmp/test_resume_#{System.unique_integer([:positive])}.txt"
       File.write!(path, "Resume content")
-      resume = resume_fixture(%{user_id: user.id, file_path: path})
+      resume = resume_fixture(%{user_id: user.id, file_path: path, original_filename: "resume.txt"})
 
       assert {:ok, "Resume content"} = Documents.extract_resume_text(resume)
       File.rm(path)
+    end
+
+    test "extract_resume_text/1 extracts text from data field" do
+      user = user_fixture()
+      resume = resume_fixture(%{user_id: user.id, data: "Data content", original_filename: "resume.txt"})
+
+      assert {:ok, "Data content"} = Documents.extract_resume_text(resume)
     end
 
     test "extract_resume_text/1 returns error if file missing" do

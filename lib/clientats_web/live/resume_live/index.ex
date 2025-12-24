@@ -74,7 +74,16 @@ defmodule ClientatsWeb.ResumeLive.Index do
                       <%= if resume.is_default do %>
                         <span class="badge badge-primary badge-sm">Default</span>
                       <% end %>
+                      <%= if !resume.is_valid do %>
+                        <span class="badge badge-error badge-sm">Invalid File</span>
+                      <% end %>
                     </div>
+                    <%= if !resume.is_valid do %>
+                      <p class="text-sm text-red-600 mt-1">
+                        <.icon name="hero-exclamation-triangle" class="w-4 h-4 inline" /> 
+                        The original file for this resume could not be found or read.
+                      </p>
+                    <% end %>
                     <%= if resume.description do %>
                       <p class="text-sm text-gray-600 mt-1">{resume.description}</p>
                     <% end %>
@@ -87,7 +96,7 @@ defmodule ClientatsWeb.ResumeLive.Index do
                     </div>
                   </div>
                   <div class="flex gap-2">
-                    <%= if !resume.is_default do %>
+                    <%= if !resume.is_default && resume.is_valid do %>
                       <.button
                         phx-click="set_default"
                         phx-value-id={resume.id}
@@ -96,9 +105,15 @@ defmodule ClientatsWeb.ResumeLive.Index do
                         Set as Default
                       </.button>
                     <% end %>
-                    <.link href={~p"/dashboard/resumes/#{resume}/download"} class="btn btn-sm btn-outline">
-                      Download
-                    </.link>
+                    <%= if resume.is_valid do %>
+                      <.link href={~p"/dashboard/resumes/#{resume}/download"} class="btn btn-sm btn-outline">
+                        Download
+                      </.link>
+                    <% else %>
+                      <button class="btn btn-sm btn-outline" disabled title="File missing">
+                        Download
+                      </button>
+                    <% end %>
                     <.link navigate={~p"/dashboard/resumes/#{resume}/edit"} class="btn btn-sm">
                       Edit
                     </.link>
