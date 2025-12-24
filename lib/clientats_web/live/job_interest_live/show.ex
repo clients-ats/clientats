@@ -41,7 +41,7 @@ defmodule ClientatsWeb.JobInterestLive.Show do
           </.link>
           <div class="flex gap-2">
             <.link
-              navigate={~p"/dashboard/applications/new?from_interest=#{@job_interest.id}"}
+              navigate={~p"/dashboard/applications/convert/#{@job_interest.id}"}
               class="btn btn-sm btn-primary"
             >
               <.icon name="hero-paper-airplane" class="w-4 h-4" /> Apply for Job

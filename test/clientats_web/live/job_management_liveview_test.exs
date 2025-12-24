@@ -341,8 +341,8 @@ defmodule ClientatsWeb.JobManagementLiveViewTest do
 
       {:ok, lv, _html} = live(conn, ~p"/dashboard/job-interests/#{interest.id}")
 
-      # Click "Apply for Job" button - should redirect
-      result = lv |> element("a[href*='applications/new']") |> render_click()
+      # Click "Apply for Job" button - should redirect to wizard
+      result = lv |> element("a[href*='applications/convert']") |> render_click()
 
       # Link click causes a redirect, which is expected
       case result do

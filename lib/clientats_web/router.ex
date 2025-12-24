@@ -35,6 +35,7 @@ defmodule ClientatsWeb.Router do
     live "/dashboard/cover-letters/:id/edit", CoverLetterLive.Edit
     live "/dashboard/applications", JobApplicationLive.Index
     live "/dashboard/applications/new", JobApplicationLive.New
+    live "/dashboard/applications/convert/:interest_id", JobApplicationLive.ConversionWizard
     live "/dashboard/applications/:id", JobApplicationLive.Show, :show
     get "/dashboard/applications/:id/download-cover-letter", JobApplicationController, :download_cover_letter
     live "/dashboard/llm-config", LLMConfigLive
