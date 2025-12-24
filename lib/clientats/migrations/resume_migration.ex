@@ -3,6 +3,7 @@ defmodule Clientats.Migrations.ResumeMigration do
   Migrates legacy resume files from the filesystem into the database.
   """
   require Logger
+  import Ecto.Query
   alias Clientats.Repo
   alias Clientats.Documents.Resume
   alias Clientats.Uploads
@@ -12,7 +13,7 @@ defmodule Clientats.Migrations.ResumeMigration do
 
     resumes = 
       Resume
-      |> Ecto.Query.where([r], is_nil(r.data))
+      |> where([r], is_nil(r.data))
       |> Repo.all()
 
     total = length(resumes)
