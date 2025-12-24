@@ -35,7 +35,17 @@ defmodule Clientats.Application do
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Clientats.Supervisor]
-    Supervisor.start_link(children, opts)
+    
+    case Supervisor.start_link(children, opts) do
+      {:ok, pid} ->
+        # Log database location for clarity
+        db_path = Application.get_env(:clientats, Clientats.Repo)[:database]
+        IO.puts("Database: #{db_path}")
+        {:ok, pid}
+
+      error ->
+        error
+    end
   end
 
   defp migrate do
