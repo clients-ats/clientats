@@ -55,7 +55,12 @@ defmodule Clientats.Application do
     # Run migrations for all configured repos
     # Ecto.Migrator.with_repo will start the repo, run migrations, then stop it
     for repo <- Application.fetch_env!(:clientats, :ecto_repos) do
-      {:ok, _, _} = Ecto.Migrator.with_repo(repo, &Ecto.Migrator.run(&1, :up, all: true))
+      {:ok, _, _} = Ecto.Migrator.with_repo(repo, fn repo ->
+        Ecto.Migrator.run(repo, :up, all: true)
+        
+        # Run custom migrations like resume file-to-db migration
+        Clientats.Migrations.ResumeMigration.run()
+      end)
     end
   end
 
