@@ -81,39 +81,43 @@ defmodule ClientatsWeb.JobApplicationLive.New do
   def handle_event("generate_ai_cover_letter", _, socket) do
     # Get job description from form
     job_desc = Phoenix.HTML.Form.input_value(socket.assigns.form, :job_description)
+    user = socket.assigns.current_user
 
-    if is_nil(job_desc) || String.trim(job_desc) == "" do
-      {:noreply, assign(socket, :generation_error, "Job description is required to generate a cover letter.")}
-    else
-      user = socket.assigns.current_user
+    cond do
+      is_nil(job_desc) || String.trim(job_desc) == "" ->
+        {:noreply, assign(socket, :generation_error, "Job description is required for AI generation. Please add a job description above.")}
 
-      # Try to get default resume and extract text
-      resume_text =
-        case Documents.get_default_resume(user.id) do
-          nil -> nil
-          resume ->
-            case Documents.extract_resume_text(resume) do
-              {:ok, text} -> text
-              _ -> nil
-            end
-        end
+      is_nil(Documents.get_default_resume(user.id)) ->
+        {:noreply, assign(socket, :generation_error, "No resume found. Upload one in Settings to enable AI generation.")}
 
-      user_context = %{
-        first_name: user.first_name,
-        last_name: user.last_name,
-        resume_text: resume_text
-      }
+      true ->
+        # Try to get default resume and extract text
+        resume_text =
+          case Documents.get_default_resume(user.id) do
+            nil -> nil
+            resume ->
+              case Documents.extract_resume_text(resume) do
+                {:ok, text} -> text
+                _ -> nil
+              end
+          end
 
-      # Start async generation
-      socket =
-        socket
-        |> assign(:generating, true)
-        |> assign(:generation_error, nil)
-        |> start_async(:generate_cover_letter, fn ->
-          Service.generate_cover_letter(job_desc, user_context, user_id: user.id)
-        end)
+        user_context = %{
+          first_name: user.first_name,
+          last_name: user.last_name,
+          resume_text: resume_text
+        }
 
-      {:noreply, socket}
+        # Start async generation
+        socket =
+          socket
+          |> assign(:generating, true)
+          |> assign(:generation_error, nil)
+          |> start_async(:generate_cover_letter, fn ->
+            Service.generate_cover_letter(job_desc, user_context, user_id: user.id)
+          end)
+
+        {:noreply, socket}
     end
   end
 
@@ -270,7 +274,8 @@ defmodule ClientatsWeb.JobApplicationLive.New do
   def handle_async(:generate_cover_letter, {:ok, {:error, reason}}, socket) do
     error_msg =
       case reason do
-        :unsupported_provider -> "Selected LLM provider is not supported."
+        :unsupported_provider -> "Selected LLM provider is not supported. Please configure a supported provider in Settings."
+        :invalid_content -> "Job description is invalid or too short for AI generation."
         msg -> "Generation failed: #{inspect(msg)}"
       end
 
@@ -423,7 +428,14 @@ defmodule ClientatsWeb.JobApplicationLive.New do
                     <%= if @generation_error do %>
                       <div class="alert alert-error">
                         <.icon name="hero-exclamation-circle" class="w-5 h-5" />
-                        <span>{@generation_error}</span>
+                        <span>
+                          {@generation_error}
+                          <%= if String.contains?(@generation_error, "No resume found") do %>
+                            <.link navigate={~p"/dashboard/resumes/new"} class="underline font-medium ml-1">
+                              Upload one here
+                            </.link>
+                          <% end %>
+                        </span>
                       </div>
                     <% end %>
 
