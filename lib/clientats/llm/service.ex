@@ -84,12 +84,21 @@ defmodule Clientats.LLM.Service do
     falls back to HTML fetching for non-vision providers.
   """
   def extract_job_data_from_url(url, mode \\ :generic, options \\ []) do
-    # Determine provider
-    provider =
-      Keyword.get(options, :provider) || Application.get_env(:req_llm, :primary_provider, :openai)
-
-    _user_id = Keyword.get(options, :user_id)
+    user_id = Keyword.get(options, :user_id)
     progress_callback = Keyword.get(options, :progress_callback)
+
+    # Determine provider: explicit option > user's primary provider > app default
+    provider =
+      case Keyword.get(options, :provider) do
+        nil when is_integer(user_id) ->
+          LLMConfig.get_primary_provider(user_id) |> String.to_atom()
+
+        nil ->
+          Application.get_env(:req_llm, :primary_provider, :openai)
+
+        explicit_provider ->
+          explicit_provider
+      end
 
     # Send loading phase update
     if progress_callback, do: progress_callback.(:loading)
@@ -523,8 +532,24 @@ defmodule Clientats.LLM.Service do
   """
   def generate_cover_letter(job_description, user_context, options \\ []) do
     # Validate input
+    user_id = Keyword.get(options, :user_id)
+
+    # Determine provider: explicit option > user's primary provider > app default
+    provider_option =
+      case Keyword.get(options, :provider) do
+        nil when is_integer(user_id) ->
+          # Use user's configured primary provider
+          LLMConfig.get_primary_provider(user_id) |> String.to_atom()
+
+        nil ->
+          nil
+
+        provider ->
+          provider
+      end
+
     with {:ok, _} <- validate_content(job_description),
-         {:ok, provider} <- determine_provider(Keyword.get(options, :provider)) do
+         {:ok, provider} <- determine_provider(provider_option) do
       prompt = PromptTemplates.build_cover_letter_prompt(job_description, user_context)
 
       IO.puts("[Service] Generating cover letter with provider: #{inspect(provider)}")
