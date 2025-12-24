@@ -96,6 +96,9 @@ defmodule ClientatsWeb.ResumeLive.Index do
                         Set as Default
                       </.button>
                     <% end %>
+                    <.link href={~p"/dashboard/resumes/#{resume}/download"} class="btn btn-sm btn-outline">
+                      Download
+                    </.link>
                     <.link navigate={~p"/dashboard/resumes/#{resume}/edit"} class="btn btn-sm">
                       Edit
                     </.link>

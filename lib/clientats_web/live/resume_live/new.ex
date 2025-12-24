@@ -37,14 +37,18 @@ defmodule ClientatsWeb.ResumeLive.New do
     uploaded_files =
       consume_uploaded_entries(socket, :resume_file, fn %{path: path}, entry ->
         filename = "#{entry.uuid}.#{ext(entry)}"
+        
+        # Read file content for DB storage
+        file_content = File.read!(path)
+        
         Uploads.ensure_dir!("resumes")
         dest = Uploads.resume_path(filename)
         File.cp!(path, dest)
-        {:ok, Uploads.url_path("resumes", filename)}
+        {:ok, {Uploads.url_path("resumes", filename), file_content}}
       end)
 
     case uploaded_files do
-      [file_path] ->
+      [{file_path, file_content}] ->
         [entry] = socket.assigns.uploads.resume_file.entries
 
         resume_params =
@@ -53,6 +57,7 @@ defmodule ClientatsWeb.ResumeLive.New do
           |> Map.put("file_path", file_path)
           |> Map.put("original_filename", entry.client_name)
           |> Map.put("file_size", entry.client_size)
+          |> Map.put("data", file_content)
 
         case Documents.create_resume(resume_params) do
           {:ok, _resume} ->

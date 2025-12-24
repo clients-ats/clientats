@@ -30,6 +30,7 @@ defmodule ClientatsWeb.Router do
     live "/dashboard/resumes", ResumeLive.Index
     live "/dashboard/resumes/new", ResumeLive.New
     live "/dashboard/resumes/:id/edit", ResumeLive.Edit
+    get "/dashboard/resumes/:id/download", ResumeController, :download
     live "/dashboard/cover-letters", CoverLetterLive.Index
     live "/dashboard/cover-letters/new", CoverLetterLive.New
     live "/dashboard/cover-letters/:id/edit", CoverLetterLive.Edit
