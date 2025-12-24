@@ -31,19 +31,56 @@ fi
 
 cargo tauri build
 
+cd ..
+
 echo ""
 echo "✅ Build complete!"
 echo ""
-echo "📂 Build artifacts:"
+
+# Collect artifacts into bin/tauri/
+echo "📦 Collecting build artifacts..."
+BIN_DIR="bin/tauri"
+rm -rf "$BIN_DIR"
+mkdir -p "$BIN_DIR"
+
 if [[ "$OSTYPE" == "darwin"* ]]; then
-    echo "   • DMG: src-tauri/target/release/bundle/dmg/"
-    echo "   • App: src-tauri/target/release/bundle/macos/"
+    # Copy DMG files
+    if ls src-tauri/target/release/bundle/dmg/*.dmg 1> /dev/null 2>&1; then
+        cp src-tauri/target/release/bundle/dmg/*.dmg "$BIN_DIR/"
+        echo "   ✓ Copied DMG installer"
+    fi
+    # Copy .app bundle (as zip for distribution)
+    if ls src-tauri/target/release/bundle/macos/*.app 1> /dev/null 2>&1; then
+        for app in src-tauri/target/release/bundle/macos/*.app; do
+            app_name=$(basename "$app" .app)
+            (cd src-tauri/target/release/bundle/macos && zip -r -q "../../../../$BIN_DIR/${app_name}.app.zip" "$(basename "$app")")
+            echo "   ✓ Copied ${app_name}.app.zip"
+        done
+    fi
 elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
-    echo "   • AppImage: src-tauri/target/release/bundle/appimage/"
-    echo "   • DEB: src-tauri/target/release/bundle/deb/"
+    # Copy AppImage
+    if ls src-tauri/target/release/bundle/appimage/*.AppImage 1> /dev/null 2>&1; then
+        cp src-tauri/target/release/bundle/appimage/*.AppImage "$BIN_DIR/"
+        echo "   ✓ Copied AppImage"
+    fi
+    # Copy DEB
+    if ls src-tauri/target/release/bundle/deb/*.deb 1> /dev/null 2>&1; then
+        cp src-tauri/target/release/bundle/deb/*.deb "$BIN_DIR/"
+        echo "   ✓ Copied DEB package"
+    fi
 elif [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "win32" ]]; then
-    echo "   • MSI: src-tauri/target/release/bundle/msi/"
-    echo "   • NSIS: src-tauri/target/release/bundle/nsis/"
-else
-    echo "   • Check: src-tauri/target/release/bundle/"
+    # Copy MSI
+    if ls src-tauri/target/release/bundle/msi/*.msi 1> /dev/null 2>&1; then
+        cp src-tauri/target/release/bundle/msi/*.msi "$BIN_DIR/"
+        echo "   ✓ Copied MSI installer"
+    fi
+    # Copy NSIS
+    if ls src-tauri/target/release/bundle/nsis/*.exe 1> /dev/null 2>&1; then
+        cp src-tauri/target/release/bundle/nsis/*.exe "$BIN_DIR/"
+        echo "   ✓ Copied NSIS installer"
+    fi
 fi
+
+echo ""
+echo "📂 Build artifacts collected in: $BIN_DIR/"
+ls -la "$BIN_DIR/"
