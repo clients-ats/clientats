@@ -212,15 +212,21 @@ fn main() {
                 }
                 log_to_file(&log_path, "Phoenix executable found");
 
-                // Get database directory in user's home
-                let db_dir = app.path().app_data_dir()
+                // Get app data directory in user's home
+                let app_data_dir = app.path().app_data_dir()
                     .expect("Failed to get app data dir");
 
-                std::fs::create_dir_all(&db_dir)
+                std::fs::create_dir_all(&app_data_dir)
                     .expect("Failed to create app data directory");
 
-                let db_path = db_dir.join("clientats.db");
+                let db_path = app_data_dir.join("clientats.db");
                 log_to_file(&log_path, &format!("Database path: {:?}", db_path));
+
+                // Create uploads directory
+                let upload_dir = app_data_dir.join("uploads");
+                std::fs::create_dir_all(&upload_dir)
+                    .expect("Failed to create uploads directory");
+                log_to_file(&log_path, &format!("Upload directory: {:?}", upload_dir));
 
                 // Step 1: Run migrations synchronously
                 log_to_file(&log_path, "Running database migrations...");
@@ -270,7 +276,8 @@ fn main() {
                 cmd.env("PORT", port.to_string())
                    .env("MIX_ENV", "prod")
                    .env("PHX_SERVER", "true")
-                   .env("DATABASE_PATH", db_path.to_str().unwrap());
+                   .env("DATABASE_PATH", db_path.to_str().unwrap())
+                   .env("UPLOAD_DIR", upload_dir.to_str().unwrap());
 
                 match cmd.spawn() {
                     Ok(child) => {

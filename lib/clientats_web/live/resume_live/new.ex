@@ -3,6 +3,7 @@ defmodule ClientatsWeb.ResumeLive.New do
 
   alias Clientats.Documents
   alias Clientats.Documents.Resume
+  alias Clientats.Uploads
 
   on_mount {ClientatsWeb.UserAuth, :ensure_authenticated}
 
@@ -35,10 +36,11 @@ defmodule ClientatsWeb.ResumeLive.New do
   def handle_event("save", %{"resume" => resume_params}, socket) do
     uploaded_files =
       consume_uploaded_entries(socket, :resume_file, fn %{path: path}, entry ->
-        dest = Path.join(["priv", "static", "uploads", "resumes", "#{entry.uuid}.#{ext(entry)}"])
-        File.mkdir_p!(Path.dirname(dest))
+        filename = "#{entry.uuid}.#{ext(entry)}"
+        Uploads.ensure_dir!("resumes")
+        dest = Uploads.resume_path(filename)
         File.cp!(path, dest)
-        {:ok, "/uploads/resumes/#{entry.uuid}.#{ext(entry)}"}
+        {:ok, Uploads.url_path("resumes", filename)}
       end)
 
     case uploaded_files do
