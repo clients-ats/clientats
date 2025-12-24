@@ -3,6 +3,7 @@
 
 # Production build packages
 /build/
+/bin/
 
 # If you run "mix test --cover", coverage assets end up here.
 /cover/
