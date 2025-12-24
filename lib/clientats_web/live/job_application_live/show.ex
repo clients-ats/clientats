@@ -214,7 +214,8 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
 
   def handle_async(:generate_cover_letter, {:ok, {:error, reason}}, socket) do
     error_msg = case reason do
-      :unsupported_provider -> "Selected LLM provider is not supported."
+      :unsupported_provider -> "Selected LLM provider is not supported. Please configure a supported provider in Settings."
+      :invalid_content -> "Job description is invalid or too short for AI generation."
       msg -> "Generation failed: #{inspect(msg)}"
     end
     send_update(ClientatsWeb.JobApplicationLive.CoverLetterEditor, id: "cover-letter-editor", generation_error: error_msg)
