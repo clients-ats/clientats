@@ -26,6 +26,10 @@ defmodule ClientatsWeb.Endpoint do
     gzip: not code_reloading?,
     only: ClientatsWeb.static_paths()
 
+  # Serve uploaded files from runtime-configurable directory
+  # This is needed for Tauri builds where the app bundle is read-only
+  plug ClientatsWeb.Plugs.ServeUploads
+
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.
   if code_reloading? do
