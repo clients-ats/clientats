@@ -8,6 +8,7 @@ defmodule Clientats.DataExport do
   alias Clientats.Accounts.User
   alias Clientats.Jobs.{JobInterest, JobApplication, ApplicationEvent}
   alias Clientats.Documents.{Resume, CoverLetterTemplate}
+  alias Clientats.Uploads
 
   @doc """
   Exports all data for a given user as a map ready for JSON encoding.
@@ -138,6 +139,23 @@ defmodule Clientats.DataExport do
   end
 
   defp serialize_resume(resume) do
+    # Try to get data from DB, fallback to disk
+    data_content =
+      if resume.data do
+        resume.data
+      else
+        case Uploads.resolve_path(resume.file_path) do
+          {:ok, path} ->
+            case File.read(path) do
+              {:ok, content} -> content
+              _ -> nil
+            end
+          _ -> nil
+        end
+      end
+
+    encoded_data = if data_content, do: Base.encode64(data_content), else: nil
+
     %{
       name: resume.name,
       description: resume.description,
@@ -145,6 +163,7 @@ defmodule Clientats.DataExport do
       original_filename: resume.original_filename,
       file_size: resume.file_size,
       is_default: resume.is_default,
+      data: encoded_data,
       inserted_at: to_iso8601(resume.inserted_at),
       updated_at: to_iso8601(resume.updated_at)
     }
@@ -289,6 +308,35 @@ defmodule Clientats.DataExport do
   end
 
   defp create_resume(user_id, attrs) do
+    # Handle data decoding and file restoration
+    attrs =
+      if attrs["data"] do
+        case Base.decode64(attrs["data"]) do
+          {:ok, decoded} ->
+            # Restore to disk to maintain compatibility
+            # We need a filename. original_filename might have spaces/etc.
+            # Let's generate a UUID based name like the upload logic does.
+            uuid = Ecto.UUID.generate()
+            ext = Path.extname(attrs["original_filename"] || "")
+            filename = "#{uuid}#{ext}"
+
+            Uploads.ensure_dir!("resumes")
+            dest = Uploads.resume_path(filename)
+            File.write!(dest, decoded)
+
+            new_file_path = Uploads.url_path("resumes", filename)
+
+            attrs
+            |> Map.put("data", decoded)
+            |> Map.put("file_path", new_file_path)
+
+          :error ->
+            attrs
+        end
+      else
+        attrs
+      end
+
     %Resume{}
     |> Resume.changeset(Map.put(attrs, "user_id", user_id))
     |> Repo.insert()

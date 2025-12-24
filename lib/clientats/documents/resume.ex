@@ -9,6 +9,7 @@ defmodule Clientats.Documents.Resume do
     field :original_filename, :string
     field :file_size, :integer
     field :is_default, :boolean, default: false
+    field :data, :binary
 
     belongs_to :user, Clientats.Accounts.User
 
@@ -24,7 +25,8 @@ defmodule Clientats.Documents.Resume do
       :file_path,
       :original_filename,
       :file_size,
-      :is_default
+      :is_default,
+      :data
     ])
     |> validate_required([:user_id, :name, :file_path, :original_filename])
     |> foreign_key_constraint(:user_id)
