@@ -29,6 +29,9 @@ if ! command -v cargo-tauri &> /dev/null; then
     cargo install tauri-cli --version "^2.0.0" --locked
 fi
 
+# Disable stripping for AppImage to avoid incompatibility with modern Fedora libraries
+export NO_STRIP=1
+
 cargo tauri build
 
 cd ..
@@ -67,6 +70,11 @@ elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
     if ls src-tauri/target/release/bundle/deb/*.deb 1> /dev/null 2>&1; then
         cp src-tauri/target/release/bundle/deb/*.deb "$BIN_DIR/"
         echo "   ✓ Copied DEB package"
+    fi
+    # Copy RPM
+    if ls src-tauri/target/release/bundle/rpm/*.rpm 1> /dev/null 2>&1; then
+        cp src-tauri/target/release/bundle/rpm/*.rpm "$BIN_DIR/"
+        echo "   ✓ Copied RPM package"
     fi
 elif [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "win32" ]]; then
     # Copy MSI
