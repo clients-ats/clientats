@@ -36,6 +36,45 @@ fn log_to_file(log_path: &std::path::Path, message: &str) {
     println!("{}", message);
 }
 
+// Get platform-specific config directory to match Elixir Platform module
+// Linux: ~/.config/clientats
+// macOS: ~/Library/Application Support/clientats
+// Windows: %APPDATA%/clientats
+fn get_config_dir() -> std::path::PathBuf {
+    let home_dir = std::env::var("HOME")
+        .or_else(|_| std::env::var("USERPROFILE"))
+        .expect("Failed to get home directory");
+
+    #[cfg(target_os = "macos")]
+    {
+        std::path::PathBuf::from(home_dir)
+            .join("Library")
+            .join("Application Support")
+            .join("clientats")
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        let appdata = std::env::var("APPDATA")
+            .unwrap_or_else(|_| {
+                std::path::PathBuf::from(home_dir)
+                    .join("AppData")
+                    .join("Roaming")
+                    .to_str()
+                    .unwrap()
+                    .to_string()
+            });
+        std::path::PathBuf::from(appdata).join("clientats")
+    }
+
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    {
+        std::path::PathBuf::from(home_dir)
+            .join(".config")
+            .join("clientats")
+    }
+}
+
 #[cfg(not(debug_assertions))]
 fn get_free_port() -> Option<u16> {
     TcpListener::bind("127.0.0.1:0")
@@ -212,18 +251,22 @@ fn main() {
                 }
                 log_to_file(&log_path, "Phoenix executable found");
 
-                // Get app data directory in user's home
-                let app_data_dir = app.path().app_data_dir()
-                    .expect("Failed to get app data dir");
+                // Get config directory (matches Elixir Platform module)
+                let config_dir = get_config_dir();
 
-                std::fs::create_dir_all(&app_data_dir)
-                    .expect("Failed to create app data directory");
+                std::fs::create_dir_all(&config_dir)
+                    .expect("Failed to create config directory");
 
-                let db_path = app_data_dir.join("clientats.db");
+                // Database in db/ subdirectory to match Elixir convention
+                let db_dir = config_dir.join("db");
+                std::fs::create_dir_all(&db_dir)
+                    .expect("Failed to create db directory");
+
+                let db_path = db_dir.join("clientats.db");
                 log_to_file(&log_path, &format!("Database path: {:?}", db_path));
 
                 // Create uploads directory
-                let upload_dir = app_data_dir.join("uploads");
+                let upload_dir = config_dir.join("uploads");
                 std::fs::create_dir_all(&upload_dir)
                     .expect("Failed to create uploads directory");
                 log_to_file(&log_path, &format!("Upload directory: {:?}", upload_dir));
