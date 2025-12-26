@@ -907,7 +907,7 @@ For full LLM testing:
 #### Test Case 6.10: File Size Validation
 
 **Steps:**
-1. Attempt to upload resume > 10 MB
+1. Attempt to upload resume > 5 MB
 2. Observe error
 
 **Expected Result:**
@@ -2281,7 +2281,7 @@ Also test:
 ### File Upload Performance
 
 **Steps:**
-1. Upload large resume (8-10 MB)
+1. Upload large resume (3-4.5 MB)
 2. Monitor upload time and memory usage
 3. Verify database storage
 
