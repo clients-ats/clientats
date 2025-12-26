@@ -17,10 +17,11 @@ config :clientats, Clientats.Repo,
 
 # We don't run a server during test. If one is required,
 # you can enable the server option below.
+# For E2E tests with Wallaby, the server needs to be enabled.
 config :clientats, ClientatsWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4002],
   secret_key_base: "HTyRfmn4cRcIgfLAswemEzOYbfJLwP2vXGBgSNWAThcHuAH75fnKnK///Gdp1Dnl",
-  server: false
+  server: true
 
 # In test we don't send emails
 # config :clientats, Clientats.Mailer, adapter: Swoosh.Adapters.Test
@@ -38,11 +39,15 @@ config :phoenix, :plug_init_mode, :runtime
 config :phoenix_live_view,
   enable_expensive_runtime_checks: true
 
-# Wallaby configuration
+# Wallaby configuration for E2E tests
 config :wallaby,
   driver: Wallaby.Chrome,
   hackney_options: [timeout: :infinity, recv_timeout: :infinity],
-  screenshot_on_failure: true
+  screenshot_on_failure: true,
+  # Use headless mode in CI environments
+  chromedriver: [
+    headless: System.get_env("CI") == "true" || System.get_env("HEADLESS") == "true"
+  ]
 
 config :clientats, :sql_sandbox, true
 

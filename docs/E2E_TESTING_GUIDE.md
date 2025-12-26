@@ -8,6 +8,13 @@ This guide provides comprehensive instructions for manual end-to-end (E2E) testi
 
 This testing guide covers all major features and edge cases of ClientATS, from basic authentication to advanced LLM features, background jobs, API endpoints, audit logging, and platform-specific functionality. Use this guide for thorough pre-release testing, regression testing, and quality assurance.
 
+## Automated E2E Tests
+
+For **automated E2E testing** using Wallaby and ChromeDriver, see the dedicated guide:
+- **[test/e2e/README.md](../test/e2e/README.md)** - Automated E2E test infrastructure, fixtures, and patterns
+
+The `test/e2e/` directory contains automated browser-based tests that complement this manual testing guide.
+
 ## Overview
 
 ClientATS has the following areas for E2E testing:
