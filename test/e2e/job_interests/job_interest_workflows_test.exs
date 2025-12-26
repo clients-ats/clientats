@@ -18,8 +18,8 @@ defmodule ClientatsWeb.E2E.JobInterestWorkflowsTest do
       |> fill_in(css("input[name='job_interest[company_name]']"), with: "Acme Corporation")
       |> fill_in(css("input[name='job_interest[position_title]']"), with: "Senior Software Engineer")
       |> fill_in(css("input[name='job_interest[job_url]']"), with: "https://acme.com/jobs/123")
-      |> select(css("select[name='job_interest[status]']"), option: "interested")
-      |> select(css("select[name='job_interest[priority]']"), option: "high")
+      |> click(css("select[name='job_interest[status]'] option[value='interested']"))
+      |> click(css("select[name='job_interest[priority]'] option[value='high']"))
       |> click(button("Save Job Interest"))
       |> assert_has(css("h3", text: "Senior Software Engineer"))
       |> assert_has(css("p", text: "Acme Corporation"))
@@ -134,7 +134,7 @@ defmodule ClientatsWeb.E2E.JobInterestWorkflowsTest do
 
       session
       |> visit("/dashboard/job-interests/#{interest.id}/edit")
-      |> select(css("select[name='job_interest[status]']"), option: "ready_to_apply")
+      |> click(css("select[name='job_interest[status]'] option[value='ready_to_apply']"))
       |> click(button("Save Job Interest"))
       |> assert_has(css("span", text: "ready_to_apply"))
     end
@@ -145,7 +145,7 @@ defmodule ClientatsWeb.E2E.JobInterestWorkflowsTest do
 
       session
       |> visit("/dashboard/job-interests/#{interest.id}/edit")
-      |> select(css("select[name='job_interest[priority]']"), option: "high")
+      |> click(css("select[name='job_interest[priority]'] option[value='high']"))
       |> click(button("Save Job Interest"))
       |> assert_has(css("span", text: "high"))
     end
@@ -188,7 +188,6 @@ defmodule ClientatsWeb.E2E.JobInterestWorkflowsTest do
       session
       |> visit("/dashboard/job-interests/#{interest.id}")
       |> click(button("Delete Interest"))
-      |> accept_confirm()
       |> assert_has(css("h1", text: "Clientats Dashboard"))
       |> refute_has(css("h3", text: "Delete Test"))
     end
@@ -201,11 +200,9 @@ defmodule ClientatsWeb.E2E.JobInterestWorkflowsTest do
       session
       |> visit("/dashboard/job-interests/#{interest1.id}")
       |> click(button("Delete Interest"))
-      |> accept_confirm()
       |> assert_has(css("h3", text: "Delete 2"))
       |> click(css("div[phx-click='select_interest']"))
       |> click(button("Delete Interest"))
-      |> accept_confirm()
       |> assert_has(css("p", text: "No job interests found"))
     end
   end
@@ -242,7 +239,7 @@ defmodule ClientatsWeb.E2E.JobInterestWorkflowsTest do
 
       session
       |> visit("/dashboard")
-      |> select(css("select[name='status_filter']"), option: "interested")
+      |> click(css("select[name='status_filter'] option[value='interested']"))
       |> assert_has(css("h3", text: "Interested Job"))
       |> refute_has(css("h3", text: "Ready Job"))
     end
@@ -254,7 +251,7 @@ defmodule ClientatsWeb.E2E.JobInterestWorkflowsTest do
 
       session
       |> visit("/dashboard")
-      |> select(css("select[name='priority_filter']"), option: "high")
+      |> click(css("select[name='priority_filter'] option[value='high']"))
       |> assert_has(css("h3", text: "High Priority Job"))
       |> refute_has(css("h3", text: "Low Priority Job"))
     end
@@ -285,7 +282,7 @@ defmodule ClientatsWeb.E2E.JobInterestWorkflowsTest do
 
       session
       |> visit("/dashboard")
-      |> select(css("select[name='sort']"), option: "date_created")
+      |> click(css("select[name='sort'] option[value='date_created']"))
       # Should show newest first by default
       |> assert_has(css("div.job-interest:first-child h3", text: "Newest Job"))
     end
@@ -297,7 +294,7 @@ defmodule ClientatsWeb.E2E.JobInterestWorkflowsTest do
 
       session
       |> visit("/dashboard")
-      |> select(css("select[name='sort']"), option: "priority")
+      |> click(css("select[name='sort'] option[value='priority']"))
       # Should show high priority first
       |> assert_has(css("div.job-interest:first-child h3", text: "High Priority"))
     end
@@ -309,7 +306,7 @@ defmodule ClientatsWeb.E2E.JobInterestWorkflowsTest do
 
       session
       |> visit("/dashboard")
-      |> select(css("select[name='sort']"), option: "company")
+      |> click(css("select[name='sort'] option[value='company']"))
       # Should show Apple first
       |> assert_has(css("div.job-interest:first-child h3", text: "A Job"))
     end
@@ -387,7 +384,6 @@ defmodule ClientatsWeb.E2E.JobInterestWorkflowsTest do
       # Delete
       session
       |> click(button("Delete Interest"))
-      |> accept_confirm()
       |> assert_has(css("h1", text: "Clientats Dashboard"))
       |> refute_has(css("h3", text: "Updated Lifecycle"))
     end

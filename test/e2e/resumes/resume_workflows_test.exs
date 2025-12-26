@@ -184,7 +184,6 @@ defmodule ClientatsWeb.E2E.ResumeWorkflowsTest do
       |> visit("/dashboard/resumes")
       |> assert_has(css("h3", text: "Delete Me"))
       |> click(css("div[data-resume-id='#{resume.id}'] button", text: "Delete"))
-      |> accept_confirm()
       |> refute_has(css("h3", text: "Delete Me"))
       |> assert_has(css("p", text: "No resumes uploaded yet"))
     end
@@ -196,7 +195,6 @@ defmodule ClientatsWeb.E2E.ResumeWorkflowsTest do
       session
       |> visit("/dashboard/resumes")
       |> click(button("Delete"))
-      |> accept_confirm()
       |> assert_has(css(".alert-warning", text: "This is your default resume"))
     end
   end
@@ -235,7 +233,7 @@ defmodule ClientatsWeb.E2E.ResumeWorkflowsTest do
       |> visit("/dashboard/applications/new")
       |> fill_in(css("input[name='job_application[company_name]']"), with: "Tech Corp")
       |> fill_in(css("input[name='job_application[position_title]']"), with: "Engineer")
-      |> select(css("select[name='job_application[resume_id]']"), option: "Application Resume")
+      |> click(css("select[name='job_application[resume_id]'] option", text: "Application Resume"))
       |> click(button("Create Application"))
       |> assert_has(css("p", text: "Resume: Application Resume"))
     end
@@ -280,7 +278,7 @@ defmodule ClientatsWeb.E2E.ResumeWorkflowsTest do
 
       session
       |> visit("/dashboard/resumes")
-      |> check(css("input[name='show_default_only']"))
+      |> click(css("input[name='show_default_only']"))
       |> assert_has(css("h3", text: "Default Resume"))
       |> refute_has(css("h3", text: "Other Resume"))
     end
@@ -293,7 +291,7 @@ defmodule ClientatsWeb.E2E.ResumeWorkflowsTest do
 
       session
       |> visit("/dashboard/resumes")
-      |> select(css("select[name='sort']"), option: "date_uploaded")
+      |> click(css("select[name='sort'] option[value='date_uploaded']"))
       |> assert_has(css("div.resume:first-child h3", text: "Newest Resume"))
     end
 
@@ -304,7 +302,7 @@ defmodule ClientatsWeb.E2E.ResumeWorkflowsTest do
 
       session
       |> visit("/dashboard/resumes")
-      |> select(css("select[name='sort']"), option: "name")
+      |> click(css("select[name='sort'] option[value='name']"))
       |> assert_has(css("div.resume:first-child h3", text: "Alpha Resume"))
     end
   end

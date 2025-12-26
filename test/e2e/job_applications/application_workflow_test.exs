@@ -118,7 +118,7 @@ defmodule ClientatsWeb.E2E.ApplicationWorkflowTest do
       session
       |> visit("/dashboard/applications/#{application.id}")
       |> click(button("Update Status"))
-      |> select(css("select[name='status']"), option: "interviewing")
+      |> click(css("select[name='status'] option[value='interviewing']"))
       |> click(button("Save"))
       |> assert_has(css("span.status-badge", text: "interviewing"))
     end
@@ -130,7 +130,7 @@ defmodule ClientatsWeb.E2E.ApplicationWorkflowTest do
       session
       |> visit("/dashboard/applications/#{application.id}")
       |> click(button("Update Status"))
-      |> select(css("select[name='status']"), option: "offered")
+      |> click(css("select[name='status'] option[value='offered']"))
       |> click(button("Save"))
       |> assert_has(css("span.status-badge", text: "offered"))
     end
@@ -142,7 +142,7 @@ defmodule ClientatsWeb.E2E.ApplicationWorkflowTest do
       session
       |> visit("/dashboard/applications/#{application.id}")
       |> click(button("Update Status"))
-      |> select(css("select[name='status']"), option: "accepted")
+      |> click(css("select[name='status'] option[value='accepted']"))
       |> click(button("Save"))
       |> assert_has(css("span.status-badge", text: "accepted"))
     end
@@ -154,7 +154,7 @@ defmodule ClientatsWeb.E2E.ApplicationWorkflowTest do
       session
       |> visit("/dashboard/applications/#{application.id}")
       |> click(button("Update Status"))
-      |> select(css("select[name='status']"), option: "rejected")
+      |> click(css("select[name='status'] option[value='rejected']"))
       |> click(button("Save"))
       |> assert_has(css("span.status-badge", text: "rejected"))
     end
@@ -166,7 +166,7 @@ defmodule ClientatsWeb.E2E.ApplicationWorkflowTest do
       session
       |> visit("/dashboard/applications/#{application.id}")
       |> click(button("Update Status"))
-      |> select(css("select[name='status']"), option: "withdrawn")
+      |> click(css("select[name='status'] option[value='withdrawn']"))
       |> click(button("Save"))
       |> assert_has(css("span.status-badge", text: "withdrawn"))
     end
@@ -179,7 +179,7 @@ defmodule ClientatsWeb.E2E.ApplicationWorkflowTest do
       |> visit("/dashboard/applications/#{application.id}")
       |> assert_has(css(".timeline-event", text: "Status changed to applied"))
       |> click(button("Update Status"))
-      |> select(css("select[name='status']"), option: "interviewing")
+      |> click(css("select[name='status'] option[value='interviewing']"))
       |> click(button("Save"))
       |> assert_has(css(".timeline-event", text: "Status changed to interviewing"))
     end
@@ -327,7 +327,6 @@ defmodule ClientatsWeb.E2E.ApplicationWorkflowTest do
       session
       |> visit("/dashboard/applications/#{application.id}")
       |> click(button("Delete Application"))
-      |> accept_confirm()
       |> assert_has(css("h1", text: "Applications"))
       |> refute_has(css("h3", text: "Delete Me"))
     end
@@ -370,7 +369,7 @@ defmodule ClientatsWeb.E2E.ApplicationWorkflowTest do
 
       session
       |> visit("/dashboard/applications")
-      |> select(css("select[name='status_filter']"), option: "interviewing")
+      |> click(css("select[name='status_filter'] option[value='interviewing']"))
       |> assert_has(css("h3", text: "Interview Job"))
       |> refute_has(css("h3", text: "Applied Job"))
       |> refute_has(css("h3", text: "Offered Job"))
@@ -429,40 +428,40 @@ defmodule ClientatsWeb.E2E.ApplicationWorkflowTest do
       # Add phone screen event
       session
       |> click(button("Add Activity"))
-      |> select(css("select[name='event_type']"), option: "phone_screen")
+      |> click(css("select[name='event_type'] option[value='phone_screen']"))
       |> fill_in(css("input[name='event_date']"), with: "2024-01-20")
       |> click(button("Save Activity"))
 
       # Update to interviewing
       session
       |> click(button("Update Status"))
-      |> select(css("select[name='status']"), option: "interviewing")
+      |> click(css("select[name='status'] option[value='interviewing']"))
       |> click(button("Save"))
 
       # Add interview event
       session
       |> click(button("Add Activity"))
-      |> select(css("select[name='event_type']"), option: "interview_onsite")
+      |> click(css("select[name='event_type'] option[value='interview_onsite']"))
       |> fill_in(css("input[name='event_date']"), with: "2024-01-25")
       |> click(button("Save Activity"))
 
       # Update to offered
       session
       |> click(button("Update Status"))
-      |> select(css("select[name='status']"), option: "offered")
+      |> click(css("select[name='status'] option[value='offered']"))
       |> click(button("Save"))
 
       # Add offer event
       session
       |> click(button("Add Activity"))
-      |> select(css("select[name='event_type']"), option: "offer")
+      |> click(css("select[name='event_type'] option[value='offer']"))
       |> fill_in(css("input[name='event_date']"), with: "2024-02-01")
       |> click(button("Save Activity"))
 
       # Accept offer
       session
       |> click(button("Update Status"))
-      |> select(css("select[name='status']"), option: "accepted")
+      |> click(css("select[name='status'] option[value='accepted']"))
       |> click(button("Save"))
       |> assert_has(css("span.status-badge", text: "accepted"))
       |> assert_has(css(".timeline-event", text: "Phone Screen"))

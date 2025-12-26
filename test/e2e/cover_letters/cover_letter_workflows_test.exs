@@ -191,7 +191,6 @@ defmodule ClientatsWeb.E2E.CoverLetterWorkflowsTest do
       |> visit("/dashboard/cover-letters")
       |> assert_has(css("h3", text: "Delete Me"))
       |> click(css("div[data-template-id='#{template.id}'] button", text: "Delete"))
-      |> accept_confirm()
       |> refute_has(css("h3", text: "Delete Me"))
       |> assert_has(css("p", text: "No cover letter templates yet"))
     end
@@ -226,7 +225,7 @@ defmodule ClientatsWeb.E2E.CoverLetterWorkflowsTest do
       session
       |> visit("/dashboard/applications/#{application.id}")
       |> click(button("Generate Cover Letter"))
-      |> select(css("select[name='template_id']"), option: "Application Template")
+      |> click(css("select[name='template_id'] option", text: "Application Template"))
       |> click(button("Generate"))
       |> assert_has(css("h3", text: "Generated Cover Letter"))
       |> assert_has(css("p", text: "I am excited about the Software Engineer role at Tech Corp"))
@@ -441,7 +440,7 @@ defmodule ClientatsWeb.E2E.CoverLetterWorkflowsTest do
 
       session
       |> visit("/dashboard/cover-letters")
-      |> check(css("input[name='show_default_only']"))
+      |> click(css("input[name='show_default_only']"))
       |> assert_has(css("h3", text: "Default Template"))
       |> refute_has(css("h3", text: "Other Template"))
     end
@@ -470,7 +469,7 @@ defmodule ClientatsWeb.E2E.CoverLetterWorkflowsTest do
       session
       |> visit("/dashboard/applications/#{application.id}")
       |> click(button("Generate Cover Letter"))
-      |> select(css("select[name='template_id']"), option: "Professional Template")
+      |> click(css("select[name='template_id'] option", text: "Professional Template"))
       |> click(button("Generate"))
 
       # Edit
