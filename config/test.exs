@@ -20,7 +20,7 @@ config :clientats, Clientats.Repo,
 config :clientats, ClientatsWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4002],
   secret_key_base: "HTyRfmn4cRcIgfLAswemEzOYbfJLwP2vXGBgSNWAThcHuAH75fnKnK///Gdp1Dnl",
-  server: true
+  server: false
 
 # In test we don't send emails
 # config :clientats, Clientats.Mailer, adapter: Swoosh.Adapters.Test
@@ -48,3 +48,9 @@ config :clientats, :sql_sandbox, true
 
 config :clientats,
   llm_encryption_key: "test-encryption-key-for-testing"
+
+# Configure Oban for testing
+config :clientats, Oban,
+  testing: :inline,
+  plugins: false,
+  queues: false
