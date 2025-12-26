@@ -53,4 +53,23 @@ defmodule Clientats.Accounts.User do
       changeset
     end
   end
+
+  def profile_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:first_name, :last_name, :email])
+    |> validate_required([:first_name, :last_name])
+    |> validate_email()
+  end
+
+  def password_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:password, :password_confirmation])
+    |> validate_password([])
+  end
+
+  def llm_provider_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:primary_llm_provider])
+    |> validate_required([:primary_llm_provider])
+  end
 end

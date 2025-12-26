@@ -74,4 +74,38 @@ defmodule Clientats.Accounts do
   def change_user_registration(%User{} = user, attrs \\ %{}) do
     User.registration_changeset(user, attrs, hash_password: false)
   end
+
+  def update_user_profile(%User{} = user, attrs) do
+    user
+    |> User.profile_changeset(attrs)
+    |> Repo.update()
+  end
+
+  def change_user_profile(%User{} = user, attrs \\ %{}) do
+    User.profile_changeset(user, attrs)
+  end
+
+  def update_user_password(%User{} = user, current_password, attrs) do
+    if Bcrypt.verify_pass(current_password, user.hashed_password) do
+      user
+      |> User.password_changeset(attrs)
+      |> Repo.update()
+    else
+      {:error, :invalid_current_password}
+    end
+  end
+
+  def change_user_password(%User{} = user, attrs \\ %{}) do
+    User.password_changeset(user, attrs)
+  end
+
+  def update_user_llm_provider(%User{} = user, attrs) do
+    user
+    |> User.llm_provider_changeset(attrs)
+    |> Repo.update()
+  end
+
+  def change_user_llm_provider(%User{} = user, attrs \\ %{}) do
+    User.llm_provider_changeset(user, attrs)
+  end
 end

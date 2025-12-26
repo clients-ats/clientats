@@ -23,6 +23,7 @@ defmodule ClientatsWeb.Router do
     live "/register", UserRegistrationLive
     live "/login", UserLoginLive
     live "/dashboard", DashboardLive
+    live "/dashboard/settings", UserSettingsLive
     live "/dashboard/job-interests/new", JobInterestLive.New
     live "/dashboard/job-interests/scrape", JobInterestLive.Scrape
     live "/dashboard/job-interests/:id", JobInterestLive.Show, :show
