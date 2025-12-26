@@ -119,6 +119,96 @@ defmodule ClientatsWeb.ResumeLiveTest do
 
       refute result =~ "can&#39;t be blank"
     end
+
+    test "rejects resume upload larger than 5MB", %{conn: conn} do
+      user = user_fixture()
+      conn = log_in_user(conn, user)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/resumes/new")
+
+      # Attempt to upload large file (6MB) - Phoenix will reject based on size metadata
+      # We use a small actual content but specify a large size to avoid memory issues in tests
+      assert catch_error(
+               file_input(lv, "#resume-form", :resume_file, [
+                 %{
+                   last_modified: 1_594_000_000,
+                   name: "large-resume.pdf",
+                   content: "small content",
+                   size: 6_000_000,
+                   type: "application/pdf"
+                 }
+               ])
+             )
+    end
+
+    test "accepts resume upload at exactly 5MB", %{conn: conn} do
+      user = user_fixture()
+      conn = log_in_user(conn, user)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/resumes/new")
+
+      # Create exactly 5MB content
+      content = :crypto.strong_rand_bytes(5_000_000)
+
+      # Upload file at size limit - should not raise error
+      file_input =
+        file_input(lv, "#resume-form", :resume_file, [
+          %{
+            last_modified: 1_594_000_000,
+            name: "exact-size-resume.pdf",
+            content: content,
+            type: "application/pdf"
+          }
+        ])
+
+      # Verify the file_input was created successfully (no exception)
+      assert file_input != nil
+    end
+
+    test "accepts resume upload just under 5MB", %{conn: conn} do
+      user = user_fixture()
+      conn = log_in_user(conn, user)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/resumes/new")
+
+      # Create content just under 5MB
+      content = :crypto.strong_rand_bytes(4_999_999)
+
+      # Upload file just under limit - should not raise error
+      file_input =
+        file_input(lv, "#resume-form", :resume_file, [
+          %{
+            last_modified: 1_594_000_000,
+            name: "under-limit-resume.pdf",
+            content: content,
+            type: "application/pdf"
+          }
+        ])
+
+      # Verify the file_input was created successfully (no exception)
+      assert file_input != nil
+    end
+
+    test "rejects resume upload just over 5MB", %{conn: conn} do
+      user = user_fixture()
+      conn = log_in_user(conn, user)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/resumes/new")
+
+      # Attempt to upload file just over limit - Phoenix will reject based on size metadata
+      # We use a small actual content but specify a large size to avoid memory issues in tests
+      assert catch_error(
+               file_input(lv, "#resume-form", :resume_file, [
+                 %{
+                   last_modified: 1_594_000_000,
+                   name: "over-limit-resume.pdf",
+                   content: "small content",
+                   size: 5_000_001,
+                   type: "application/pdf"
+                 }
+               ])
+             )
+    end
   end
 
   describe "edit resume" do
