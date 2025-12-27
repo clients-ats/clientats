@@ -25,6 +25,7 @@ defmodule Clientats.LLM.GeminiServiceTest do
       {:ok, user: user}
     end
 
+    @tag :gemini
     test "test_connection validates Gemini connection" do
       # Test with missing API key
       config = %{api_key: nil}
@@ -104,6 +105,7 @@ defmodule Clientats.LLM.GeminiServiceTest do
   end
 
   describe "Gemini error handling" do
+    @tag :gemini
     test "Gemini connection errors are logged and reported" do
       # Test with invalid key format
       config = %{api_key: "invalid"}

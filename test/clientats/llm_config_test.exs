@@ -207,6 +207,7 @@ defmodule Clientats.LLMConfigTest do
       assert msg == "API key is required"
     end
 
+    @tag :gemini
     test "handles Gemini 401 authentication error" do
       # Invalid API key will typically result in 401
       config = %{api_key: "invalid-key-12345"}
@@ -214,6 +215,7 @@ defmodule Clientats.LLMConfigTest do
       assert {:error, _msg} = result
     end
 
+    @tag :gemini
     test "handles Gemini 403 access denied error gracefully" do
       # 403 typically means API is not enabled in Google Cloud project
       config = %{api_key: "AIza-test-12345"}
@@ -372,6 +374,7 @@ defmodule Clientats.LLMConfigTest do
       assert retrieved.enabled == true
     end
 
+    @tag :gemini
     test "Gemini error handling for rate limiting", %{user: _user} do
       # Test error message generation for rate limit (429) error
       config = %{api_key: "AIza-test-key"}
