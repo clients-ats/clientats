@@ -221,6 +221,41 @@ defmodule ClientatsWeb.JobApplicationLive.ConversionWizardTest do
       # Should accept the content (no error shown)
       refute html =~ "error"
     end
+
+    test "persists cover letter edits when navigating between steps", %{conn: conn} do
+      user = user_fixture()
+      interest = job_interest_fixture(user_id: user.id)
+      conn = log_in_user(conn, user)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/applications/convert/#{interest.id}")
+
+      # Navigate to step 3 (cover letter)
+      lv |> element("button", "Next →") |> render_click()
+      lv |> element("button", "Next →") |> render_click()
+
+      # Enter cover letter content
+      cover_letter_text = "Dear Hiring Manager,\n\nI am writing to express my interest..."
+      lv
+      |> element("textarea[name='cover_letter_content']")
+      |> render_change(%{"cover_letter_content" => cover_letter_text})
+
+      # Navigate to step 4 (review)
+      html = lv |> element("button", "Next →") |> render_click()
+
+      # Verify cover letter is shown in review
+      assert html =~ "Dear Hiring Manager"
+      assert html =~ "I am writing to express my interest"
+
+      # Navigate back to step 3
+      html = lv |> element("button", "← Previous") |> render_click()
+
+      # Verify content is still present in textarea
+      assert html =~ cover_letter_text
+
+      # Navigate forward again to verify persistence
+      html = lv |> element("button", "Next →") |> render_click()
+      assert html =~ "Dear Hiring Manager"
+    end
   end
 
   describe "step 4: review and finalize" do
