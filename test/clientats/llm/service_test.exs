@@ -50,6 +50,8 @@ defmodule Clientats.LLM.ServiceTest do
   end
 
   describe "extract_job_data_from_url/3" do
+    @describetag :browser
+
     test "returns error for invalid URL format" do
       result = Service.extract_job_data_from_url("not-a-url", :generic)
       # Invalid URLs get caught during fetch, not validation
