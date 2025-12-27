@@ -41,6 +41,8 @@ defmodule ClientatsWeb.JobApplicationLive.ConversionWizard do
      |> assign(:selected_resume, nil)
      |> assign(:cover_letter_content, nil)
      |> assign(:generating_cover_letter, false)
+     |> assign(:custom_prompt, nil)
+     |> assign(:show_custom_prompt_modal, false)
      |> assign(:errors, %{})}
   end
 
@@ -137,6 +139,15 @@ defmodule ClientatsWeb.JobApplicationLive.ConversionWizard do
           </button>
         </div>
       </div>
+
+      <!-- Custom Prompt Modal -->
+      <.live_component
+        :if={@show_custom_prompt_modal}
+        module={ClientatsWeb.JobApplicationLive.CustomPromptModal}
+        id="custom-prompt-modal"
+        show={@show_custom_prompt_modal}
+        custom_prompt={@custom_prompt}
+      />
     </div>
     """
   end
@@ -361,6 +372,14 @@ defmodule ClientatsWeb.JobApplicationLive.ConversionWizard do
       <div class="space-y-4">
         <div class="flex gap-3">
           <button
+            phx-click="open_custom_prompt"
+            class="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
+            title="Customize AI prompt"
+          >
+            <.icon name="hero-cog-6-tooth" class="w-4 h-4 inline" />
+          </button>
+
+          <button
             phx-click="generate_cover_letter"
             disabled={@generating_cover_letter}
             class="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:bg-gray-400"
@@ -371,6 +390,9 @@ defmodule ClientatsWeb.JobApplicationLive.ConversionWizard do
             <% else %>
               <.icon name="hero-sparkles" class="w-4 h-4 inline mr-2" />
               Generate with AI
+              <%= if @custom_prompt do %>
+                <span class="ml-2 px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded">Custom</span>
+              <% end %>
             <% end %>
           </button>
 
@@ -614,11 +636,16 @@ defmodule ClientatsWeb.JobApplicationLive.ConversionWizard do
           resume_mime: resume_mime
         }
 
-        # Pass user_id to service to ensure it uses the user's configured provider
-        Service.generate_cover_letter(job_description, user_context, user_id: user.id)
+        # Pass user_id and custom_prompt to service
+        Service.generate_cover_letter(job_description, user_context, user_id: user.id, custom_prompt: socket.assigns.custom_prompt)
       end)
 
     {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("open_custom_prompt", _params, socket) do
+    {:noreply, assign(socket, :show_custom_prompt_modal, true)}
   end
 
   @impl true
@@ -688,6 +715,12 @@ defmodule ClientatsWeb.JobApplicationLive.ConversionWizard do
      socket
      |> assign(:generating_cover_letter, false)
      |> put_flash(:error, "Cover letter generation timed out or failed: #{inspect(reason)}")}
+  end
+
+  # Handle updates from CustomPromptModal
+  @impl true
+  def handle_info({ClientatsWeb.JobApplicationLive.CustomPromptModal, {:custom_prompt_updated, prompt}}, socket) do
+    {:noreply, assign(socket, custom_prompt: prompt, show_custom_prompt_modal: false)}
   end
 
   # Private helper functions

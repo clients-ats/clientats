@@ -35,6 +35,15 @@ defmodule ClientatsWeb.JobApplicationLive.CoverLetterEditor do
                       <%= if @llm_available do %>
                         <button
                           type="button"
+                          phx-click="open_custom_prompt"
+                          phx-target={@myself}
+                          class="btn btn-sm btn-outline"
+                          title="Customize AI prompt"
+                        >
+                          <.icon name="hero-cog-6-tooth" class="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
                           phx-click="generate_ai"
                           phx-target={@myself}
                           disabled={@generating}
@@ -45,6 +54,9 @@ defmodule ClientatsWeb.JobApplicationLive.CoverLetterEditor do
                             Generating...
                           <% else %>
                             <.icon name="hero-sparkles" class="w-4 h-4 mr-2" /> Generate with AI
+                            <%= if @custom_prompt do %>
+                              <span class="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">Custom</span>
+                            <% end %>
                           <% end %>
                         </button>
                         <%= if @has_generated_content do %>
@@ -317,6 +329,15 @@ defmodule ClientatsWeb.JobApplicationLive.CoverLetterEditor do
           </div>
         </div>
       </div>
+
+      <!-- Custom Prompt Modal -->
+      <.live_component
+        :if={@show_custom_prompt_modal}
+        module={ClientatsWeb.JobApplicationLive.CustomPromptModal}
+        id="custom-prompt-modal"
+        show={@show_custom_prompt_modal}
+        custom_prompt={@custom_prompt}
+      />
     </div>
     """
   end
@@ -390,6 +411,8 @@ defmodule ClientatsWeb.JobApplicationLive.CoverLetterEditor do
      |> assign(:llm_available, llm_available)
      |> assign(:has_generated_content, false)
      |> assign(:previous_content, nil)
+     |> assign(:custom_prompt, nil)
+     |> assign(:show_custom_prompt_modal, false)
      |> assign(:form, to_form(changeset))}
   end
 
@@ -439,8 +462,8 @@ defmodule ClientatsWeb.JobApplicationLive.CoverLetterEditor do
          )}
 
       true ->
-        # Notify parent to start generation
-        notify_parent({:generate_cover_letter, job_desc})
+        # Notify parent to start generation with custom prompt
+        notify_parent({:generate_cover_letter, job_desc, socket.assigns.custom_prompt})
         {:noreply, assign(socket, :generating, true)}
     end
   end
@@ -490,8 +513,8 @@ defmodule ClientatsWeb.JobApplicationLive.CoverLetterEditor do
             socket
           end
 
-        # Notify parent to start generation
-        notify_parent({:generate_cover_letter, job_desc})
+        # Notify parent to start generation with custom prompt
+        notify_parent({:generate_cover_letter, job_desc, socket.assigns.custom_prompt})
 
         {:noreply,
          socket
@@ -593,6 +616,16 @@ defmodule ClientatsWeb.JobApplicationLive.CoverLetterEditor do
       {:error, _changeset} ->
         {:noreply, assign(socket, :error, "Failed to save template. Please try again.")}
     end
+  end
+
+  def handle_event("open_custom_prompt", _, socket) do
+    {:noreply, assign(socket, :show_custom_prompt_modal, true)}
+  end
+
+  # Handle updates from CustomPromptModal
+  @impl true
+  def handle_info({ClientatsWeb.JobApplicationLive.CustomPromptModal, {:custom_prompt_updated, prompt}}, socket) do
+    {:noreply, assign(socket, custom_prompt: prompt, show_custom_prompt_modal: false)}
   end
 
   defp notify_parent(msg), do: send(self(), {__MODULE__, msg})

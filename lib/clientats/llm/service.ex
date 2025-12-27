@@ -554,14 +554,23 @@ defmodule Clientats.LLM.Service do
       resume_text = user_context[:resume_text]
       resume_data = user_context[:resume_data]
       resume_mime = user_context[:resume_mime] || "application/pdf"
+      custom_prompt = Keyword.get(options, :custom_prompt)
 
       multimodal? = (is_nil(resume_text) or resume_text == "") and not is_nil(resume_data)
 
-      prompt = 
+      prompt =
         if multimodal? do
-          PromptTemplates.build_multimodal_cover_letter_prompt(job_description, user_context)
+          PromptTemplates.build_multimodal_cover_letter_prompt(
+            job_description,
+            user_context,
+            custom_prompt
+          )
         else
-          PromptTemplates.build_cover_letter_prompt(job_description, user_context)
+          PromptTemplates.build_cover_letter_prompt(
+            job_description,
+            user_context,
+            custom_prompt
+          )
         end
 
       IO.puts("[Service] Generating cover letter with provider: #{inspect(provider)} (Multimodal: #{multimodal?})")
