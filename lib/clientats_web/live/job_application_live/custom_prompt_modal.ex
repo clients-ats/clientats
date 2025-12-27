@@ -144,14 +144,26 @@ defmodule ClientatsWeb.JobApplicationLive.CustomPromptModal do
 
             <!-- Footer -->
             <div class="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-between">
-              <button
-                type="button"
-                phx-click="use_default"
-                phx-target={@myself}
-                class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-              >
-                Use Default Prompt
-              </button>
+              <div class="flex gap-3">
+                <button
+                  type="button"
+                  phx-click="load_default"
+                  phx-target={@myself}
+                  class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                  title="Load the default template into the editor"
+                >
+                  Reset to Default Template
+                </button>
+                <button
+                  type="button"
+                  phx-click="clear_custom"
+                  phx-target={@myself}
+                  class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                  title="Clear custom prompt and use built-in default"
+                >
+                  Clear Custom Prompt
+                </button>
+              </div>
 
               <div class="flex gap-3">
                 <button
@@ -182,14 +194,25 @@ defmodule ClientatsWeb.JobApplicationLive.CustomPromptModal do
 
   @impl true
   def update(assigns, socket) do
-    {:ok,
-     socket
-     |> assign(assigns)
-     |> assign_new(:show, fn -> false end)
-     |> assign_new(:custom_prompt, fn -> "" end)
-     |> assign_new(:validation_errors, fn -> [] end)
-     |> assign_new(:available_variables, fn -> PromptTemplates.get_available_variables() end)
-     |> assign_new(:example_prompts, fn -> get_example_prompts() end)}
+    socket =
+      socket
+      |> assign(assigns)
+      |> assign_new(:show, fn -> false end)
+      |> assign_new(:custom_prompt, fn -> "" end)
+      |> assign_new(:validation_errors, fn -> [] end)
+      |> assign_new(:available_variables, fn -> PromptTemplates.get_available_variables() end)
+      |> assign_new(:example_prompts, fn -> get_example_prompts() end)
+
+    # Pre-populate with default template when opening modal with empty custom_prompt
+    socket =
+      if Map.get(assigns, :show) == true &&
+           (is_nil(socket.assigns.custom_prompt) || socket.assigns.custom_prompt == "") do
+        assign(socket, :custom_prompt, PromptTemplates.get_default_template())
+      else
+        socket
+      end
+
+    {:ok, socket}
   end
 
   @impl true
@@ -223,7 +246,13 @@ defmodule ClientatsWeb.JobApplicationLive.CustomPromptModal do
   end
 
   @impl true
-  def handle_event("use_default", _params, socket) do
+  def handle_event("load_default", _params, socket) do
+    default_template = PromptTemplates.get_default_template()
+    {:noreply, assign(socket, custom_prompt: default_template, validation_errors: [])}
+  end
+
+  @impl true
+  def handle_event("clear_custom", _params, socket) do
     notify_parent({:custom_prompt_updated, nil})
     {:noreply, assign(socket, show: false, custom_prompt: "", validation_errors: [])}
   end

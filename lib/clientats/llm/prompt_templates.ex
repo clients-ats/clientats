@@ -63,6 +63,34 @@ defmodule Clientats.LLM.PromptTemplates do
   def get_available_variables, do: @prompt_variables
 
   @doc """
+  Get the default cover letter prompt template with variable placeholders.
+  This template can be used as a starting point for customization.
+  """
+  def get_default_template do
+    """
+    Generate a professional cover letter for the following job:
+
+    Job Description:
+    {{JOB_DESCRIPTION}}
+
+    Candidate Profile:
+    Name: {{CANDIDATE_NAME}}
+    Resume/Experience:
+    {{RESUME_TEXT}}
+
+    Instructions:
+    - Write a compelling cover letter tailored to this specific job and company.
+    - Highlight relevant skills from the candidate's profile that match the job requirements.
+    - Keep it professional, concise, and engaging.
+    - Use a standard cover letter format.
+    - Do not include placeholders like "[Your Name]" - use the candidate's name provided.
+    - If specific details (like hiring manager name) are missing, use generic professional greetings.
+
+    Return ONLY the cover letter text, no other commentary.
+    """
+  end
+
+  @doc """
   Build a job extraction prompt based on content, URL, and mode.
   """
   def build_job_extraction_prompt(content, url, mode) do
