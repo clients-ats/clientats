@@ -80,7 +80,7 @@ defmodule ClientatsWeb.ResumeLive.Index do
                     </div>
                     <%= if !resume.is_valid do %>
                       <p class="text-sm text-red-600 mt-1">
-                        <.icon name="hero-exclamation-triangle" class="w-4 h-4 inline" /> 
+                        <.icon name="hero-exclamation-triangle" class="w-4 h-4 inline" />
                         The original file for this resume could not be found or read.
                       </p>
                     <% end %>
@@ -106,7 +106,10 @@ defmodule ClientatsWeb.ResumeLive.Index do
                       </.button>
                     <% end %>
                     <%= if resume.is_valid do %>
-                      <.link href={~p"/dashboard/resumes/#{resume}/download"} class="btn btn-sm btn-outline">
+                      <.link
+                        href={~p"/dashboard/resumes/#{resume}/download"}
+                        class="btn btn-sm btn-outline"
+                      >
                         Download
                       </.link>
                     <% else %>

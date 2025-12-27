@@ -4,10 +4,19 @@ defmodule ClientatsWeb.JobApplicationControllerTest do
   describe "download_cover_letter" do
     test "downloads cover letter as PDF", %{conn: conn} do
       user = user_fixture()
-      app = job_application_fixture(user_id: user.id, company_name: "Test Corp", cover_letter_content: "My cover letter content")
-      
-      conn = conn |> log_in_user(user) |> get(~p"/dashboard/applications/#{app.id}/download-cover-letter")
-      
+
+      app =
+        job_application_fixture(
+          user_id: user.id,
+          company_name: "Test Corp",
+          cover_letter_content: "My cover letter content"
+        )
+
+      conn =
+        conn
+        |> log_in_user(user)
+        |> get(~p"/dashboard/applications/#{app.id}/download-cover-letter")
+
       assert conn.status == 200
       assert response_content_type(conn, :pdf)
       assert conn.resp_body =~ "%PDF"

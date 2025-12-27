@@ -10,10 +10,12 @@ defmodule ClientatsWeb.E2E.ApplicationWorkflowTest do
   describe "interest to application conversion" do
     test "converts job interest to application successfully", %{session: session} do
       user = create_user_and_login(session)
-      interest = create_job_interest(user.id, %{
-        company_name: "Conversion Corp",
-        position_title: "Conversion Engineer"
-      })
+
+      interest =
+        create_job_interest(user.id, %{
+          company_name: "Conversion Corp",
+          position_title: "Conversion Engineer"
+        })
 
       session
       |> visit("/dashboard/job-interests/#{interest.id}")
@@ -31,10 +33,12 @@ defmodule ClientatsWeb.E2E.ApplicationWorkflowTest do
 
     test "interest is deleted after conversion to application", %{session: session} do
       user = create_user_and_login(session)
-      interest = create_job_interest(user.id, %{
-        company_name: "Delete Corp",
-        position_title: "Delete Test"
-      })
+
+      interest =
+        create_job_interest(user.id, %{
+          company_name: "Delete Corp",
+          position_title: "Delete Test"
+        })
 
       session
       |> visit("/dashboard/job-interests/#{interest.id}")
@@ -61,11 +65,13 @@ defmodule ClientatsWeb.E2E.ApplicationWorkflowTest do
 
     test "conversion wizard pre-fills data from interest", %{session: session} do
       user = create_user_and_login(session)
-      interest = create_job_interest(user.id, %{
-        company_name: "PreFill Corp",
-        position_title: "PreFill Engineer",
-        job_url: "https://prefill.com/jobs"
-      })
+
+      interest =
+        create_job_interest(user.id, %{
+          company_name: "PreFill Corp",
+          position_title: "PreFill Engineer",
+          job_url: "https://prefill.com/jobs"
+        })
 
       session
       |> visit("/dashboard/applications/convert/#{interest.id}")
@@ -288,11 +294,13 @@ defmodule ClientatsWeb.E2E.ApplicationWorkflowTest do
   describe "application management" do
     test "can view application details", %{session: session} do
       user = create_user_and_login(session)
-      application = create_job_application(user.id, %{
-        company_name: "View Corp",
-        position_title: "View Engineer",
-        application_date: ~D[2024-01-15]
-      })
+
+      application =
+        create_job_application(user.id, %{
+          company_name: "View Corp",
+          position_title: "View Engineer",
+          application_date: ~D[2024-01-15]
+        })
 
       session
       |> visit("/dashboard/applications/#{application.id}")
@@ -303,10 +311,12 @@ defmodule ClientatsWeb.E2E.ApplicationWorkflowTest do
 
     test "can edit application details", %{session: session} do
       user = create_user_and_login(session)
-      application = create_job_application(user.id, %{
-        company_name: "Original Corp",
-        position_title: "Original Title"
-      })
+
+      application =
+        create_job_application(user.id, %{
+          company_name: "Original Corp",
+          position_title: "Original Title"
+        })
 
       session
       |> visit("/dashboard/applications/#{application.id}")
@@ -320,9 +330,11 @@ defmodule ClientatsWeb.E2E.ApplicationWorkflowTest do
 
     test "can delete application", %{session: session} do
       user = create_user_and_login(session)
-      application = create_job_application(user.id, %{
-        position_title: "Delete Me"
-      })
+
+      application =
+        create_job_application(user.id, %{
+          position_title: "Delete Me"
+        })
 
       session
       |> visit("/dashboard/applications/#{application.id}")
@@ -333,6 +345,7 @@ defmodule ClientatsWeb.E2E.ApplicationWorkflowTest do
 
     test "can navigate from list to detail view", %{session: session} do
       user = create_user_and_login(session)
+
       create_job_application(user.id, %{
         company_name: "Nav Corp",
         position_title: "Nav Engineer"
@@ -413,10 +426,11 @@ defmodule ClientatsWeb.E2E.ApplicationWorkflowTest do
       user = create_user_and_login(session)
 
       # Create interest
-      interest = create_job_interest(user.id, %{
-        company_name: "Dream Corp",
-        position_title: "Dream Job"
-      })
+      interest =
+        create_job_interest(user.id, %{
+          company_name: "Dream Corp",
+          position_title: "Dream Job"
+        })
 
       # Convert to application
       session

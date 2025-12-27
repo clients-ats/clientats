@@ -249,7 +249,9 @@ defmodule ClientatsWeb.JobApplicationLiveTest do
 
       # Save content
       lv
-      |> form("#cover-letter-form", job_application: %{cover_letter_content: "My new cover letter"})
+      |> form("#cover-letter-form",
+        job_application: %{cover_letter_content: "My new cover letter"}
+      )
       |> render_submit()
 
       assert render(lv) =~ "My new cover letter"

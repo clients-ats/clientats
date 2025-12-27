@@ -65,7 +65,10 @@ defmodule ClientatsWeb.UserSettingsLive do
       {:ok, _user} ->
         {:noreply,
          socket
-         |> assign(:password_form, to_form(Accounts.change_user_password(socket.assigns.current_user)))
+         |> assign(
+           :password_form,
+           to_form(Accounts.change_user_password(socket.assigns.current_user))
+         )
          |> assign(:password_error, nil)
          |> put_flash(:info, "Password updated successfully")}
 
@@ -174,8 +177,8 @@ defmodule ClientatsWeb.UserSettingsLive do
               </button>
             </nav>
           </div>
-
-          <!-- Tab Content -->
+          
+    <!-- Tab Content -->
           <div class="p-6">
             <%= if @active_tab == "profile" do %>
               <div>

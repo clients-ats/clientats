@@ -16,7 +16,9 @@ defmodule ClientatsWeb.E2E.JobInterestWorkflowsTest do
       |> click(link("Add Interest"))
       |> assert_has(css("h2", text: "New Job Interest"))
       |> fill_in(css("input[name='job_interest[company_name]']"), with: "Acme Corporation")
-      |> fill_in(css("input[name='job_interest[position_title]']"), with: "Senior Software Engineer")
+      |> fill_in(css("input[name='job_interest[position_title]']"),
+        with: "Senior Software Engineer"
+      )
       |> fill_in(css("input[name='job_interest[job_url]']"), with: "https://acme.com/jobs/123")
       |> click(css("select[name='job_interest[status]'] option[value='interested']"))
       |> click(css("select[name='job_interest[priority]'] option[value='high']"))
@@ -70,12 +72,14 @@ defmodule ClientatsWeb.E2E.JobInterestWorkflowsTest do
   describe "view job interest" do
     test "displays job interest details", %{session: session} do
       user = create_user_and_login(session)
-      interest = create_job_interest(user.id, %{
-        company_name: "View Test Corp",
-        position_title: "Test Engineer",
-        status: "interested",
-        priority: "high"
-      })
+
+      interest =
+        create_job_interest(user.id, %{
+          company_name: "View Test Corp",
+          position_title: "Test Engineer",
+          status: "interested",
+          priority: "high"
+        })
 
       session
       |> visit("/dashboard/job-interests/#{interest.id}")
@@ -87,10 +91,12 @@ defmodule ClientatsWeb.E2E.JobInterestWorkflowsTest do
 
     test "can navigate from dashboard to interest detail", %{session: session} do
       user = create_user_and_login(session)
-      _interest = create_job_interest(user.id, %{
-        company_name: "Navigation Corp",
-        position_title: "Navigation Engineer"
-      })
+
+      _interest =
+        create_job_interest(user.id, %{
+          company_name: "Navigation Corp",
+          position_title: "Navigation Engineer"
+        })
 
       session
       |> visit("/dashboard")
@@ -112,10 +118,12 @@ defmodule ClientatsWeb.E2E.JobInterestWorkflowsTest do
   describe "edit job interest" do
     test "successfully updates job interest", %{session: session} do
       user = create_user_and_login(session)
-      interest = create_job_interest(user.id, %{
-        company_name: "Original Corp",
-        position_title: "Original Title"
-      })
+
+      interest =
+        create_job_interest(user.id, %{
+          company_name: "Original Corp",
+          position_title: "Original Title"
+        })
 
       session
       |> visit("/dashboard/job-interests/#{interest.id}")
@@ -164,10 +172,12 @@ defmodule ClientatsWeb.E2E.JobInterestWorkflowsTest do
 
     test "can cancel editing and return to detail view", %{session: session} do
       user = create_user_and_login(session)
-      interest = create_job_interest(user.id, %{
-        company_name: "Cancel Test Corp",
-        position_title: "Cancel Test"
-      })
+
+      interest =
+        create_job_interest(user.id, %{
+          company_name: "Cancel Test Corp",
+          position_title: "Cancel Test"
+        })
 
       session
       |> visit("/dashboard/job-interests/#{interest.id}/edit")
@@ -180,10 +190,12 @@ defmodule ClientatsWeb.E2E.JobInterestWorkflowsTest do
   describe "delete job interest" do
     test "successfully deletes a job interest", %{session: session} do
       user = create_user_and_login(session)
-      interest = create_job_interest(user.id, %{
-        company_name: "Delete Corp",
-        position_title: "Delete Test"
-      })
+
+      interest =
+        create_job_interest(user.id, %{
+          company_name: "Delete Corp",
+          position_title: "Delete Test"
+        })
 
       session
       |> visit("/dashboard/job-interests/#{interest.id}")
@@ -315,10 +327,12 @@ defmodule ClientatsWeb.E2E.JobInterestWorkflowsTest do
   describe "status workflow" do
     test "can change status from interested to ready_to_apply", %{session: session} do
       user = create_user_and_login(session)
-      interest = create_job_interest(user.id, %{
-        status: "interested",
-        position_title: "Status Test"
-      })
+
+      interest =
+        create_job_interest(user.id, %{
+          status: "interested",
+          position_title: "Status Test"
+        })
 
       session
       |> visit("/dashboard/job-interests/#{interest.id}")
@@ -329,10 +343,12 @@ defmodule ClientatsWeb.E2E.JobInterestWorkflowsTest do
 
     test "can change status from ready_to_apply to not_interested", %{session: session} do
       user = create_user_and_login(session)
-      interest = create_job_interest(user.id, %{
-        status: "ready_to_apply",
-        position_title: "Status Change Test"
-      })
+
+      interest =
+        create_job_interest(user.id, %{
+          status: "ready_to_apply",
+          position_title: "Status Change Test"
+        })
 
       session
       |> visit("/dashboard/job-interests/#{interest.id}")

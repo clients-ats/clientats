@@ -102,8 +102,8 @@ defmodule ClientatsWeb.Features.DataImportExportTest do
 
       # Verify no truncation - all records included
       assert Enum.all?(data.job_interests, fn interest ->
-        is_binary(interest.company_name)
-      end)
+               is_binary(interest.company_name)
+             end)
 
       # Export should complete in less than 30 seconds
       elapsed_ms = end_time - start_time
@@ -239,8 +239,16 @@ defmodule ClientatsWeb.Features.DataImportExportTest do
       import_data = %{
         "version" => "1.0",
         "job_interests" => [
-          %{"company_name" => "Company 1", "position_title" => "Position 1", "status" => "interested"},
-          %{"company_name" => "Company 2", "position_title" => "Position 2", "status" => "interested"}
+          %{
+            "company_name" => "Company 1",
+            "position_title" => "Position 1",
+            "status" => "interested"
+          },
+          %{
+            "company_name" => "Company 2",
+            "position_title" => "Position 2",
+            "status" => "interested"
+          }
         ],
         "job_applications" => [
           %{
@@ -306,9 +314,12 @@ defmodule ClientatsWeb.Features.DataImportExportTest do
       }
 
       # Count before import
-      count_before = Repo.one(from j in JobInterest,
-        where: j.user_id == ^user.id,
-        select: count(j.id))
+      count_before =
+        Repo.one(
+          from j in JobInterest,
+            where: j.user_id == ^user.id,
+            select: count(j.id)
+        )
 
       # Attempt import - should fail and rollback
       # Note: Current implementation continues on error, but in a true transactional
@@ -321,9 +332,12 @@ defmodule ClientatsWeb.Features.DataImportExportTest do
 
       # If import was truly atomic and failed, count should be unchanged
       # For now, we verify the import can handle partial failures gracefully
-      count_after = Repo.one(from j in JobInterest,
-        where: j.user_id == ^user.id,
-        select: count(j.id))
+      count_after =
+        Repo.one(
+          from j in JobInterest,
+            where: j.user_id == ^user.id,
+            select: count(j.id)
+        )
 
       assert count_after >= count_before
     end
@@ -333,7 +347,8 @@ defmodule ClientatsWeb.Features.DataImportExportTest do
 
       # Test with completely invalid version to trigger early failure
       import_data = %{
-        "version" => "99.0",  # Invalid version
+        # Invalid version
+        "version" => "99.0",
         "job_interests" => [
           %{"company_name" => "Company", "position_title" => "Position", "status" => "interested"}
         ]
@@ -343,9 +358,12 @@ defmodule ClientatsWeb.Features.DataImportExportTest do
       assert {:error, _reason} = DataExport.import_user_data(user.id, import_data)
 
       # Verify no data was imported
-      count = Repo.one(from j in JobInterest,
-        where: j.user_id == ^user.id,
-        select: count(j.id))
+      count =
+        Repo.one(
+          from j in JobInterest,
+            where: j.user_id == ^user.id,
+            select: count(j.id)
+        )
 
       assert count == 0
     end
@@ -372,26 +390,35 @@ defmodule ClientatsWeb.Features.DataImportExportTest do
       assert stats1.job_interests == 1
 
       # Count after first import
-      count_after_first = Repo.one(from j in JobInterest,
-        where: j.user_id == ^user.id,
-        select: count(j.id))
+      count_after_first =
+        Repo.one(
+          from j in JobInterest,
+            where: j.user_id == ^user.id,
+            select: count(j.id)
+        )
 
       # Second import - same data
       {:ok, stats2} = DataExport.import_user_data(user.id, import_data)
       assert stats2.job_interests == 1
 
       # Count after second import
-      count_after_second = Repo.one(from j in JobInterest,
-        where: j.user_id == ^user.id,
-        select: count(j.id))
+      count_after_second =
+        Repo.one(
+          from j in JobInterest,
+            where: j.user_id == ^user.id,
+            select: count(j.id)
+        )
 
       # Current implementation allows duplicates (additive)
       # In production, you might want to add duplicate detection
       assert count_after_second == count_after_first + 1
 
       # Verify both records exist
-      interests = Repo.all(from j in JobInterest,
-        where: j.user_id == ^user.id and j.company_name == "Duplicate Company")
+      interests =
+        Repo.all(
+          from j in JobInterest,
+            where: j.user_id == ^user.id and j.company_name == "Duplicate Company"
+        )
 
       assert length(interests) == 2
     end
@@ -400,11 +427,12 @@ defmodule ClientatsWeb.Features.DataImportExportTest do
       user = create_test_user()
 
       # Create existing data
-      {:ok, _existing} = create_job_interest(user.id, %{
-        company_name: "Existing Company",
-        position_title: "Existing Position",
-        status: "interested"
-      })
+      {:ok, _existing} =
+        create_job_interest(user.id, %{
+          company_name: "Existing Company",
+          position_title: "Existing Position",
+          status: "interested"
+        })
 
       # Import new data
       import_data = %{
@@ -422,9 +450,12 @@ defmodule ClientatsWeb.Features.DataImportExportTest do
       assert stats.job_interests == 1
 
       # Verify both records exist and are intact
-      interests = Repo.all(from j in JobInterest,
-        where: j.user_id == ^user.id,
-        order_by: [asc: j.company_name])
+      interests =
+        Repo.all(
+          from j in JobInterest,
+            where: j.user_id == ^user.id,
+            order_by: [asc: j.company_name]
+        )
 
       assert length(interests) == 2
       assert Enum.at(interests, 0).company_name == "Existing Company"
@@ -467,15 +498,17 @@ defmodule ClientatsWeb.Features.DataImportExportTest do
       user = create_test_user()
 
       # Create multiple resumes
-      {:ok, _resume1} = create_resume_with_data(user.id, "PDF Resume Content", %{
-        name: "Resume PDF",
-        original_filename: "resume.pdf"
-      })
+      {:ok, _resume1} =
+        create_resume_with_data(user.id, "PDF Resume Content", %{
+          name: "Resume PDF",
+          original_filename: "resume.pdf"
+        })
 
-      {:ok, _resume2} = create_resume_with_data(user.id, "DOCX Resume Content", %{
-        name: "Resume DOCX",
-        original_filename: "resume.docx"
-      })
+      {:ok, _resume2} =
+        create_resume_with_data(user.id, "DOCX Resume Content", %{
+          name: "Resume DOCX",
+          original_filename: "resume.docx"
+        })
 
       # Export
       export_data = DataExport.export_user_data(user.id)
@@ -496,25 +529,28 @@ defmodule ClientatsWeb.Features.DataImportExportTest do
       user = create_test_user()
 
       # Create application with events
-      {:ok, app} = create_job_application(user.id, %{
-        company_name: "Event Test Company",
-        position_title: "Event Test Position",
-        application_date: Date.utc_today()
-      })
+      {:ok, app} =
+        create_job_application(user.id, %{
+          company_name: "Event Test Company",
+          position_title: "Event Test Position",
+          application_date: Date.utc_today()
+        })
 
-      {:ok, _event1} = create_application_event(app.id, %{
-        event_type: "applied",
-        event_date: Date.utc_today(),
-        notes: "Initial application"
-      })
+      {:ok, _event1} =
+        create_application_event(app.id, %{
+          event_type: "applied",
+          event_date: Date.utc_today(),
+          notes: "Initial application"
+        })
 
-      {:ok, _event2} = create_application_event(app.id, %{
-        event_type: "phone_screen",
-        event_date: Date.add(Date.utc_today(), 7),
-        contact_person: "John Recruiter",
-        contact_email: "john@company.com",
-        notes: "Phone interview scheduled"
-      })
+      {:ok, _event2} =
+        create_application_event(app.id, %{
+          event_type: "phone_screen",
+          event_date: Date.add(Date.utc_today(), 7),
+          contact_person: "John Recruiter",
+          contact_email: "john@company.com",
+          notes: "Phone interview scheduled"
+        })
 
       # Export
       export_data = DataExport.export_user_data(user.id)
@@ -539,9 +575,12 @@ defmodule ClientatsWeb.Features.DataImportExportTest do
       assert stats.application_events == 2
 
       # Verify events imported correctly
-      imported_app = Repo.one(from a in JobApplication,
-        where: a.user_id == ^user2.id,
-        preload: [:events])
+      imported_app =
+        Repo.one(
+          from a in JobApplication,
+            where: a.user_id == ^user2.id,
+            preload: [:events]
+        )
 
       assert length(imported_app.events) == 2
     end
@@ -552,14 +591,15 @@ defmodule ClientatsWeb.Features.DataImportExportTest do
       user = create_test_user()
 
       # Create records with nil/empty values
-      {:ok, _interest} = create_job_interest(user.id, %{
-        company_name: "Company",
-        position_title: "Position",
-        status: "interested",
-        notes: nil,
-        job_description: "",
-        salary_min: nil
-      })
+      {:ok, _interest} =
+        create_job_interest(user.id, %{
+          company_name: "Company",
+          position_title: "Position",
+          status: "interested",
+          notes: nil,
+          job_description: "",
+          salary_min: nil
+        })
 
       export_data = DataExport.export_user_data(user.id)
 
@@ -577,12 +617,13 @@ defmodule ClientatsWeb.Features.DataImportExportTest do
       user = create_test_user()
 
       # Create data with special characters
-      {:ok, _interest} = create_job_interest(user.id, %{
-        company_name: "Company™ & Co.",
-        position_title: "Senior \"Expert\" Developer",
-        status: "interested",
-        notes: "Notes with\nnewlines\tand\ttabs"
-      })
+      {:ok, _interest} =
+        create_job_interest(user.id, %{
+          company_name: "Company™ & Co.",
+          position_title: "Senior \"Expert\" Developer",
+          status: "interested",
+          notes: "Notes with\nnewlines\tand\ttabs"
+        })
 
       export_data = DataExport.export_user_data(user.id)
 
@@ -595,7 +636,9 @@ defmodule ClientatsWeb.Features.DataImportExportTest do
       # Verify JSON encoding works
       assert {:ok, json} = Jason.encode(export_data)
       assert {:ok, decoded} = Jason.decode(json)
-      assert decoded["job_interests"] |> List.first() |> Map.get("company_name") == "Company™ & Co."
+
+      assert decoded["job_interests"] |> List.first() |> Map.get("company_name") ==
+               "Company™ & Co."
     end
   end
 
@@ -614,40 +657,43 @@ defmodule ClientatsWeb.Features.DataImportExportTest do
     user
   end
 
-
   defp create_test_data(user_id) do
     # Create job interest
-    {:ok, _interest} = create_job_interest(user_id, %{
-      company_name: "Test Corp",
-      position_title: "Senior Developer",
-      status: "interested",
-      priority: "high"
-    })
+    {:ok, _interest} =
+      create_job_interest(user_id, %{
+        company_name: "Test Corp",
+        position_title: "Senior Developer",
+        status: "interested",
+        priority: "high"
+      })
 
     # Create job application with events
-    {:ok, app} = create_job_application(user_id, %{
-      company_name: "App Corp",
-      position_title: "Backend Engineer",
-      application_date: Date.utc_today(),
-      status: "applied"
-    })
+    {:ok, app} =
+      create_job_application(user_id, %{
+        company_name: "App Corp",
+        position_title: "Backend Engineer",
+        application_date: Date.utc_today(),
+        status: "applied"
+      })
 
-    {:ok, _event} = create_application_event(app.id, %{
-      event_type: "applied",
-      event_date: Date.utc_today(),
-      notes: "Submitted application"
-    })
+    {:ok, _event} =
+      create_application_event(app.id, %{
+        event_type: "applied",
+        event_date: Date.utc_today(),
+        notes: "Submitted application"
+      })
 
     # Create resume
     {:ok, _resume} = create_resume_with_data(user_id, "Test resume content")
 
     # Create cover letter template
-    {:ok, _template} = Documents.create_cover_letter_template(%{
-      user_id: user_id,
-      name: "Test Template",
-      content: "Dear [Company],\n\nI am interested in the [Position] role.",
-      is_default: false
-    })
+    {:ok, _template} =
+      Documents.create_cover_letter_template(%{
+        user_id: user_id,
+        name: "Test Template",
+        content: "Dear [Company],\n\nI am interested in the [Position] role.",
+        is_default: false
+      })
   end
 
   defp create_job_interest(user_id, attrs) do

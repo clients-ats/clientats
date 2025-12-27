@@ -51,6 +51,7 @@ if config_env() == :prod do
   generate_secret = fn ->
     hash1 = :crypto.hash(:sha256, "clientats-desktop-#{:erlang.system_info(:system_version)}")
     hash2 = :crypto.hash(:sha256, hash1)
+
     (hash1 <> hash2)
     |> Base.encode64(padding: false)
     |> binary_part(0, 64)

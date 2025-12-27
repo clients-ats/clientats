@@ -196,8 +196,7 @@ defmodule ClientatsWeb.JobApplicationLive.CoverLetterEditor do
                     <%= if not @preview_mode do %>
                       <div class="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
                         <label class="block text-sm font-medium text-gray-700 mb-2">
-                          <.icon name="hero-document-text" class="w-4 h-4 inline" />
-                          Templates
+                          <.icon name="hero-document-text" class="w-4 h-4 inline" /> Templates
                         </label>
                         <div class="flex gap-2">
                           <select
@@ -208,9 +207,14 @@ defmodule ClientatsWeb.JobApplicationLive.CoverLetterEditor do
                           >
                             <option value="">Select a template...</option>
                             <%= for template <- @templates do %>
-                              <option value={template.id} selected={@selected_template_id == template.id}>
+                              <option
+                                value={template.id}
+                                selected={@selected_template_id == template.id}
+                              >
                                 {template.name}
-                                <%= if template.is_default do %> (Default)<% end %>
+                                <%= if template.is_default do %>
+                                  (Default)
+                                <% end %>
                               </option>
                             <% end %>
                           </select>
@@ -221,13 +225,14 @@ defmodule ClientatsWeb.JobApplicationLive.CoverLetterEditor do
                               phx-target={@myself}
                               class="btn btn-sm btn-primary"
                             >
-                              <.icon name="hero-arrow-down-tray" class="w-4 h-4 mr-1" />
-                              Load
+                              <.icon name="hero-arrow-down-tray" class="w-4 h-4 mr-1" /> Load
                             </button>
                           <% end %>
                         </div>
                         <%= if @selected_template_id && @selected_template_description do %>
-                          <p class="mt-1 text-xs text-gray-500 italic">{@selected_template_description}</p>
+                          <p class="mt-1 text-xs text-gray-500 italic">
+                            {@selected_template_description}
+                          </p>
                         <% end %>
                         <%= if @loaded_template_name do %>
                           <div class="mt-2 text-sm text-blue-600">
@@ -296,8 +301,7 @@ defmodule ClientatsWeb.JobApplicationLive.CoverLetterEditor do
                             phx-target={@myself}
                             class="btn btn-sm btn-outline w-full sm:w-auto"
                           >
-                            <.icon name="hero-bookmark" class="w-4 h-4 mr-1" />
-                            Save as Template
+                            <.icon name="hero-bookmark" class="w-4 h-4 mr-1" /> Save as Template
                           </button>
                         <% end %>
                         <button

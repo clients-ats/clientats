@@ -359,7 +359,7 @@ defmodule Clientats.LLM.ServiceTest do
       # However, generate_cover_letter calls build_cover_letter_prompt.
       # Let's ensure it doesn't crash.
       user_context = %{first_name: "John", last_name: "Doe", resume_text: "My resume"}
-      
+
       # We'll just check if it calls the prompt builder correctly
       prompt = PromptTemplates.build_cover_letter_prompt("Job description", user_context)
       assert String.contains?(prompt, "John Doe")

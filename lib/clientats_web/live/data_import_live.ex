@@ -118,7 +118,13 @@ defmodule ClientatsWeb.DataImportLive do
             </div>
           <% end %>
 
-          <.form for={%{}} id="import-form" phx-change="validate" phx-submit="import" class="space-y-4">
+          <.form
+            for={%{}}
+            id="import-form"
+            phx-change="validate"
+            phx-submit="import"
+            class="space-y-4"
+          >
             <div>
               <label class="label">
                 <span class="label-text font-medium">Import File *</span>

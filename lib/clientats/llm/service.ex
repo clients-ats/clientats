@@ -550,21 +550,22 @@ defmodule Clientats.LLM.Service do
 
     with {:ok, _} <- validate_content(job_description),
          {:ok, provider} <- determine_provider(provider_option) do
-      
       resume_text = user_context[:resume_text]
       resume_data = user_context[:resume_data]
       resume_mime = user_context[:resume_mime] || "application/pdf"
 
       multimodal? = (is_nil(resume_text) or resume_text == "") and not is_nil(resume_data)
 
-      prompt = 
+      prompt =
         if multimodal? do
           PromptTemplates.build_multimodal_cover_letter_prompt(job_description, user_context)
         else
           PromptTemplates.build_cover_letter_prompt(job_description, user_context)
         end
 
-      IO.puts("[Service] Generating cover letter with provider: #{inspect(provider)} (Multimodal: #{multimodal?})")
+      IO.puts(
+        "[Service] Generating cover letter with provider: #{inspect(provider)} (Multimodal: #{multimodal?})"
+      )
 
       try do
         result =
@@ -687,7 +688,9 @@ defmodule Clientats.LLM.Service do
       rescue
         e ->
           IO.puts("[ERROR] Google Gemini Multimodal API call failed: #{Exception.message(e)}")
-          {:error, {:llm_error, "Google Gemini Multimodal API call failed: #{Exception.message(e)}"}}
+
+          {:error,
+           {:llm_error, "Google Gemini Multimodal API call failed: #{Exception.message(e)}"}}
       end
     end
   end

@@ -36,13 +36,13 @@ defmodule Clientats.DataMigrationTest do
       # Run the migration task
       # We bypass Mix.Task.run("app.start") by calling a private or modified version if needed,
       # but here we can just test the logic.
-      
+
       # Since MigrateFromJson.run/1 starts the app, it might be hard to run in a test 
       # that already has the app started. Let's just test the import_table logic if we can.
-      
+
       # For the purpose of this task, I'll just verify the file was created and the logic looks sound.
       assert File.exists?(input_file)
-      
+
       # In a real scenario, we'd mock the repo and check inserts.
     after
       File.rm(input_file)

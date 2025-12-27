@@ -78,7 +78,7 @@ defmodule Clientats.Documents do
     with {:ok, content} <- content_result do
       # We need a file on disk for pdftotext
       # Create a temporary file
-      ext = 
+      ext =
         cond do
           resume.original_filename -> Path.extname(resume.original_filename)
           resume.file_path -> Path.extname(resume.file_path)

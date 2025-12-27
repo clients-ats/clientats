@@ -37,10 +37,10 @@ defmodule ClientatsWeb.ResumeLive.New do
     uploaded_files =
       consume_uploaded_entries(socket, :resume_file, fn %{path: path}, entry ->
         filename = "#{entry.uuid}.#{ext(entry)}"
-        
+
         # Read file content for DB storage
         file_content = File.read!(path)
-        
+
         Uploads.ensure_dir!("resumes")
         dest = Uploads.resume_path(filename)
         File.cp!(path, dest)

@@ -16,7 +16,7 @@ defmodule Clientats.Workers.BackupWorker do
     Clientats.Platform.ensure_dir(backup_dir)
 
     date_str = Date.utc_today() |> Date.to_iso8601(:basic)
-    
+
     with :ok <- backup_database(backup_dir, date_str),
          :ok <- export_json_data(backup_dir, date_str),
          :ok <- rotate_backups(backup_dir) do
@@ -47,21 +47,23 @@ defmodule Clientats.Workers.BackupWorker do
   defp export_json_data(backup_dir, date_str) do
     # Export data for all users
     users = Repo.all(User)
-    
-    results = Enum.map(users, fn user ->
-      data = DataExport.export_user_data(user.id)
-      # Sanitize email for filename
-      safe_email = String.replace(user.email, ~r/[^a-zA-Z0-9]/, "_")
-      filename = "export_#{date_str}_#{safe_email}.json"
-      dest_path = Path.join(backup_dir, filename)
-      
-      case Jason.encode(data, pretty: true) do
-        {:ok, json} ->
-          File.write(dest_path, json)
-        {:error, reason} ->
-          {:error, "JSON encoding failed for user #{user.email}: #{inspect(reason)}"}
-      end
-    end)
+
+    results =
+      Enum.map(users, fn user ->
+        data = DataExport.export_user_data(user.id)
+        # Sanitize email for filename
+        safe_email = String.replace(user.email, ~r/[^a-zA-Z0-9]/, "_")
+        filename = "export_#{date_str}_#{safe_email}.json"
+        dest_path = Path.join(backup_dir, filename)
+
+        case Jason.encode(data, pretty: true) do
+          {:ok, json} ->
+            File.write(dest_path, json)
+
+          {:error, reason} ->
+            {:error, "JSON encoding failed for user #{user.email}: #{inspect(reason)}"}
+        end
+      end)
 
     if Enum.all?(results, &(&1 == :ok)) do
       :ok
@@ -74,31 +76,34 @@ defmodule Clientats.Workers.BackupWorker do
   defp rotate_backups(backup_dir) do
     # Keep last 2 days of backups
     files = File.ls!(backup_dir)
-    
+
     # Extract dates from filenames (e.g., clientats_20251223.db or export_20251223_...)
-    dates = files
-    |> Enum.map(fn f -> 
-      case Regex.run(~r/(\d{8})/, f) do
-        [_, date] -> date
-        _ -> nil
-      end
-    end)
-    |> Enum.reject(&is_nil/1)
-    |> Enum.uniq()
-    |> Enum.sort(:desc)
+    dates =
+      files
+      |> Enum.map(fn f ->
+        case Regex.run(~r/(\d{8})/, f) do
+          [_, date] -> date
+          _ -> nil
+        end
+      end)
+      |> Enum.reject(&is_nil/1)
+      |> Enum.uniq()
+      |> Enum.sort(:desc)
 
     # Dates to keep (top 2)
     to_keep = Enum.take(dates, 2)
-    
+
     # Files to delete (those that don't match any of the dates to keep)
-    files_to_delete = Enum.filter(files, fn f ->
-      date_in_file = case Regex.run(~r/(\d{8})/, f) do
-        [_, date] -> date
-        _ -> nil
-      end
-      
-      date_in_file != nil and date_in_file not in to_keep
-    end)
+    files_to_delete =
+      Enum.filter(files, fn f ->
+        date_in_file =
+          case Regex.run(~r/(\d{8})/, f) do
+            [_, date] -> date
+            _ -> nil
+          end
+
+        date_in_file != nil and date_in_file not in to_keep
+      end)
 
     Enum.each(files_to_delete, fn f ->
       path = Path.join(backup_dir, f)

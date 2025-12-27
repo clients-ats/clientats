@@ -40,19 +40,21 @@ defmodule ClientatsWeb.DataImportLiveTest do
 
       {:ok, lv, _html} = live(conn, ~p"/import")
 
-            import_data = %{
-              "version" => "1.0",
-              "job_interests" => []
-            }
-      
-            file_input = file_input(lv, "#import-form", :import_file, [
-              %{
-                last_modified: 1_594,
-                name: "data.json",
-                content: Jason.encode!(import_data),
-                type: "application/json"
-              }
-            ])
+      import_data = %{
+        "version" => "1.0",
+        "job_interests" => []
+      }
+
+      file_input =
+        file_input(lv, "#import-form", :import_file, [
+          %{
+            last_modified: 1_594,
+            name: "data.json",
+            content: Jason.encode!(import_data),
+            type: "application/json"
+          }
+        ])
+
       render_upload(file_input, "data.json")
 
       assert has_element?(lv, "p", "data.json")
@@ -67,7 +69,7 @@ defmodule ClientatsWeb.DataImportLiveTest do
       import_data = %{
         "version" => "1.0",
         "job_interests" => [
-          %{ 
+          %{
             "company_name" => "Tech Corp",
             "position_title" => "Elixir Developer",
             "status" => "interested"
@@ -75,14 +77,15 @@ defmodule ClientatsWeb.DataImportLiveTest do
         ]
       }
 
-      file_input = file_input(lv, "#import-form", :import_file, [
-        %{ 
-          last_modified: 1_594,
-          name: "data.json",
-          content: Jason.encode!(import_data),
-          type: "application/json"
-        }
-      ])
+      file_input =
+        file_input(lv, "#import-form", :import_file, [
+          %{
+            last_modified: 1_594,
+            name: "data.json",
+            content: Jason.encode!(import_data),
+            type: "application/json"
+          }
+        ])
 
       render_upload(file_input, "data.json")
 
@@ -101,14 +104,15 @@ defmodule ClientatsWeb.DataImportLiveTest do
 
       {:ok, lv, _html} = live(conn, ~p"/import")
 
-      file_input = file_input(lv, "#import-form", :import_file, [
-        %{ 
-          last_modified: 1_594,
-          name: "data.json",
-          content: "invalid json",
-          type: "application/json"
-        }
-      ])
+      file_input =
+        file_input(lv, "#import-form", :import_file, [
+          %{
+            last_modified: 1_594,
+            name: "data.json",
+            content: "invalid json",
+            type: "application/json"
+          }
+        ])
 
       render_upload(file_input, "data.json")
 

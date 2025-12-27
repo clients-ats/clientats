@@ -56,13 +56,9 @@ defmodule ClientatsWeb.Features.HelpSystemTest do
       user = create_user_and_login(session)
 
       # Log multiple tutorial steps
-      Repo.insert!(
-        HelpInteraction.log_tutorial_start(to_string(user.id), "applications")
-      )
+      Repo.insert!(HelpInteraction.log_tutorial_start(to_string(user.id), "applications"))
 
-      Repo.insert!(
-        HelpInteraction.log_tutorial_complete(to_string(user.id), "applications")
-      )
+      Repo.insert!(HelpInteraction.log_tutorial_complete(to_string(user.id), "applications"))
 
       interactions =
         Repo.all(
@@ -147,9 +143,7 @@ defmodule ClientatsWeb.Features.HelpSystemTest do
       user = create_user_and_login(session)
 
       # Dismiss multiple tutorials
-      Repo.insert!(
-        HelpInteraction.log_tutorial_dismiss(to_string(user.id), "dashboard", "later")
-      )
+      Repo.insert!(HelpInteraction.log_tutorial_dismiss(to_string(user.id), "dashboard", "later"))
 
       Repo.insert!(
         HelpInteraction.log_tutorial_dismiss(to_string(user.id), "documents", "not_interested")
@@ -158,8 +152,7 @@ defmodule ClientatsWeb.Features.HelpSystemTest do
       dismissed_count =
         Repo.aggregate(
           from(h in HelpInteraction,
-            where:
-              h.user_id == ^to_string(user.id) and h.interaction_type == "tutorial_dismiss"
+            where: h.user_id == ^to_string(user.id) and h.interaction_type == "tutorial_dismiss"
           ),
           :count
         )

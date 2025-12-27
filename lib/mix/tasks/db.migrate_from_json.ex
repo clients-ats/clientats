@@ -5,7 +5,7 @@ defmodule Mix.Tasks.Db.MigrateFromJson do
 
   @moduledoc """
   Migrates data from a JSON export into the SQLite database.
-  
+
   Usage:
     mix db.migrate_from_json --input export.json
   """
@@ -28,7 +28,7 @@ defmodule Mix.Tasks.Db.MigrateFromJson do
     data = if Map.has_key?(json_data, "tables"), do: json_data["tables"], else: json_data
 
     repo = Clientats.Repo
-    
+
     # Order matters for foreign keys
     tables = [
       "users",
@@ -67,7 +67,7 @@ defmodule Mix.Tasks.Db.MigrateFromJson do
   defp import_table(repo, table_name, rows) do
     # Batch insert for performance
     prepared_rows = Enum.map(rows, &prepare_row/1)
-    
+
     # SQLite has limits on number of parameters (usually 999 or 32766)
     # We'll chunk it just in case
     Enum.chunk_every(prepared_rows, 50)
@@ -83,6 +83,7 @@ defmodule Mix.Tasks.Db.MigrateFromJson do
   end
 
   defp parse_value(nil), do: nil
+
   defp parse_value(v) when is_binary(v) do
     # Try parsing ISO 8601 timestamps
     case DateTime.from_iso8601(v) do
@@ -90,5 +91,6 @@ defmodule Mix.Tasks.Db.MigrateFromJson do
       _ -> v
     end
   end
+
   defp parse_value(v), do: v
 end

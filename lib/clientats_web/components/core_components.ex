@@ -94,7 +94,9 @@ defmodule ClientatsWeb.CoreComponents do
   slot :inner_block, required: true
 
   def button(assigns) do
-    variant_class = if assigns[:variant] == "primary" || is_nil(assigns[:variant]), do: "btn-primary", else: ""
+    variant_class =
+      if assigns[:variant] == "primary" || is_nil(assigns[:variant]), do: "btn-primary", else: ""
+
     assigns = assign(assigns, :variant_class, variant_class)
 
     if assigns.rest[:href] || assigns.rest[:navigate] || assigns.rest[:patch] do
