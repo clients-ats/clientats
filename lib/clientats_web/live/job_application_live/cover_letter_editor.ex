@@ -40,7 +40,8 @@ defmodule ClientatsWeb.JobApplicationLive.CoverLetterEditor do
                           class="btn btn-sm btn-outline"
                           title="Customize AI prompt"
                         >
-                          <.icon name="hero-cog-6-tooth" class="w-4 h-4" />
+                          <.icon name="hero-cog-6-tooth" class="w-4 h-4 mr-2" />
+                          <span>Customize Prompt</span>
                         </button>
                         <button
                           type="button"

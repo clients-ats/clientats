@@ -376,7 +376,8 @@ defmodule ClientatsWeb.JobApplicationLive.ConversionWizard do
             class="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
             title="Customize AI prompt"
           >
-            <.icon name="hero-cog-6-tooth" class="w-4 h-4 inline" />
+            <.icon name="hero-cog-6-tooth" class="w-4 h-4 inline mr-2" />
+            <span>Customize Prompt</span>
           </button>
 
           <button
