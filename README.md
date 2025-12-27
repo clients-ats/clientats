@@ -309,21 +309,21 @@ cp -r config/runtime.exs backups/
 
 #### Restore Database
 ```bash
-# Drop existing database (if needed)
-dropdb -U postgres clientats_dev
+# Simply copy the backup file to the database location
+# Development:
+cp backups/clientats_backup_20240101_120000.db clientats_dev.db
 
-# Create fresh database
-createdb -U postgres clientats_dev
+# Production (Linux example):
+cp backups/clientats_backup_20240101_120000.db ~/.config/clientats/db/clientats.db
 
-# Restore from backup
-psql -U postgres clientats_dev < backup.sql
+# Restart application
+mix phx.server
 ```
 
 #### Restore Configuration
 ```bash
 # Restore config files
 cp backups/runtime.exs config/
-cp -r backups/llm lib/clientats/
 
 # Restart application
 mix phx.server
@@ -335,18 +335,22 @@ Create a backup script (e.g., `backup.sh`):
 ```bash
 #!/bin/bash
 BACKUP_DIR="/path/to/backups"
-DB_NAME="clientats_dev"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+
+# Platform-specific database location
+# Linux: ~/.config/clientats/db/clientats.db
+# macOS: ~/Library/Application Support/clientats/db/clientats.db
+DB_PATH="${DATABASE_PATH:-$HOME/.config/clientats/db/clientats.db}"
 
 mkdir -p $BACKUP_DIR
 
-# Database backup
-pg_dump -U postgres $DB_NAME > $BACKUP_DIR/db_${TIMESTAMP}.sql
+# Database backup (simple file copy)
+cp "$DB_PATH" "$BACKUP_DIR/db_${TIMESTAMP}.db"
 
 # Keep only last 7 days of backups
-find $BACKUP_DIR -name "db_*.sql" -mtime +7 -delete
+find $BACKUP_DIR -name "db_*.db" -mtime +7 -delete
 
-echo "Backup completed: $BACKUP_DIR/db_${TIMESTAMP}.sql"
+echo "Backup completed: $BACKUP_DIR/db_${TIMESTAMP}.db"
 ```
 
 Schedule with cron:
@@ -472,11 +476,12 @@ clientats/
 
 **Database connection error**
 ```bash
-# Verify PostgreSQL is running
-psql -U postgres -c "SELECT 1"
+# Verify database file exists
+ls -la clientats_dev.db  # Development
+ls -la ~/.config/clientats/db/clientats.db  # Production (Linux)
 
-# Check database exists
-psql -U postgres -l | grep clientats
+# Check database integrity
+sqlite3 clientats_dev.db "PRAGMA integrity_check;"
 
 # Reset database if needed
 mix ecto.reset
@@ -556,11 +561,12 @@ See `Dockerfile` for containerized deployment instructions.
 
 ### Cloud Platforms
 The application can be deployed to:
-- Heroku (with PostgreSQL add-on)
 - DigitalOcean App Platform
 - AWS (ECS, Elastic Beanstalk)
 - Google Cloud Run
 - Any platform supporting Elixir/Phoenix
+
+**Note:** Since ClientATS uses SQLite (file-based database), ensure your deployment platform supports persistent storage for the database file.
 
 ---
 

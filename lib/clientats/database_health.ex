@@ -43,23 +43,19 @@ defmodule Clientats.DatabaseHealth do
       iex> get_pool_stats()
       %{
         pool_size: 10,
-        pool_count: 1,
-        max_overflow: 0,
         timeout_ms: 5000,
-        database_version: "PostgreSQL 15.1",
-        active_connections: 2
+        database_version: "SQLite 3.45.0",
+        database: "clientats_dev.db"
       }
   """
   def get_pool_stats do
     config = Repo.config()
 
-    # Get PostgreSQL version
+    # Get SQLite version
     version =
-      case Repo.query("SELECT version()", []) do
+      case Repo.query("SELECT sqlite_version()", []) do
         {:ok, %{rows: [[version_string | _] | _]}} ->
-          version_string
-          |> String.split(",")
-          |> List.first()
+          "SQLite #{version_string}"
 
         _ ->
           "Unknown"
@@ -67,11 +63,8 @@ defmodule Clientats.DatabaseHealth do
 
     %{
       pool_size: Keyword.get(config, :pool_size, "unknown"),
-      pool_count: Keyword.get(config, :pool_count, 1),
-      max_overflow: Keyword.get(config, :max_overflow, 0),
       timeout_ms: Keyword.get(config, :timeout, 5000),
       database_version: version,
-      hostname: Keyword.get(config, :hostname, "unknown"),
       database: Keyword.get(config, :database, "unknown")
     }
   end
@@ -79,88 +72,86 @@ defmodule Clientats.DatabaseHealth do
   @doc """
   Gets current database activity statistics.
 
-  Returns information about active connections and queries.
+  Returns information about the database file and basic statistics.
+  Note: SQLite is file-based and doesn't track connections like PostgreSQL.
 
   ## Examples
 
       iex> get_database_activity()
       %{
-        active_connections: 5,
-        idle_connections: 3,
-        active_queries: 2,
-        longest_query_ms: 1234
+        page_count: 100,
+        page_size: 4096,
+        database_size_bytes: 409600,
+        wal_mode: "wal"
       }
   """
   def get_database_activity do
-    case Repo.query(
-           """
-           SELECT
-             count(*) as total_connections,
-             count(CASE WHEN state = 'active' THEN 1 END) as active,
-             count(CASE WHEN state = 'idle' THEN 1 END) as idle,
-             max(EXTRACT(EPOCH FROM (now() - query_start)) * 1000) as longest_query_ms
-           FROM pg_stat_activity
-           WHERE datname = current_database()
-           """,
-           []
-         ) do
-      {:ok, %{rows: rows}} when is_list(rows) and length(rows) > 0 ->
-        [total, active, idle, longest] = List.first(rows)
+    page_count =
+      case Repo.query("PRAGMA page_count", []) do
+        {:ok, %{rows: [[count | _] | _]}} -> count
+        _ -> 0
+      end
 
-        %{
-          total_connections: total,
-          active_connections: active,
-          idle_connections: idle,
-          longest_query_ms: longest || 0
-        }
+    page_size =
+      case Repo.query("PRAGMA page_size", []) do
+        {:ok, %{rows: [[size | _] | _]}} -> size
+        _ -> 4096
+      end
 
-      _ ->
-        %{
-          total_connections: 0,
-          active_connections: 0,
-          idle_connections: 0,
-          longest_query_ms: 0
-        }
-    end
+    journal_mode =
+      case Repo.query("PRAGMA journal_mode", []) do
+        {:ok, %{rows: [[mode | _] | _]}} -> mode
+        _ -> "unknown"
+      end
+
+    %{
+      page_count: page_count,
+      page_size: page_size,
+      database_size_bytes: page_count * page_size,
+      journal_mode: journal_mode
+    }
   end
 
   @doc """
   Identifies potentially slow queries or missing indexes.
 
   Returns a list of observations about database performance.
+  Uses SQLite's index_list pragma to inspect indexes.
 
   ## Examples
 
       iex> get_performance_insights()
       [
-        %{type: "missing_index", table: "users", column: "email", reason: "Frequently used in WHERE clause"},
-        %{type: "slow_query", query: "SELECT * FROM jobs", duration_ms: 5234, count: 42}
+        %{type: "index_info", table: "users", indexes: ["users_email_index"]}
       ]
   """
   def get_performance_insights do
+    # Get list of tables
     case Repo.query(
-           """
-           SELECT
-             schemaname,
-             tablename,
-             indexname
-           FROM pg_stat_user_indexes
-           WHERE idx_scan = 0
-             AND indexname NOT LIKE '%_pkey'
-           LIMIT 10
-           """,
+           "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'schema_%'",
            []
          ) do
-      {:ok, result} ->
-        Enum.map(result.rows, fn [schema, table, index] ->
-          %{
-            type: "unused_index",
-            schema: schema,
-            table: table,
-            index: index,
-            suggestion: "Consider dropping unused indexes to improve write performance"
-          }
+      {:ok, %{rows: table_rows}} ->
+        table_rows
+        |> Enum.flat_map(fn [table_name] ->
+          case Repo.query("PRAGMA index_list('#{table_name}')", []) do
+            {:ok, %{rows: index_rows}} when index_rows != [] ->
+              indexes = Enum.map(index_rows, fn [_seq, name | _rest] -> name end)
+
+              [
+                %{
+                  type: "index_info",
+                  table: table_name,
+                  indexes: indexes,
+                  suggestion: "Review indexes for optimization opportunities"
+                }
+              ]
+
+            _ ->
+              []
+          end
         end)
+        |> Enum.take(10)
 
       _ ->
         []
@@ -168,47 +159,45 @@ defmodule Clientats.DatabaseHealth do
   end
 
   @doc """
-  Gets connection pool configuration documentation as markdown.
+  Gets database configuration documentation as markdown.
 
   Useful for displaying in UI or logging.
   """
   def get_configuration_docs do
     """
-    # Database Connection Pool Configuration
+    # SQLite Database Configuration
 
     ## Environment Variables
 
-    - `POOL_SIZE`: Number of connections in each pool (default: 10)
-    - `POOL_COUNT`: Number of independent pools (default: 1)
-    - `MAX_OVERFLOW`: Maximum overflow connections allowed (default: 0)
+    - `DATABASE_PATH`: Path to SQLite database file (default: platform-specific)
+      - Linux: ~/.config/clientats/db/clientats.db
+      - macOS: ~/Library/Application Support/clientats/db/clientats.db
+      - Windows: %APPDATA%/clientats/db/clientats.db
+    - `POOL_SIZE`: Number of connections in the pool (default: 5)
     - `POOL_TIMEOUT`: Connection acquisition timeout in ms (default: 5000)
-    - `DATABASE_SSL`: Enable SSL for database connection (default: false)
-    - `DATABASE_URL`: PostgreSQL connection string (required in production)
+
+    ## SQLite Advantages
+
+    - No separate database server required
+    - Simple file-based storage
+    - Easy backup (just copy the file)
+    - Perfect for single-user or small team deployments
 
     ## Recommended Settings
 
-    ### Small Deployments (1-5 users)
+    ### Development
+    - POOL_SIZE=5 (default)
+
+    ### Production (single instance)
     - POOL_SIZE=10
-    - POOL_COUNT=1
-    - MAX_OVERFLOW=2
-
-    ### Medium Deployments (5-100 users)
-    - POOL_SIZE=20
-    - POOL_COUNT=2
-    - MAX_OVERFLOW=10
-
-    ### Large Deployments (100+ users)
-    - POOL_SIZE=30
-    - POOL_COUNT=4
-    - MAX_OVERFLOW=20
+    - Enable WAL mode for better concurrency
 
     ## Performance Tuning
 
-    1. Monitor `pool_timeout` errors - if frequent, increase `POOL_SIZE`
-    2. Watch `query_queue_time` metrics - indicates pool contention
-    3. Use `POOL_COUNT` to distribute connections across multiple pools
-    4. Enable `DATABASE_SSL` in production for security
-    5. Separate Oban job queue connections if heavy background processing
+    1. WAL mode is enabled by default for better concurrent read/write
+    2. Run `PRAGMA optimize` periodically for query planning
+    3. Run `VACUUM` occasionally to reclaim space
+    4. Monitor database file size
 
     ## Health Checks
 

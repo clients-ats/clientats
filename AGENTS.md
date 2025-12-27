@@ -6,25 +6,24 @@ A comprehensive Phoenix LiveView application for tracking job interests, applica
 
 ### Database
 
-The project uses PostgreSQL running in a Podman container:
+The project uses SQLite - no separate database server needed. The database file is created automatically when you run `mix setup` or start the application.
 
 ```bash
-# Start the PostgreSQL container
-podman run -d --name clientats-db \
-  -e POSTGRES_PASSWORD=postgres \
-  -e POSTGRES_USER=postgres \
-  -e POSTGRES_DB=clientats_dev \
-  -p 5432:5432 \
-  postgres:16-alpine
+# Development database location
+# The file is created automatically in the project directory:
+# clientats_dev.db (development)
+# clientats_test.db (testing)
 
-# Stop the container
-podman stop clientats-db
+# Production database location (platform-specific):
+# Linux: ~/.config/clientats/db/clientats.db
+# macOS: ~/Library/Application Support/clientats/db/clientats.db
+# Windows: %APPDATA%/clientats/db/clientats.db
 
-# Start existing container
-podman start clientats-db
+# Check database file
+ls -la clientats_dev.db
 
-# Remove the container (if needed)
-podman rm -f clientats-db
+# Verify database integrity
+sqlite3 clientats_dev.db "PRAGMA integrity_check;"
 ```
 
 ### Development Commands
@@ -98,7 +97,7 @@ mix compile --warnings-as-errors
 ## Tech Stack
 
 - **Framework**: Phoenix 1.8 with LiveView
-- **Database**: PostgreSQL 16 (via Podman)
+- **Database**: SQLite (embedded, file-based)
 - **CSS**: Tailwind CSS
 - **Build**: esbuild
 - **Components**: Phoenix Core Components with Heroicons

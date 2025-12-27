@@ -27,7 +27,7 @@ Runs on every push to `main`/`develop` and all PRs.
 #### Jobs
 
 1. **Test Job**
-   - Sets up PostgreSQL service container
+   - Uses SQLite database (no external services needed)
    - Runs full test suite with coverage
    - Uploads coverage reports to Codecov
    - ~5-10 minutes runtime
@@ -163,20 +163,11 @@ Add Heroku deployment action:
 docker-compose up -d
 ```
 
-2. **Create database:**
+2. **Access the application:**
 ```bash
-docker-compose exec -T postgres createdb clientats_dev
-```
-
-3. **Run migrations:**
-```bash
-docker-compose exec web mix ecto.migrate
-```
-
-4. **Start development server:**
-```bash
-docker-compose up
 # Application runs on http://localhost:4000
+# SQLite database is created automatically
+# Migrations run on startup
 ```
 
 #### Using Optional Services
@@ -249,7 +240,8 @@ docker build --target=runtime -t clientats:prod .
 
 ```bash
 docker run -p 4000:4000 \
-  -e DATABASE_URL=postgresql://user:pass@host/db \
+  -v clientats_data:/app/data \
+  -e DATABASE_PATH=/app/data/clientats.db \
   -e SECRET_KEY_BASE=your-secret-key \
   -e PHX_SERVER=true \
   clientats:prod
@@ -272,20 +264,15 @@ Required for deployments:
 
 ```env
 # Required
-DATABASE_URL=postgresql://user:pass@host/dbname
 SECRET_KEY_BASE=generated-secret-key
 PHX_HOST=example.com
 LLM_ENCRYPTION_KEY=encryption-key
 
 # Optional
-POOL_SIZE=20
-POOL_COUNT=2
-MAX_OVERFLOW=10
-DATABASE_SSL=true
+DATABASE_PATH=/custom/path/clientats.db  # Default: platform-specific location
+POOL_SIZE=10
 HEALTH_CHECK_TOKEN=secret-token
 METRICS_TOKEN=metrics-secret-token
-OPENAI_API_KEY=key
-ANTHROPIC_API_KEY=key
 OLLAMA_BASE_URL=http://localhost:11434
 ```
 
@@ -316,7 +303,7 @@ OLLAMA_BASE_URL=http://localhost:11434
 #### Tests Failing in CI
 
 1. Check database initialization in workflow
-2. Verify PostgreSQL service is healthy
+2. Verify SQLite database file is created correctly
 3. Check for environment variable mismatches
 4. Look for test data dependencies
 
