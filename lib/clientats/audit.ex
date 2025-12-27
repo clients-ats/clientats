@@ -218,8 +218,8 @@ defmodule Clientats.Audit do
       |> where([a], a.inserted_at >= ^cutoff)
       |> where(
         [a],
-        ilike(a.description, ^search_pattern) or ilike(a.action, ^search_pattern) or
-          ilike(a.resource_type, ^search_pattern)
+        like(a.description, ^search_pattern) or like(a.action, ^search_pattern) or
+          like(a.resource_type, ^search_pattern)
       )
 
     query
@@ -265,7 +265,7 @@ defmodule Clientats.Audit do
     rows =
       Enum.map(logs, fn log ->
         [
-          DateTime.to_iso8601(log.inserted_at),
+          NaiveDateTime.to_iso8601(log.inserted_at),
           log.action,
           log.resource_type,
           log.resource_id || "",
@@ -331,7 +331,7 @@ defmodule Clientats.Audit do
          |> select([a], a.inserted_at)
          |> Repo.one() do
       nil -> nil
-      timestamp -> DateTime.to_iso8601(timestamp)
+      timestamp -> NaiveDateTime.to_iso8601(timestamp)
     end
   end
 end

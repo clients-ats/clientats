@@ -565,7 +565,8 @@ defmodule ClientatsWeb.Features.DataImportExportTest do
 
       interest = List.first(export_data.job_interests)
       assert interest.notes == nil
-      assert interest.job_description == ""
+      # Empty strings are stored as nil in the database
+      assert interest.job_description == nil
       assert interest.salary_min == nil
 
       # Verify JSON encoding works

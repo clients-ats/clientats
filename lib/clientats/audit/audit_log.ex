@@ -9,13 +9,13 @@ defmodule Clientats.Audit.AuditLog do
   use Ecto.Schema
   import Ecto.Changeset
 
-  @primary_key {:id, Ecto.UUID, autogenerate: true}
-  @foreign_key_type Ecto.UUID
+  @derive {Jason.Encoder, except: [:__meta__]}
+  @primary_key {:id, :string, autogenerate: false}
   schema "audit_logs" do
-    field :user_id, Ecto.UUID
+    field :user_id, :string
     field :action, :string
     field :resource_type, :string
-    field :resource_id, Ecto.UUID
+    field :resource_id, :string
     field :description, :string
     field :ip_address, :string
     field :user_agent, :string
@@ -78,8 +78,47 @@ defmodule Clientats.Audit.AuditLog do
   Create audit entry for user action.
   """
   def create_entry(attrs) do
+    # Generate UUID for primary key
+    attrs = Map.put(attrs, :id, Ecto.UUID.generate())
+
+    # Convert user_id and resource_id to strings if they're integers
+    attrs =
+      attrs
+      |> convert_id_to_string(:user_id)
+      |> convert_id_to_string(:resource_id)
+      |> stringify_map_keys(:old_values)
+      |> stringify_map_keys(:new_values)
+      |> stringify_map_keys(:metadata)
+
     %__MODULE__{}
     |> changeset(attrs)
+  end
+
+  defp convert_id_to_string(attrs, key) do
+    case Map.get(attrs, key) do
+      nil -> attrs
+      id when is_integer(id) -> Map.put(attrs, key, Integer.to_string(id))
+      id when is_binary(id) -> attrs
+      _ -> attrs
+    end
+  end
+
+  defp stringify_map_keys(attrs, key) do
+    case Map.get(attrs, key) do
+      nil ->
+        attrs
+
+      map when is_map(map) ->
+        stringified =
+          map
+          |> Enum.map(fn {k, v} -> {to_string(k), v} end)
+          |> Enum.into(%{})
+
+        Map.put(attrs, key, stringified)
+
+      _ ->
+        attrs
+    end
   end
 
   @doc """

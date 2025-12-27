@@ -34,7 +34,7 @@ defmodule ClientatsWeb.Features.AuditLoggingTest do
       # Verify audit log was created
       assert log.action == "create"
       assert log.resource_type == "job_interest"
-      assert log.resource_id == interest.id
+      assert log.resource_id == Integer.to_string(interest.id)
       assert log.user_id == user.id
       assert log.status == "success"
       assert log.new_values["company_name"] == "Test Corp"
@@ -111,7 +111,7 @@ defmodule ClientatsWeb.Features.AuditLoggingTest do
         )
 
       assert log.action == "delete"
-      assert log.resource_id == interest_id
+      assert log.resource_id == Integer.to_string(interest_id)
       assert log.old_values["company_name"] == "Delete Corp"
     end
 
@@ -251,7 +251,7 @@ defmodule ClientatsWeb.Features.AuditLoggingTest do
         |> AuditLog.changeset(%{action: "update"})
 
       assert changeset.valid? == false
-      assert {"Audit logs are immutable", []} in changeset.errors
+      assert changeset.errors[:base] == {"Audit logs are immutable", []}
     end
 
     test "audit logs have no updated_at timestamp" do
