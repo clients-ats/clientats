@@ -3,7 +3,7 @@ const { test, expect } = require('@playwright/test');
 // Test configuration
 const BASE_URL = 'http://localhost:4000';
 const EMAIL = 'test@example.com';
-const PASSWORD = 'password';
+const PASSWORD = 'password123';
 const JOB_URL = 'https://example.com/jobs/senior-site-reliability-engineer';
 
 // Helper function to login

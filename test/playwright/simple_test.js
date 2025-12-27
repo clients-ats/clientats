@@ -12,7 +12,7 @@ const { chromium } = require('playwright');
     
     // Login
     await page.fill('input[name="email"]', 'test@example.com');
-    await page.fill('input[name="password"]', 'password');
+    await page.fill('input[name="password"]', 'password123');
     await page.click('button[type="submit"]');
     
     // Wait for dashboard
