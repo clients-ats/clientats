@@ -28,14 +28,26 @@ mix release --overwrite
 # Copy the release to src-tauri directory
 echo "📋 Copying release to Tauri resources..."
 
-# Always remove existing directory first (works on all platforms in Git Bash)
+# Remove existing directory first
 if [ -d "src-tauri/phoenix" ]; then
   echo "🗑️  Removing existing release..."
-  rm -rf src-tauri/phoenix
+  if [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "cygwin" ]] || [[ -n "$WINDIR" ]]; then
+    # Windows: Use PowerShell for reliable removal
+    powershell.exe -Command "Remove-Item -Path 'src-tauri/phoenix' -Recurse -Force -ErrorAction SilentlyContinue"
+  else
+    rm -rf src-tauri/phoenix
+  fi
 fi
 
 mkdir -p src-tauri/phoenix
-cp -rf _build/prod/rel/clientats/* src-tauri/phoenix/
+
+# Copy files
+if [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "cygwin" ]] || [[ -n "$WINDIR" ]]; then
+  # Windows: Use PowerShell for reliable copy
+  powershell.exe -Command "Copy-Item -Path '_build/prod/rel/clientats/*' -Destination 'src-tauri/phoenix/' -Recurse -Force"
+else
+  cp -rf _build/prod/rel/clientats/* src-tauri/phoenix/
+fi
 
 # Fix permissions and remove macOS extended attributes
 echo "🔧 Fixing file permissions and attributes..."
