@@ -144,7 +144,12 @@ fn main() {
             
             let quit_i = MenuItem::with_id(handle, "quit", "Quit", true, None::<&str>)?;
             let close_i = MenuItem::with_id(handle, "close", "Close", true, None::<&str>)?;
-            
+
+            // Zoom menu items with keyboard shortcuts
+            let zoom_in_i = MenuItem::with_id(handle, "zoom_in", "Zoom In", true, Some("CmdOrCtrl+Plus"))?;
+            let zoom_out_i = MenuItem::with_id(handle, "zoom_out", "Zoom Out", true, Some("CmdOrCtrl+-"))?;
+            let zoom_reset_i = MenuItem::with_id(handle, "zoom_reset", "Actual Size", true, Some("CmdOrCtrl+0"))?;
+
             let file_menu = Submenu::with_items(
                 handle,
                 "File",
@@ -177,6 +182,17 @@ fn main() {
                 ],
             )?;
 
+            let view_menu = Submenu::with_items(
+                handle,
+                "View",
+                true,
+                &[
+                    &zoom_in_i,
+                    &zoom_out_i,
+                    &zoom_reset_i,
+                ],
+            )?;
+
             let window_menu = Submenu::with_items(
                 handle,
                 "Window",
@@ -188,7 +204,7 @@ fn main() {
                 ],
             )?;
 
-            let menu = Menu::with_items(handle, &[&file_menu, &edit_menu, &window_menu])?;
+            let menu = Menu::with_items(handle, &[&file_menu, &edit_menu, &view_menu, &window_menu])?;
             app.set_menu(menu)?;
 
             app.on_menu_event(move |app, event| {
@@ -197,6 +213,18 @@ fn main() {
                 } else if event.id == close_i.id() {
                     if let Some(window) = app.get_webview_window("main") {
                         let _ = window.close();
+                    }
+                } else if event.id == zoom_in_i.id() {
+                    if let Some(window) = app.get_webview_window("main") {
+                        let _ = window.eval("document.body.style.zoom = (parseFloat(document.body.style.zoom || 1) + 0.1).toString()");
+                    }
+                } else if event.id == zoom_out_i.id() {
+                    if let Some(window) = app.get_webview_window("main") {
+                        let _ = window.eval("document.body.style.zoom = Math.max(0.1, parseFloat(document.body.style.zoom || 1) - 0.1).toString()");
+                    }
+                } else if event.id == zoom_reset_i.id() {
+                    if let Some(window) = app.get_webview_window("main") {
+                        let _ = window.eval("document.body.style.zoom = '1'");
                     }
                 }
             });
