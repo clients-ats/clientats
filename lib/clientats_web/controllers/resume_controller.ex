@@ -2,14 +2,40 @@ defmodule ClientatsWeb.ResumeController do
   use ClientatsWeb, :controller
   alias Clientats.Documents
 
-    def download(conn, %{"id" => id}) do
-      resume = Documents.get_resume!(id)
-  
-      if !resume.is_valid do
+  plug :fetch_current_user
+
+  def download(conn, %{"id" => id}) do
+    case conn.assigns[:current_user] do
+      nil ->
+        conn
+        |> put_flash(:error, "You must be logged in to download resumes")
+        |> redirect(to: "/login")
+
+      user ->
+        download_resume(conn, id, user.id)
+    end
+  end
+
+  defp download_resume(conn, id, user_id) do
+    resume = Clientats.Repo.get(Clientats.Documents.Resume, id)
+
+    cond do
+      is_nil(resume) ->
+        conn
+        |> put_flash(:error, "Resume not found")
+        |> redirect(to: ~p"/dashboard/resumes")
+
+      resume.user_id != user_id ->
+        conn
+        |> put_flash(:error, "You don't have permission to download this resume")
+        |> redirect(to: ~p"/dashboard/resumes")
+
+      !resume.is_valid ->
         conn
         |> put_flash(:error, "Resume file is invalid or missing")
         |> redirect(to: ~p"/dashboard/resumes")
-      else
+
+      true ->
         # Check if data exists in DB
         content =
           if resume.data do
@@ -36,9 +62,20 @@ defmodule ClientatsWeb.ResumeController do
           |> put_flash(:error, "Resume file not found")
           |> redirect(to: ~p"/dashboard/resumes")
         end
-      end
     end
+  end
   defp mime_type(filename) do
     MIME.from_path(filename)
+  end
+
+  defp fetch_current_user(conn, _opts) do
+    case get_session(conn, :user_id) do
+      nil ->
+        assign(conn, :current_user, nil)
+
+      user_id ->
+        user = Clientats.Accounts.get_user(user_id)
+        assign(conn, :current_user, user)
+    end
   end
 end
