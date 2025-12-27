@@ -31,7 +31,7 @@ echo "📋 Copying release to Tauri resources..."
 # Remove existing directory first
 if [ -d "src-tauri/phoenix" ]; then
   echo "🗑️  Removing existing release..."
-  if [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "cygwin" ]] || [[ -n "$WINDIR" ]]; then
+  if [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "cygwin" ]] || [[ -n "${WINDIR:-}" ]]; then
     # Windows: Use PowerShell for reliable removal
     powershell.exe -Command "Remove-Item -Path 'src-tauri/phoenix' -Recurse -Force -ErrorAction SilentlyContinue"
   else
@@ -42,7 +42,7 @@ fi
 mkdir -p src-tauri/phoenix
 
 # Copy files
-if [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "cygwin" ]] || [[ -n "$WINDIR" ]]; then
+if [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "cygwin" ]] || [[ -n "${WINDIR:-}" ]]; then
   # Windows: Use PowerShell for reliable copy
   powershell.exe -Command "Copy-Item -Path '_build/prod/rel/clientats/*' -Destination 'src-tauri/phoenix/' -Recurse -Force"
 else
