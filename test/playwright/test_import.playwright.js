@@ -2,9 +2,9 @@ const { test, expect } = require('@playwright/test');
 
 // Test configuration
 const BASE_URL = 'http://localhost:4000';
-const EMAIL = 'test@example.com';
+const EMAIL = 'jesse.sightler@gmail.com';
 const PASSWORD = 'password';
-const JOB_URL = 'https://example.com/jobs/senior-site-reliability-engineer';
+const JOB_URL = 'https://redhat.wd5.myworkdayjobs.com/en-US/jobs/job/Senior-Site-Reliability-Engineer_R-044303-1';
 
 // Helper function to login
 async function login(page) {

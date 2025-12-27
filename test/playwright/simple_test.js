@@ -11,7 +11,7 @@ const { chromium } = require('playwright');
     await page.goto('http://localhost:4000/login');
     
     // Login
-    await page.fill('input[name="email"]', 'test@example.com');
+    await page.fill('input[name="email"]', 'jesse.sightler@gmail.com');
     await page.fill('input[name="password"]', 'password');
     await page.click('button[type="submit"]');
     
@@ -22,7 +22,7 @@ const { chromium } = require('playwright');
     await page.goto('http://localhost:4000/dashboard/job-interests/scrape');
     
     // Enter URL
-    const url = 'https://example.com/jobs/senior-site-reliability-engineer';
+    const url = 'https://redhat.wd5.myworkdayjobs.com/en-US/jobs/job/Senior-Site-Reliability-Engineer_R-044303-1';
     await page.fill('input[type="url"]', url);
     
     // Check button state
