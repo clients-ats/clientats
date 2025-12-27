@@ -8,12 +8,12 @@ defmodule ClientatsWeb.JobApplicationLive.CustomPromptModal do
     ~H"""
     <div :if={@show} id={@id} class="relative z-50">
       <!-- Overlay -->
-      <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
+      <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity z-40"></div>
 
       <!-- Modal -->
       <div class="fixed inset-0 z-50 overflow-y-auto">
         <div class="flex min-h-full items-center justify-center p-4">
-          <div class="relative transform overflow-hidden rounded-lg bg-white shadow-xl transition-all w-full max-w-6xl">
+          <div class="relative transform overflow-hidden rounded-lg bg-white shadow-xl transition-all w-full max-w-6xl max-h-[90vh] overflow-y-auto">
             <!-- Header -->
             <div class="bg-gray-50 px-6 py-4 border-b border-gray-200">
               <div class="flex items-center justify-between">
@@ -65,6 +65,7 @@ defmodule ClientatsWeb.JobApplicationLive.CustomPromptModal do
                     <textarea
                       id="custom-prompt-textarea"
                       phx-change="validate"
+                      phx-debounce="300"
                       phx-target={@myself}
                       name="custom_prompt"
                       rows="20"
