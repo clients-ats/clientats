@@ -56,7 +56,9 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     if ls src-tauri/target/release/bundle/macos/*.app 1> /dev/null 2>&1; then
         for app in src-tauri/target/release/bundle/macos/*.app; do
             app_name=$(basename "$app" .app)
-            (cd src-tauri/target/release/bundle/macos && zip -r -q "../../../../$BIN_DIR/${app_name}.app.zip" "$(basename "$app")")
+            # Use absolute path to avoid relative path issues
+            abs_bin_dir="$(pwd)/$BIN_DIR"
+            (cd src-tauri/target/release/bundle/macos && zip -r -q "$abs_bin_dir/${app_name}.app.zip" "$(basename "$app")")
             echo "   ✓ Copied ${app_name}.app.zip"
         done
     fi
