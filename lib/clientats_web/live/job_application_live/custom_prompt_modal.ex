@@ -6,14 +6,15 @@ defmodule ClientatsWeb.JobApplicationLive.CustomPromptModal do
   @impl true
   def render(assigns) do
     ~H"""
-    <div :if={@show} id={@id} class="relative z-50">
-      <!-- Overlay -->
-      <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity z-40"></div>
+    <div id={@id}>
+      <div :if={@show} class="relative z-50">
+        <!-- Overlay -->
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity z-40"></div>
 
-      <!-- Modal -->
-      <div class="fixed inset-0 z-50 overflow-y-auto">
-        <div class="flex min-h-full items-center justify-center p-4">
-          <div class="relative transform overflow-hidden rounded-lg bg-white shadow-xl transition-all w-full max-w-6xl max-h-[90vh] overflow-y-auto">
+        <!-- Modal -->
+        <div class="fixed inset-0 z-50 overflow-y-auto">
+          <div class="flex min-h-full items-center justify-center p-4">
+            <div class="relative transform overflow-hidden rounded-lg bg-white shadow-xl transition-all w-full max-w-6xl max-h-[90vh] overflow-y-auto">
             <!-- Header -->
             <div class="bg-gray-50 px-6 py-4 border-b border-gray-200">
               <div class="flex items-center justify-between">
@@ -70,7 +71,7 @@ defmodule ClientatsWeb.JobApplicationLive.CustomPromptModal do
                       name="custom_prompt"
                       rows="20"
                       class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 font-mono text-sm"
-                      placeholder="Enter your custom prompt here. Use variables like {{JOB_DESCRIPTION}}, {{CANDIDATE_NAME}}, etc."
+                      placeholder={"Enter your custom prompt here. Use variables like {{JOB_DESCRIPTION}}, {{CANDIDATE_NAME}}, etc."}
                     ><%= @custom_prompt %></textarea>
                     <div class="mt-2 flex justify-between text-xs text-gray-500">
                       <span><%= character_count(@custom_prompt) %> characters</span>
@@ -133,7 +134,7 @@ defmodule ClientatsWeb.JobApplicationLive.CustomPromptModal do
                       <.icon name="hero-exclamation-triangle" class="w-5 h-5 text-yellow-400 mr-2" />
                       <div class="text-xs text-yellow-800">
                         <p class="font-semibold">Required:</p>
-                        <p class="mt-1">Your prompt must include <code class="font-mono">{{JOB_DESCRIPTION}}</code> to generate relevant cover letters.</p>
+                        <p class="mt-1">Your prompt must include <code class="font-mono">{"{{JOB_DESCRIPTION}}"}</code> to generate relevant cover letters.</p>
                       </div>
                     </div>
                   </div>
@@ -170,6 +171,7 @@ defmodule ClientatsWeb.JobApplicationLive.CustomPromptModal do
                   Save Custom Prompt
                 </button>
               </div>
+            </div>
             </div>
           </div>
         </div>
