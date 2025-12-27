@@ -408,14 +408,14 @@ defmodule ClientatsWeb.JobApplicationLive.ConversionWizard do
 
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">Cover Letter Content</label>
-          <textarea
-            phx-change="update_cover_letter"
-            phx-blur="update_cover_letter"
-            name="cover_letter_content"
-            rows="16"
-            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 font-mono text-sm"
-            placeholder="Click 'Generate with AI' or write your cover letter here..."
-          ><%= @cover_letter_content %></textarea>
+          <form phx-change="update_cover_letter">
+            <textarea
+              name="cover_letter_content"
+              rows="16"
+              class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 font-mono text-sm"
+              placeholder="Click 'Generate with AI' or write your cover letter here..."
+            ><%= @cover_letter_content %></textarea>
+          </form>
         </div>
 
         <%= if @cover_letter_content do %>
