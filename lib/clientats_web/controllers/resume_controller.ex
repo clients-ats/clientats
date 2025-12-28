@@ -51,7 +51,7 @@ defmodule ClientatsWeb.ResumeController do
               _ -> nil
             end
           end
-  
+
         if content do
           conn
           |> put_resp_content_type(mime_type(resume.original_filename))
@@ -64,6 +64,7 @@ defmodule ClientatsWeb.ResumeController do
         end
     end
   end
+
   defp mime_type(filename) do
     MIME.from_path(filename)
   end

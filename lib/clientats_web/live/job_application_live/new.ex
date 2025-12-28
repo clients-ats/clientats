@@ -42,9 +42,8 @@ defmodule ClientatsWeb.JobApplicationLive.New do
     changeset = Jobs.change_job_application(%JobApplication{}, attrs)
 
     # Check if user has any enabled LLM providers
-    llm_available =
-      enabled_providers = LLMConfig.get_enabled_providers(socket.assigns.current_user.id)
-      length(enabled_providers) > 0
+    enabled_providers = LLMConfig.get_enabled_providers(socket.assigns.current_user.id)
+    llm_available = length(enabled_providers) > 0
 
     {:ok,
      socket
@@ -85,16 +84,28 @@ defmodule ClientatsWeb.JobApplicationLive.New do
 
     cond do
       is_nil(job_desc) || String.trim(job_desc) == "" ->
-        {:noreply, assign(socket, :generation_error, "Job description is required for AI generation. Please add a job description above.")}
+        {:noreply,
+         assign(
+           socket,
+           :generation_error,
+           "Job description is required for AI generation. Please add a job description above."
+         )}
 
       is_nil(Documents.get_default_resume(user.id)) ->
-        {:noreply, assign(socket, :generation_error, "No resume found. Upload one in Settings to enable AI generation.")}
+        {:noreply,
+         assign(
+           socket,
+           :generation_error,
+           "No resume found. Upload one in Settings to enable AI generation."
+         )}
 
       true ->
         # Try to get default resume and extract text
         resume_text =
           case Documents.get_default_resume(user.id) do
-            nil -> nil
+            nil ->
+              nil
+
             resume ->
               case Documents.extract_resume_text(resume) do
                 {:ok, text} -> text
@@ -178,11 +189,18 @@ defmodule ClientatsWeb.JobApplicationLive.New do
 
     # Update application with PDF paths
     attrs = %{}
-    attrs = if cover_letter_pdf_path, do: Map.put(attrs, :cover_letter_pdf_path, cover_letter_pdf_path), else: attrs
+
+    attrs =
+      if cover_letter_pdf_path,
+        do: Map.put(attrs, :cover_letter_pdf_path, cover_letter_pdf_path),
+        else: attrs
+
     attrs = if resume_pdf_path, do: Map.put(attrs, :resume_pdf_path, resume_pdf_path), else: attrs
 
     case Jobs.update_job_application(application, attrs) do
-      {:ok, updated_application} -> updated_application
+      {:ok, updated_application} ->
+        updated_application
+
       {:error, _changeset} ->
         Logger.error("Failed to update application with PDF paths")
         application
@@ -236,7 +254,9 @@ defmodule ClientatsWeb.JobApplicationLive.New do
     case Browser.generate_pdf(html) do
       {:ok, temp_path} ->
         # Move to permanent location
-        permanent_path = "/tmp/clientats_cover_letter_#{application.id}_#{System.unique_integer([:positive])}.pdf"
+        permanent_path =
+          "/tmp/clientats_cover_letter_#{application.id}_#{System.unique_integer([:positive])}.pdf"
+
         File.cp!(temp_path, permanent_path)
         permanent_path
 
@@ -274,9 +294,14 @@ defmodule ClientatsWeb.JobApplicationLive.New do
   def handle_async(:generate_cover_letter, {:ok, {:error, reason}}, socket) do
     error_msg =
       case reason do
-        :unsupported_provider -> "Selected LLM provider is not supported. Please configure a supported provider in Settings."
-        :invalid_content -> "Job description is invalid or too short for AI generation."
-        msg -> "Generation failed: #{inspect(msg)}"
+        :unsupported_provider ->
+          "Selected LLM provider is not supported. Please configure a supported provider in Settings."
+
+        :invalid_content ->
+          "Job description is invalid or too short for AI generation."
+
+        msg ->
+          "Generation failed: #{inspect(msg)}"
       end
 
     {:noreply,
@@ -431,7 +456,10 @@ defmodule ClientatsWeb.JobApplicationLive.New do
                         <span>
                           {@generation_error}
                           <%= if String.contains?(@generation_error, "No resume found") do %>
-                            <.link navigate={~p"/dashboard/resumes/new"} class="underline font-medium ml-1">
+                            <.link
+                              navigate={~p"/dashboard/resumes/new"}
+                              class="underline font-medium ml-1"
+                            >
                               Upload one here
                             </.link>
                           <% end %>
@@ -460,11 +488,9 @@ defmodule ClientatsWeb.JobApplicationLive.New do
                         class={"btn btn-sm #{if @generating, do: "btn-disabled loading", else: "btn-primary"}"}
                       >
                         <%= if @generating do %>
-                          <span class="loading loading-spinner loading-xs mr-2"></span>
-                          Generating...
+                          <span class="loading loading-spinner loading-xs mr-2"></span> Generating...
                         <% else %>
-                          <.icon name="hero-sparkles" class="w-4 h-4 mr-2" />
-                          Generate Cover Letter
+                          <.icon name="hero-sparkles" class="w-4 h-4 mr-2" /> Generate Cover Letter
                         <% end %>
                       </button>
                     <% end %>

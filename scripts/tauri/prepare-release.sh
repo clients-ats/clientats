@@ -25,21 +25,28 @@ mix assets.deploy
 echo "🚀 Creating Phoenix release..."
 mix release --overwrite
 
-# Copy the release to src-tauri directory (force overwrite on Windows)
+# Copy the release to src-tauri directory
 echo "📋 Copying release to Tauri resources..."
-if [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "win32" ]] || [[ "$OSTYPE" == "cygwin" ]]; then
-  # Windows: Remove directory with PowerShell if it exists, then copy
-  if [ -d "src-tauri/phoenix" ]; then
-    echo "🗑️  Removing existing release (Windows)..."
-    powershell.exe -Command "if (Test-Path 'src-tauri/phoenix') { Remove-Item -Path 'src-tauri/phoenix' -Recurse -Force -ErrorAction SilentlyContinue }"
+
+# Remove existing directory first
+if [ -d "src-tauri/phoenix" ]; then
+  echo "🗑️  Removing existing release..."
+  if [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "cygwin" ]] || [[ -n "${WINDIR:-}" ]]; then
+    # Windows: Use PowerShell for reliable removal
+    powershell.exe -Command "Remove-Item -Path 'src-tauri/phoenix' -Recurse -Force -ErrorAction SilentlyContinue"
+  else
+    rm -rf src-tauri/phoenix
   fi
-  mkdir -p src-tauri/phoenix
-  cp -r _build/prod/rel/clientats/* src-tauri/phoenix/
+fi
+
+mkdir -p src-tauri/phoenix
+
+# Copy files
+if [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "cygwin" ]] || [[ -n "${WINDIR:-}" ]]; then
+  # Windows: Use PowerShell for reliable copy
+  powershell.exe -Command "Copy-Item -Path '_build/prod/rel/clientats/*' -Destination 'src-tauri/phoenix/' -Recurse -Force"
 else
-  # Unix/macOS: Standard rm and copy
-  rm -rf src-tauri/phoenix
-  mkdir -p src-tauri/phoenix
-  cp -r _build/prod/rel/clientats/* src-tauri/phoenix/
+  cp -rf _build/prod/rel/clientats/* src-tauri/phoenix/
 fi
 
 # Fix permissions and remove macOS extended attributes

@@ -1,6 +1,6 @@
 [package]
 name = "clientats"
-version = "1.0.0-alpha2"
+version = "1.0.0"
 description = "Job Scraping & Management Platform"
 authors = ["ClientATS Team"]
 license = "MIT"

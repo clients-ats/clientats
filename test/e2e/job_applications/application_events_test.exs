@@ -17,7 +17,9 @@ defmodule ClientatsWeb.Features.ApplicationEventsTest do
     |> assert_has(css("h3", text: "Add Activity"))
     |> click(css("select[name='event_type'] option[value='applied']"))
     |> fill_in(css("input[name='event_date']"), with: "2024-01-15")
-    |> fill_in(css("textarea[name='notes']"), with: "Submitted application through company portal")
+    |> fill_in(css("textarea[name='notes']"),
+      with: "Submitted application through company portal"
+    )
     |> click(button("Save Activity"))
     |> assert_has(css(".timeline-event", text: "Applied"))
     |> assert_has(css(".timeline-event", text: "2024-01-15"))
@@ -91,7 +93,9 @@ defmodule ClientatsWeb.Features.ApplicationEventsTest do
     |> click(css("select[name='event_type'] option[value='technical_screen']"))
     |> fill_in(css("input[name='event_date']"), with: "2024-01-22")
     |> fill_in(css("input[name='contact_person']"), with: "Sarah Engineer")
-    |> fill_in(css("textarea[name='notes']"), with: "Coding challenge - algorithms and data structures")
+    |> fill_in(css("textarea[name='notes']"),
+      with: "Coding challenge - algorithms and data structures"
+    )
     |> click(button("Save Activity"))
     |> assert_has(css(".timeline-event", text: "Technical Screen"))
     |> assert_has(css(".timeline-event", text: "Sarah Engineer"))

@@ -30,11 +30,12 @@ defmodule ClientatsWeb.SecurityTest do
     test "session cookie configuration is secure", %{conn: _conn} do
       # Check session cookie configuration
       # Note: In test environment, cookie attributes are configured in endpoint.ex
-      session_opts = Plug.Session.init(
-        store: :cookie,
-        key: "_clientats_web_key",
-        signing_salt: "test_salt"
-      )
+      session_opts =
+        Plug.Session.init(
+          store: :cookie,
+          key: "_clientats_web_key",
+          signing_salt: "test_salt"
+        )
 
       # Verify HttpOnly is enabled (default in Phoenix)
       # Session store should be Plug.Session.COOKIE
@@ -77,8 +78,8 @@ defmodule ClientatsWeb.SecurityTest do
 
       # Verify bcrypt format (starts with $2b$ or $2a$)
       assert String.starts_with?(db_user.hashed_password, "$2") or
-             String.starts_with?(db_user.hashed_password, "$2b$") or
-             String.starts_with?(db_user.hashed_password, "$2a$")
+               String.starts_with?(db_user.hashed_password, "$2b$") or
+               String.starts_with?(db_user.hashed_password, "$2a$")
 
       # Verify hash length (bcrypt hashes are 60 characters)
       assert String.length(db_user.hashed_password) == 60
@@ -114,12 +115,13 @@ defmodule ClientatsWeb.SecurityTest do
 
       xss_payload = "<script>alert('XSS')</script>"
 
-      {:ok, interest} = Clientats.Jobs.create_job_interest(%{
-        user_id: user.id,
-        company_name: "Test Corp",
-        position_title: xss_payload,
-        status: "interested"
-      })
+      {:ok, interest} =
+        Clientats.Jobs.create_job_interest(%{
+          user_id: user.id,
+          company_name: "Test Corp",
+          position_title: xss_payload,
+          status: "interested"
+        })
 
       # Visit the interest detail page
       conn = get(conn, ~p"/dashboard/job-interests/#{interest.id}")
@@ -132,7 +134,7 @@ defmodule ClientatsWeb.SecurityTest do
 
       # Should contain escaped version
       assert String.contains?(html, "&lt;script&gt;") or
-             String.contains?(html, xss_payload) == false
+               String.contains?(html, xss_payload) == false
     end
 
     test "HTML injection is prevented in user inputs", %{conn: conn} do
@@ -141,13 +143,14 @@ defmodule ClientatsWeb.SecurityTest do
 
       malicious_html = "<img src=x onerror='alert(1)'>"
 
-      {:ok, interest} = Clientats.Jobs.create_job_interest(%{
-        user_id: user.id,
-        company_name: malicious_html,
-        position_title: "Engineer",
-        status: "interested",
-        notes: malicious_html
-      })
+      {:ok, interest} =
+        Clientats.Jobs.create_job_interest(%{
+          user_id: user.id,
+          company_name: malicious_html,
+          position_title: "Engineer",
+          status: "interested",
+          notes: malicious_html
+        })
 
       conn = get(conn, ~p"/dashboard/job-interests/#{interest.id}")
       html = html_response(conn, 200)
@@ -162,19 +165,21 @@ defmodule ClientatsWeb.SecurityTest do
       user = user_fixture()
 
       # Create job interests
-      {:ok, interest1} = Clientats.Jobs.create_job_interest(%{
-        user_id: user.id,
-        company_name: "Acme Corp",
-        position_title: "Engineer",
-        status: "interested"
-      })
+      {:ok, interest1} =
+        Clientats.Jobs.create_job_interest(%{
+          user_id: user.id,
+          company_name: "Acme Corp",
+          position_title: "Engineer",
+          status: "interested"
+        })
 
-      {:ok, _interest2} = Clientats.Jobs.create_job_interest(%{
-        user_id: user.id,
-        company_name: "Test Company",
-        position_title: "Developer",
-        status: "interested"
-      })
+      {:ok, _interest2} =
+        Clientats.Jobs.create_job_interest(%{
+          user_id: user.id,
+          company_name: "Test Company",
+          position_title: "Developer",
+          status: "interested"
+        })
 
       # Verify list function works correctly
       result = Clientats.Jobs.list_job_interests(user.id)
@@ -186,19 +191,21 @@ defmodule ClientatsWeb.SecurityTest do
 
       # Try to query with malicious input
       # Ecto will safely escape this as a string parameter
-      safe_result = Repo.all(
-        from ji in Clientats.Jobs.JobInterest,
-        where: ji.user_id == ^user.id and ji.company_name == ^sql_injection_payload
-      )
+      safe_result =
+        Repo.all(
+          from ji in Clientats.Jobs.JobInterest,
+            where: ji.user_id == ^user.id and ji.company_name == ^sql_injection_payload
+        )
 
       # Should return empty (not all records)
       assert safe_result == []
 
       # Verify regular query still works
-      normal_result = Repo.all(
-        from ji in Clientats.Jobs.JobInterest,
-        where: ji.user_id == ^user.id and ji.id == ^interest1.id
-      )
+      normal_result =
+        Repo.all(
+          from ji in Clientats.Jobs.JobInterest,
+            where: ji.user_id == ^user.id and ji.id == ^interest1.id
+        )
 
       assert length(normal_result) == 1
     end
@@ -210,12 +217,13 @@ defmodule ClientatsWeb.SecurityTest do
       malicious_input = "Company'; DROP TABLE users; --"
 
       # This should be safely stored as a string
-      {:ok, interest} = Clientats.Jobs.create_job_interest(%{
-        user_id: user.id,
-        company_name: malicious_input,
-        position_title: "Engineer",
-        status: "interested"
-      })
+      {:ok, interest} =
+        Clientats.Jobs.create_job_interest(%{
+          user_id: user.id,
+          company_name: malicious_input,
+          position_title: "Engineer",
+          status: "interested"
+        })
 
       # Verify data was stored as-is (not executed)
       assert interest.company_name == malicious_input
@@ -236,12 +244,13 @@ defmodule ClientatsWeb.SecurityTest do
       ]
 
       for company <- company_names do
-        {:ok, interest} = Clientats.Jobs.create_job_interest(%{
-          user_id: user.id,
-          company_name: company,
-          position_title: "Engineer",
-          status: "interested"
-        })
+        {:ok, interest} =
+          Clientats.Jobs.create_job_interest(%{
+            user_id: user.id,
+            company_name: company,
+            position_title: "Engineer",
+            status: "interested"
+          })
 
         # Verify data was stored correctly
         db_interest = Repo.get(Clientats.Jobs.JobInterest, interest.id)
@@ -260,13 +269,14 @@ defmodule ClientatsWeb.SecurityTest do
       ]
 
       for email <- invalid_emails do
-        result = Clientats.Accounts.register_user(%{
-          email: email,
-          password: "ValidPassword123!",
-          password_confirmation: "ValidPassword123!",
-          first_name: "Test",
-          last_name: "User"
-        })
+        result =
+          Clientats.Accounts.register_user(%{
+            email: email,
+            password: "ValidPassword123!",
+            password_confirmation: "ValidPassword123!",
+            first_name: "Test",
+            last_name: "User"
+          })
 
         assert {:error, changeset} = result
         # Check that email has validation errors
@@ -276,13 +286,14 @@ defmodule ClientatsWeb.SecurityTest do
 
     test "password requirements are enforced", %{conn: _conn} do
       # Test very short password (less than 8 characters)
-      result = Clientats.Accounts.register_user(%{
-        email: "test#{System.unique_integer([:positive])}@example.com",
-        password: "short",
-        password_confirmation: "short",
-        first_name: "Test",
-        last_name: "User"
-      })
+      result =
+        Clientats.Accounts.register_user(%{
+          email: "test#{System.unique_integer([:positive])}@example.com",
+          password: "short",
+          password_confirmation: "short",
+          first_name: "Test",
+          last_name: "User"
+        })
 
       # Should fail validation for being too short
       assert {:error, changeset} = result
@@ -332,11 +343,13 @@ defmodule ClientatsWeb.SecurityTest do
     }
 
     # If password is provided, ensure password_confirmation matches
-    attrs_map = if Map.has_key?(attrs_map, :password) and not Map.has_key?(attrs_map, :password_confirmation) do
-      Map.put(attrs_map, :password_confirmation, attrs_map.password)
-    else
-      attrs_map
-    end
+    attrs_map =
+      if Map.has_key?(attrs_map, :password) and
+           not Map.has_key?(attrs_map, :password_confirmation) do
+        Map.put(attrs_map, :password_confirmation, attrs_map.password)
+      else
+        attrs_map
+      end
 
     final_attrs = Map.merge(default_attrs, attrs_map)
 

@@ -161,7 +161,10 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
   end
 
   @impl true
-  def handle_info({ClientatsWeb.JobApplicationLive.CoverLetterEditor, {:saved, application}}, socket) do
+  def handle_info(
+        {ClientatsWeb.JobApplicationLive.CoverLetterEditor, {:saved, application}},
+        socket
+      ) do
     {:noreply,
      socket
      |> assign(:application, application)
@@ -179,7 +182,9 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
     # Try to get default resume and extract text
     resume_text =
       case Documents.get_default_resume(user.id) do
-        nil -> nil
+        nil ->
+          nil
+
         resume ->
           case Documents.extract_resume_text(resume) do
             {:ok, text} -> text
@@ -206,36 +211,59 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
     {:noreply, socket}
   end
 
-  @impl true
-  def handle_async(:generate_cover_letter, {:ok, {:ok, content}}, socket) do
-    send_update(ClientatsWeb.JobApplicationLive.CoverLetterEditor, id: "cover-letter-editor", generated_content: content)
-    {:noreply, assign(socket, :generation_start_time, nil)}
-  end
-
-  def handle_async(:generate_cover_letter, {:ok, {:error, reason}}, socket) do
-    error_msg = case reason do
-      :unsupported_provider -> "Selected LLM provider is not supported. Please configure a supported provider in Settings."
-      :invalid_content -> "Job description is invalid or too short for AI generation."
-      msg -> "Generation failed: #{inspect(msg)}"
-    end
-    send_update(ClientatsWeb.JobApplicationLive.CoverLetterEditor, id: "cover-letter-editor", generation_error: error_msg)
-    {:noreply, assign(socket, :generation_start_time, nil)}
-  end
-
-  def handle_async(:generate_cover_letter, {:exit, reason}, socket) do
-    send_update(ClientatsWeb.JobApplicationLive.CoverLetterEditor, id: "cover-letter-editor", generation_error: "Generation crashed: #{inspect(reason)}")
-    {:noreply, assign(socket, :generation_start_time, nil)}
-  end
-
   def handle_info({:generation_timeout, :generate_cover_letter}, socket) do
     # Check if generation is still in progress
     if Map.has_key?(socket.assigns, :generation_start_time) do
-      send_update(ClientatsWeb.JobApplicationLive.CoverLetterEditor, id: "cover-letter-editor", generation_error: "Generation timed out after 60 seconds. Please try again.")
+      send_update(ClientatsWeb.JobApplicationLive.CoverLetterEditor,
+        id: "cover-letter-editor",
+        generation_error: "Generation timed out after 60 seconds. Please try again."
+      )
+
       {:noreply, assign(socket, :generation_start_time, nil)}
     else
       # Generation already completed, ignore timeout
       {:noreply, socket}
     end
+  end
+
+  @impl true
+  def handle_async(:generate_cover_letter, {:ok, {:ok, content}}, socket) do
+    send_update(ClientatsWeb.JobApplicationLive.CoverLetterEditor,
+      id: "cover-letter-editor",
+      generated_content: content
+    )
+
+    {:noreply, assign(socket, :generation_start_time, nil)}
+  end
+
+  def handle_async(:generate_cover_letter, {:ok, {:error, reason}}, socket) do
+    error_msg =
+      case reason do
+        :unsupported_provider ->
+          "Selected LLM provider is not supported. Please configure a supported provider in Settings."
+
+        :invalid_content ->
+          "Job description is invalid or too short for AI generation."
+
+        msg ->
+          "Generation failed: #{inspect(msg)}"
+      end
+
+    send_update(ClientatsWeb.JobApplicationLive.CoverLetterEditor,
+      id: "cover-letter-editor",
+      generation_error: error_msg
+    )
+
+    {:noreply, assign(socket, :generation_start_time, nil)}
+  end
+
+  def handle_async(:generate_cover_letter, {:exit, reason}, socket) do
+    send_update(ClientatsWeb.JobApplicationLive.CoverLetterEditor,
+      id: "cover-letter-editor",
+      generation_error: "Generation crashed: #{inspect(reason)}"
+    )
+
+    {:noreply, assign(socket, :generation_start_time, nil)}
   end
 
   @impl true
@@ -372,16 +400,24 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
                           <.icon name="hero-document-arrow-down" class="w-3 h-3 mr-1" /> PDF
                         </.link>
                       <% end %>
-                      <button id="edit-cover-letter-btn" phx-click="edit_cover_letter" class="btn btn-xs btn-outline">
+                      <button
+                        id="edit-cover-letter-btn"
+                        phx-click="edit_cover_letter"
+                        class="btn btn-xs btn-outline"
+                      >
                         <.icon name="hero-pencil" class="w-3 h-3 mr-1" /> Edit
                       </button>
                     </div>
                   </dt>
                   <%= if @application.cover_letter_content do %>
-                    <dd class="text-sm text-gray-900 mt-1 whitespace-pre-wrap line-clamp-3">{@application.cover_letter_content}</dd>
+                    <dd class="text-sm text-gray-900 mt-1 whitespace-pre-wrap line-clamp-3">
+                      {@application.cover_letter_content}
+                    </dd>
                   <% else %>
                     <%= if @application.cover_letter_path do %>
-                      <dd class="text-sm text-gray-900 mt-1">Template: {@application.cover_letter_path}</dd>
+                      <dd class="text-sm text-gray-900 mt-1">
+                        Template: {@application.cover_letter_path}
+                      </dd>
                     <% else %>
                       <dd class="text-sm text-gray-400 mt-1">Not specified</dd>
                     <% end %>

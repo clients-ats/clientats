@@ -110,42 +110,19 @@ cat > "${BUILD_DIR}/docker-compose.yml" << 'EOF'
 version: '3.8'
 
 services:
-  db:
-    image: postgres:16-alpine
-    container_name: clientats-prod-db
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: clientats_prod
-    volumes:
-      - clientats_prod_data:/var/lib/postgresql/data
-    ports:
-      - "5433:5432"
-    networks:
-      - clientats-prod
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   app:
     build: .
     container_name: clientats-prod-app
-    depends_on:
-      db:
-        condition: service_healthy
     environment:
-      DATABASE_URL: ecto://postgres:postgres@db:5432/clientats_prod
+      DATABASE_PATH: /app/data/clientats.db
       SECRET_KEY_BASE: ${SECRET_KEY_BASE}
       PHX_HOST: ${PHX_HOST:-localhost}
       PHX_PORT: ${PHX_PORT:-4001}
       PORT: 4000
     ports:
       - "${PHX_PORT:-4001}:4000"
-    networks:
-      - clientats-prod
+    volumes:
+      - clientats_data:/app/data
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:4000"]
@@ -154,11 +131,7 @@ services:
       retries: 3
 
 volumes:
-  clientats_prod_data:
-
-networks:
-  clientats-prod:
-    driver: bridge
+  clientats_data:
 EOF
 
 # Create .env.example
@@ -206,7 +179,7 @@ echo "📝 Creating README..."
 cat > "${BUILD_DIR}/README.md" << 'EOF'
 # Clientats Production Deployment (Docker)
 
-This package contains a production-ready Docker build of Clientats.
+This package contains a production-ready Docker build of Clientats using SQLite.
 
 ## Prerequisites
 
@@ -231,24 +204,15 @@ This package contains a production-ready Docker build of Clientats.
    docker-compose up -d --build
    ```
 
-4. **Run migrations:**
-   ```bash
-   docker-compose exec app mix ecto.migrate
-   ```
-
-5. **Access the application:**
+4. **Access the application:**
    - Open http://localhost:4001 in your browser
+   - Database migrations run automatically on startup
 
 ## Management Commands
 
 ### View logs
 ```bash
 docker-compose logs -f app
-```
-
-### Run migrations
-```bash
-docker-compose exec app mix ecto.migrate
 ```
 
 ### Access console
@@ -276,7 +240,6 @@ docker-compose restart
 docker-compose down
 # Replace files with new version
 docker-compose up -d --build
-docker-compose exec app mix ecto.migrate
 ```
 
 ## Configuration
@@ -286,25 +249,30 @@ The application runs on port 4001 by default (to avoid conflicts with dev).
 Change `PHX_PORT` in `.env` to use a different port.
 
 ### Database
-PostgreSQL runs on port 5433 (to avoid conflicts with dev).
-Data is persisted in a Docker volume named `clientats_prod_data`.
+SQLite database is stored in a Docker volume for persistence.
+Data is persisted in a Docker volume named `clientats_data`.
 
 ### Backup Database
 ```bash
-docker-compose exec db pg_dump -U postgres clientats_prod > backup.sql
+# Copy database file from container
+docker cp clientats-prod-app:/app/data/clientats.db ./backup_$(date +%Y%m%d_%H%M%S).db
 ```
 
 ### Restore Database
 ```bash
-cat backup.sql | docker-compose exec -T db psql -U postgres clientats_prod
+# Stop the application first
+docker-compose down
+
+# Copy backup into volume (start container briefly)
+docker-compose up -d
+docker cp ./backup.db clientats-prod-app:/app/data/clientats.db
+docker-compose restart
 ```
 
 ## Architecture
 
-- **app**: Clientats application (Phoenix/Elixir)
-- **db**: PostgreSQL 16 database
-- **Network**: Isolated `clientats-prod` network
-- **Volumes**: `clientats_prod_data` for database persistence
+- **app**: Clientats application (Phoenix/Elixir with embedded SQLite)
+- **Volumes**: `clientats_data` for SQLite database persistence
 
 ## Troubleshooting
 
@@ -313,9 +281,13 @@ cat backup.sql | docker-compose exec -T db psql -U postgres clientats_prod
 docker-compose logs app
 ```
 
-### Database connection issues
+### Database issues
 ```bash
-docker-compose exec db psql -U postgres -c "SELECT 1"
+# Check database file exists
+docker-compose exec app ls -la /app/data/
+
+# Check database integrity
+docker-compose exec app sqlite3 /app/data/clientats.db "PRAGMA integrity_check;"
 ```
 
 ### Reset everything
@@ -373,13 +345,8 @@ echo "🐳 Building and starting containers..."
 docker-compose up -d --build
 
 echo ""
-echo "⏳ Waiting for database to be ready..."
-sleep 10
-
-echo ""
-echo "🔄 Running migrations..."
-docker-compose exec app mix ecto.create
-docker-compose exec app mix ecto.migrate
+echo "⏳ Waiting for application to start..."
+sleep 5
 
 echo ""
 echo "✅ Clientats is running!"

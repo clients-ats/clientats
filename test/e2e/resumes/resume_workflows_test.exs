@@ -122,11 +122,13 @@ defmodule ClientatsWeb.E2E.ResumeWorkflowsTest do
 
     test "can view resume details", %{session: session} do
       user = create_user_and_login(session)
-      resume = create_resume(user.id, %{
-        name: "Detail Resume",
-        original_filename: "my_resume.pdf",
-        file_size: 102_400
-      })
+
+      resume =
+        create_resume(user.id, %{
+          name: "Detail Resume",
+          original_filename: "my_resume.pdf",
+          file_size: 102_400
+        })
 
       session
       |> visit("/dashboard/resumes")
@@ -213,10 +215,12 @@ defmodule ClientatsWeb.E2E.ResumeWorkflowsTest do
 
     test "download link contains correct filename", %{session: session} do
       user = create_user_and_login(session)
-      resume = create_resume(user.id, %{
-        name: "My Resume",
-        original_filename: "resume_2024.pdf"
-      })
+
+      resume =
+        create_resume(user.id, %{
+          name: "My Resume",
+          original_filename: "resume_2024.pdf"
+        })
 
       session
       |> visit("/dashboard/resumes")
@@ -233,7 +237,9 @@ defmodule ClientatsWeb.E2E.ResumeWorkflowsTest do
       |> visit("/dashboard/applications/new")
       |> fill_in(css("input[name='job_application[company_name]']"), with: "Tech Corp")
       |> fill_in(css("input[name='job_application[position_title]']"), with: "Engineer")
-      |> click(css("select[name='job_application[resume_id]'] option", text: "Application Resume"))
+      |> click(
+        css("select[name='job_application[resume_id]'] option", text: "Application Resume")
+      )
       |> click(button("Create Application"))
       |> assert_has(css("p", text: "Resume: Application Resume"))
     end
@@ -245,7 +251,9 @@ defmodule ClientatsWeb.E2E.ResumeWorkflowsTest do
 
       session
       |> visit("/dashboard/applications/new")
-      |> assert_has(css("select[name='job_application[resume_id]'] option[selected]", text: "Default Resume"))
+      |> assert_has(
+        css("select[name='job_application[resume_id]'] option[selected]", text: "Default Resume")
+      )
     end
 
     test "shows message if no resumes available when creating application", %{session: session} do
@@ -315,7 +323,9 @@ defmodule ClientatsWeb.E2E.ResumeWorkflowsTest do
       |> visit("/dashboard/resumes")
       |> click(link("Generate with AI"))
       |> assert_has(css("h2", text: "AI Resume Generator"))
-      |> fill_in(css("textarea[name='job_description']"), with: "Looking for a software engineer...")
+      |> fill_in(css("textarea[name='job_description']"),
+        with: "Looking for a software engineer..."
+      )
       |> fill_in(css("textarea[name='skills']"), with: "Python, Django, PostgreSQL")
       |> click(button("Generate Resume"))
       |> assert_has(css("h3", text: "Generating your resume..."))
@@ -361,7 +371,9 @@ defmodule ClientatsWeb.E2E.ResumeWorkflowsTest do
   end
 
   describe "complete workflow" do
-    test "full resume lifecycle: upload -> set default -> use in application -> download", %{session: session} do
+    test "full resume lifecycle: upload -> set default -> use in application -> download", %{
+      session: session
+    } do
       user = create_user_and_login(session)
 
       # Upload resume
@@ -382,7 +394,11 @@ defmodule ClientatsWeb.E2E.ResumeWorkflowsTest do
       |> visit("/dashboard/applications/new")
       |> fill_in(css("input[name='job_application[company_name]']"), with: "Dream Corp")
       |> fill_in(css("input[name='job_application[position_title]']"), with: "Dream Job")
-      |> assert_has(css("select[name='job_application[resume_id]'] option[selected]", text: "My Professional Resume"))
+      |> assert_has(
+        css("select[name='job_application[resume_id]'] option[selected]",
+          text: "My Professional Resume"
+        )
+      )
       |> click(button("Create Application"))
       |> assert_has(css("p", text: "Resume: My Professional Resume"))
 

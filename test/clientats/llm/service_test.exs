@@ -50,6 +50,8 @@ defmodule Clientats.LLM.ServiceTest do
   end
 
   describe "extract_job_data_from_url/3" do
+    @describetag :browser
+
     test "returns error for invalid URL format" do
       result = Service.extract_job_data_from_url("not-a-url", :generic)
       # Invalid URLs get caught during fetch, not validation
@@ -359,7 +361,7 @@ defmodule Clientats.LLM.ServiceTest do
       # However, generate_cover_letter calls build_cover_letter_prompt.
       # Let's ensure it doesn't crash.
       user_context = %{first_name: "John", last_name: "Doe", resume_text: "My resume"}
-      
+
       # We'll just check if it calls the prompt builder correctly
       prompt = PromptTemplates.build_cover_letter_prompt("Job description", user_context)
       assert String.contains?(prompt, "John Doe")

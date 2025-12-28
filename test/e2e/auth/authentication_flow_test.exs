@@ -18,7 +18,9 @@ defmodule ClientatsWeb.E2E.AuthenticationFlowTest do
       |> fill_in(css("input[name='user[first_name]']"), with: user.first_name)
       |> fill_in(css("input[name='user[last_name]']"), with: user.last_name)
       |> fill_in(css("input[name='user[password]']"), with: user.password)
-      |> fill_in(css("input[name='user[password_confirmation]']"), with: user.password_confirmation)
+      |> fill_in(css("input[name='user[password_confirmation]']"),
+        with: user.password_confirmation
+      )
       |> click(button("Create an account"))
       |> assert_has(css("h1", text: "Welcome to Clientats"))
       |> assert_has(link("Go to Dashboard"))
@@ -33,7 +35,9 @@ defmodule ClientatsWeb.E2E.AuthenticationFlowTest do
       |> fill_in(css("input[name='user[first_name]']"), with: user.first_name)
       |> fill_in(css("input[name='user[last_name]']"), with: user.last_name)
       |> fill_in(css("input[name='user[password]']"), with: user.password)
-      |> fill_in(css("input[name='user[password_confirmation]']"), with: user.password_confirmation)
+      |> fill_in(css("input[name='user[password_confirmation]']"),
+        with: user.password_confirmation
+      )
       |> click(button("Create an account"))
       |> assert_has(css(".phx-form-error", text: "must have the @ sign and no spaces"))
     end
@@ -209,7 +213,9 @@ defmodule ClientatsWeb.E2E.AuthenticationFlowTest do
       |> assert_has(css("h2", text: "Sign in to your account"))
     end
 
-    test "unauthenticated user redirected to login when accessing job interests", %{session: session} do
+    test "unauthenticated user redirected to login when accessing job interests", %{
+      session: session
+    } do
       session
       |> visit("/dashboard/job-interests/new")
       |> assert_has(css("h2", text: "Sign in to your account"))
@@ -221,7 +227,9 @@ defmodule ClientatsWeb.E2E.AuthenticationFlowTest do
       |> assert_has(css("h2", text: "Sign in to your account"))
     end
 
-    test "unauthenticated user redirected to login when accessing applications", %{session: session} do
+    test "unauthenticated user redirected to login when accessing applications", %{
+      session: session
+    } do
       session
       |> visit("/dashboard/applications")
       |> assert_has(css("h2", text: "Sign in to your account"))
@@ -258,7 +266,9 @@ defmodule ClientatsWeb.E2E.AuthenticationFlowTest do
       |> fill_in(css("input[name='user[first_name]']"), with: user.first_name)
       |> fill_in(css("input[name='user[last_name]']"), with: user.last_name)
       |> fill_in(css("input[name='user[password]']"), with: user.password)
-      |> fill_in(css("input[name='user[password_confirmation]']"), with: user.password_confirmation)
+      |> fill_in(css("input[name='user[password_confirmation]']"),
+        with: user.password_confirmation
+      )
       |> click(button("Create an account"))
       |> assert_has(css("h1", text: "Welcome to Clientats"))
 

@@ -137,7 +137,7 @@ PHX_PORT=4000
 LLM_ENCRYPTION_KEY=<your-encryption-key>
 ```
 
-**Note:** In production, the database will automatically be stored in a platform-appropriate directory unless `DATABASE_PATH` is explicitly set. Development and test environments use local database files in the project directory.
+The desktop app stores the database in a platform-appropriate directory (see [Backup & Data](#-backup--data)). Development uses `./clientats_dev.db` in the project directory.
 
 ### 🚀 LLM Provider Setup Guide
 
@@ -206,7 +206,7 @@ Clientats supports two powerful LLM providers. Choose one or configure both for 
    In another terminal:
    ```bash
    # Pull a model (one-time download)
-   ollama pull mistral
+   ollama pull llama3.2
    ```
 
 3. **Configure in Clientats**
@@ -234,12 +234,6 @@ You can configure both Gemini and Ollama! The system will:
 - Automatically fall back to another if the first one fails
 - Give you maximum flexibility
 
-**Recommended Setup for Production:**
-```
-Primary: Gemini (fast, reliable)
-Fallback: Ollama (local backup if Gemini is down)
-```
-
 ---
 
 ### LLM Provider Configuration Reference
@@ -256,272 +250,81 @@ Cost: Free tier available, paid tiers for higher usage
 #### Ollama (Local)
 ```
 Base URL: http://localhost:11434
-Models: mistral, llama2, neural-chat, etc.
+Models: llama3.2, llama3.1, gemma2, etc.
 Default Model: Select after running "Discover Models"
 Cost: Completely free
 Privacy: 100% local, no data sent anywhere
 ```
 
-## 📦 Backup & Restore
+## 📦 Backup & Data
 
-### Database Backup
+### Database Location
 
-#### Manual SQLite Backup
-Since ClientATS uses SQLite, backing up is as simple as copying the database file.
+ClientATS uses SQLite. Your data is stored in a single file:
 
-**Development:**
+| Platform | Location |
+|----------|----------|
+| macOS | `~/Library/Application Support/clientats/db/clientats.db` |
+| Linux | `~/.config/clientats/db/clientats.db` |
+| Windows | `%APPDATA%/clientats/db/clientats.db` |
+| Development | `./clientats_dev.db` (project directory) |
+
+### Backup & Restore
+
+Just copy the database file:
 ```bash
-# Create a backup (development database in project directory)
-cp clientats_dev.db backups/clientats_dev_backup.db
+# Backup
+cp ~/Library/Application\ Support/clientats/db/clientats.db ~/my-backup.db
 
-# Restore from backup
-cp backups/clientats_dev_backup.db clientats_dev.db
+# Restore
+cp ~/my-backup.db ~/Library/Application\ Support/clientats/db/clientats.db
 ```
 
-**Production:**
-```bash
-# Find your database location (platform-specific)
-# Linux: ~/.config/clientats/db/clientats.db
-# macOS: ~/Library/Application Support/clientats/db/clientats.db
-# Windows: %APPDATA%/clientats/db/clientats.db
+### Moving to Another Machine
 
-# Create a backup (Linux example)
-cp ~/.config/clientats/db/clientats.db backups/clientats_backup_$(date +%Y%m%d_%H%M%S).db
+1. Copy your database file to the new machine
+2. Place it in the appropriate location for your platform (see table above)
+3. Install and run ClientATS - it will use your existing data
 
-# Or use DATABASE_PATH if you set a custom location
-cp $DATABASE_PATH backups/clientats_backup_$(date +%Y%m%d_%H%M%S).db
+### Export & Import (JSON)
 
-# Restore from backup
-cp backups/clientats_backup_20240101_120000.db ~/.config/clientats/db/clientats.db
-```
+ClientATS also supports exporting your data as JSON, which is useful for:
+- Sharing data between accounts
+- Keeping a human-readable backup
+- Migrating data selectively
 
-#### Full Application Backup
-```bash
-# Backup database and configuration
-mkdir -p backups
-cp clientats_dev.db backups/clientats_$(date +%Y%m%d_%H%M%S).db
+**Export:** Go to `http://localhost:4000/export` (while logged in) to download a JSON file with all your job interests, applications, resumes, and cover letter templates.
 
-# Backup configuration files
-cp -r config/runtime.exs backups/
-```
-
-### Restore from Backup
-
-#### Restore Database
-```bash
-# Drop existing database (if needed)
-dropdb -U postgres clientats_dev
-
-# Create fresh database
-createdb -U postgres clientats_dev
-
-# Restore from backup
-psql -U postgres clientats_dev < backup.sql
-```
-
-#### Restore Configuration
-```bash
-# Restore config files
-cp backups/runtime.exs config/
-cp -r backups/llm lib/clientats/
-
-# Restart application
-mix phx.server
-```
-
-### Automated Backups
-
-Create a backup script (e.g., `backup.sh`):
-```bash
-#!/bin/bash
-BACKUP_DIR="/path/to/backups"
-DB_NAME="clientats_dev"
-TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-
-mkdir -p $BACKUP_DIR
-
-# Database backup
-pg_dump -U postgres $DB_NAME > $BACKUP_DIR/db_${TIMESTAMP}.sql
-
-# Keep only last 7 days of backups
-find $BACKUP_DIR -name "db_*.sql" -mtime +7 -delete
-
-echo "Backup completed: $BACKUP_DIR/db_${TIMESTAMP}.sql"
-```
-
-Schedule with cron:
-```bash
-0 2 * * * /path/to/backup.sh
-```
+**Import:** Go to `http://localhost:4000/import` to upload a previously exported JSON file. Imported data is added to your existing data (not replaced).
 
 ## 🛠️ Development
 
-### Running Tests
 ```bash
-# Run all tests
+# Run tests
 mix test
-
-# Run specific test file
-mix test test/clientats/llm_config_test.exs
-
-# Run with coverage
-mix coveralls
-```
-
-### Database Migrations
-
-**Note:** Migrations run automatically on application startup, so you typically don't need to run them manually. However, these commands are available for development tasks:
-
-```bash
-# Create new migration
-mix ecto.gen.migration migration_name
-
-# Run migrations manually (optional - they run automatically on startup)
-mix ecto.migrate
-
-# Rollback last migration
-mix ecto.rollback
 
 # Reset database (dev only)
 mix ecto.reset
-```
 
-### Code Quality
-```bash
-# Format code
-mix format
-
-# Check for unused variables
-mix credo
-
-# Run linter
-mix dialyzer
-```
-
-### Debugging
-```bash
-# Start with IEx
+# Start with interactive shell
 iex -S mix phx.server
-
-# Query database interactively
-iex> import Ecto.Query
-iex> Clientats.Repo.all(Clientats.LLM.Setting)
 ```
-
-## 📊 Project Structure
-
-```
-clientats/
-├── lib/
-│   ├── clientats/              # Core application logic
-│   │   ├── llm/                # LLM integration
-│   │   │   ├── service.ex      # Main extraction service
-│   │   │   ├── error_handler.ex # Error handling & retry logic
-│   │   │   ├── cache.ex        # Result caching
-│   │   │   └── providers/      # Provider implementations
-│   │   ├── jobs/               # Job interest management
-│   │   ├── accounts/           # User authentication
-│   │   └── browser.ex          # Browser automation
-│   └── clientats_web/          # Web interface
-│       ├── live/               # LiveView components
-│       ├── controllers/        # HTTP controllers
-│       └── templates/          # HTML templates
-├── priv/
-│   └── repo/migrations/        # Database migrations
-├── test/                       # Test suite
-├── config/                     # Configuration files
-└── README.md                   # This file
-```
-
-## 🔧 API Endpoints
-
-### Job Interests
-- `GET /dashboard/job-interests` - List all job interests
-- `GET /dashboard/job-interests/:id` - View job interest details
-- `POST /dashboard/job-interests` - Create new job interest
-- `PUT /dashboard/job-interests/:id` - Update job interest
-- `DELETE /dashboard/job-interests/:id` - Delete job interest
-
-### LLM Configuration
-- `GET /dashboard/llm-config` - View configuration page
-- `POST /dashboard/llm-config/save` - Save provider configuration
-- `POST /dashboard/llm-config/test` - Test provider connection
-
-### Job Scraping
-- `GET /dashboard/job-interests/scrape` - Import from URL page
-- `POST /dashboard/job-interests/scrape` - Process URL import
 
 ## 🐛 Troubleshooting
 
-### Common Issues
+**"Provider not configured"** - Set up an LLM provider in Dashboard → LLM Configuration
 
-**"Provider not configured" error**
-- Ensure you've set up at least one LLM provider
-- Check that the provider is enabled in LLM Configuration
-- Verify API key is entered (if required)
+**"Connection failed"** - For Ollama, make sure it's running (`ollama serve`). For Gemini, check your API key.
 
-**"Connection failed" error**
-- For Ollama: Verify it's running on http://localhost:11434
-- For cloud providers: Check API key is valid
-- Test internet connectivity
+**Port 4000 in use** - Another app is using the port. Find it with `lsof -i :4000` and stop it.
 
-**Screenshot extraction fails**
-- Ensure browser is properly configured
-- Check disk space for temporary screenshots
-- Verify JavaScript is enabled in browser
+**Database issues** - Reset with `mix ecto.reset` (warning: deletes all data)
 
-**Database connection error**
-```bash
-# Verify PostgreSQL is running
-psql -U postgres -c "SELECT 1"
+## 💡 Tips
 
-# Check database exists
-psql -U postgres -l | grep clientats
-
-# Reset database if needed
-mix ecto.reset
-```
-
-**"Port 4000 already in use"**
-```bash
-# Find process using port 4000
-lsof -i :4000
-
-# Kill process if needed
-kill -9 <PID>
-```
-
-## 📝 API Key Recommendations
-
-### Security Best Practices
-1. **Never commit API keys** - Use environment variables
-2. **Rotate keys regularly** - Change keys every 90 days
-3. **Use least privilege** - Only enable necessary scopes
-4. **Monitor usage** - Watch for unusual API activity
-5. **Backup securely** - Encrypt backup files containing keys
-
-### Cost Optimization
-- **Ollama** - Free, runs locally (requires GPU for fast inference)
-- **Mistral** - Affordable open-source models ($0.14-0.81/MTok)
-- **Anthropic** - Higher quality, higher cost ($3-15/MTok)
-- **Google Gemini** - Free tier available with rate limits
-- **OpenAI** - Premium pricing ($0.03-0.15/1K tokens)
-
-## 📈 Performance Tips
-
-1. **Use Ollama for frequent requests** - Local execution, no API costs
-2. **Cache results** - Application automatically caches extraction results
-3. **Batch operations** - Import multiple URLs in sequence
-4. **Monitor LLM tokens** - Some providers charge per token
-5. **Optimize screenshots** - Larger screenshots = higher LLM costs
-
-## 🔒 Security Considerations
-
-1. **Database encryption** - Consider encrypting sensitive database columns
-2. **API key management** - Use environment variables, never hardcode
-3. **Session timeouts** - Configure appropriate session expiration
-4. **HTTPS in production** - Always use TLS for deployed applications
-5. **Input validation** - URLs and content are validated before processing
+- **Use Ollama for frequent requests** - Local execution, no API costs
+- **Results are cached** - Re-importing the same URL won't re-process it
+- **Don't commit API keys** - Use environment variables if sharing your setup
 
 ## 📞 Support & Documentation
 
@@ -534,37 +337,9 @@ kill -9 <PID>
 
 This project is provided as-is. See LICENSE file for details.
 
-## 🚀 Deployment
-
-### Production Checklist
-- [ ] Set strong `SECRET_KEY_BASE`
-- [ ] (Optional) Configure `DATABASE_PATH` if not using default platform directory
-- [ ] Set up LLM provider keys in environment variables
-- [ ] Enable HTTPS/TLS
-- [ ] Configure backup strategy
-- [ ] Set up monitoring and logging
-- [ ] Test all LLM providers
-- [ ] Create database backups before deploying
-
-**Notes:**
-- The database will automatically be stored in a platform-specific directory (e.g., `~/.config/clientats/db/` on Linux) unless `DATABASE_PATH` is explicitly set.
-- The Phoenix server is **enabled by default** in production mode. To disable, set `PHX_SERVER=false`.
-- Database migrations run automatically on startup.
-
-### Docker Deployment
-See `Dockerfile` for containerized deployment instructions.
-
-### Cloud Platforms
-The application can be deployed to:
-- Heroku (with PostgreSQL add-on)
-- DigitalOcean App Platform
-- AWS (ECS, Elastic Beanstalk)
-- Google Cloud Run
-- Any platform supporting Elixir/Phoenix
-
 ---
 
-**Last Updated:** December 17, 2024
-**Version:** 1.1.0
-**Status:** Production Ready
+**Last Updated:** December 27, 2025
+**Version:** 1.0.0-alpha2
+**Status:** Alpha
 **LLM Providers:** Gemini, Ollama

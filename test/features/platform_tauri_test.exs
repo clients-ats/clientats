@@ -58,7 +58,14 @@ defmodule ClientatsWeb.Features.PlatformTauriTest do
     test "database_path with ensure_dir creates directory" do
       # Use a temporary test path
       temp_dir = System.tmp_dir!()
-      test_db_path = Path.join([temp_dir, "test_clientats_#{System.unique_integer([:positive])}", "db", "test.db"])
+
+      test_db_path =
+        Path.join([
+          temp_dir,
+          "test_clientats_#{System.unique_integer([:positive])}",
+          "db",
+          "test.db"
+        ])
 
       System.put_env("DATABASE_PATH", test_db_path)
 
@@ -140,7 +147,8 @@ defmodule ClientatsWeb.Features.PlatformTauriTest do
     end
 
     test "ensure_dir! creates upload subdirectories" do
-      temp_upload_dir = Path.join([System.tmp_dir!(), "test_uploads_#{System.unique_integer([:positive])}"])
+      temp_upload_dir =
+        Path.join([System.tmp_dir!(), "test_uploads_#{System.unique_integer([:positive])}"])
 
       System.put_env("UPLOAD_DIR", temp_upload_dir)
 
@@ -165,7 +173,8 @@ defmodule ClientatsWeb.Features.PlatformTauriTest do
     end
 
     test "resume_path constructs correct file path" do
-      temp_upload_dir = Path.join([System.tmp_dir!(), "test_uploads_#{System.unique_integer([:positive])}"])
+      temp_upload_dir =
+        Path.join([System.tmp_dir!(), "test_uploads_#{System.unique_integer([:positive])}"])
 
       System.put_env("UPLOAD_DIR", temp_upload_dir)
 
@@ -188,7 +197,8 @@ defmodule ClientatsWeb.Features.PlatformTauriTest do
     end
 
     test "resolve_path finds existing files" do
-      temp_upload_dir = Path.join([System.tmp_dir!(), "test_uploads_#{System.unique_integer([:positive])}"])
+      temp_upload_dir =
+        Path.join([System.tmp_dir!(), "test_uploads_#{System.unique_integer([:positive])}"])
 
       System.put_env("UPLOAD_DIR", temp_upload_dir)
 
@@ -236,7 +246,9 @@ defmodule ClientatsWeb.Features.PlatformTauriTest do
 
     test "backup worker uses platform-specific paths" do
       # Create a temporary config directory for testing
-      temp_config_dir = Path.join([System.tmp_dir!(), "test_clientats_#{System.unique_integer([:positive])}"])
+      temp_config_dir =
+        Path.join([System.tmp_dir!(), "test_clientats_#{System.unique_integer([:positive])}"])
+
       temp_db_dir = Path.join(temp_config_dir, "db")
       temp_db_path = Path.join(temp_db_dir, "clientats.db")
 
@@ -268,7 +280,9 @@ defmodule ClientatsWeb.Features.PlatformTauriTest do
 
     test "backup rotation keeps only last 2 days" do
       # This tests the backup rotation logic
-      temp_backup_dir = Path.join([System.tmp_dir!(), "test_backups_#{System.unique_integer([:positive])}"])
+      temp_backup_dir =
+        Path.join([System.tmp_dir!(), "test_backups_#{System.unique_integer([:positive])}"])
+
       File.mkdir_p!(temp_backup_dir)
 
       try do
@@ -288,7 +302,8 @@ defmodule ClientatsWeb.Features.PlatformTauriTest do
 
         # Verify all files were created
         files = File.ls!(temp_backup_dir)
-        assert length(files) == 10  # 5 dates * 2 files each
+        # 5 dates * 2 files each
+        assert length(files) == 10
 
         # The actual rotation logic is in BackupWorker.rotate_backups/1
         # We're testing that the files are structured correctly for rotation
@@ -531,7 +546,8 @@ defmodule ClientatsWeb.Features.PlatformTauriTest do
     end
 
     test "ensure_dir creates directory structure" do
-      temp_dir = Path.join([System.tmp_dir!(), "test_ensure_dir_#{System.unique_integer([:positive])}"])
+      temp_dir =
+        Path.join([System.tmp_dir!(), "test_ensure_dir_#{System.unique_integer([:positive])}"])
 
       # Should create directory successfully
       assert :ok = Clientats.Platform.ensure_dir(temp_dir)

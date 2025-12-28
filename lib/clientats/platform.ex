@@ -29,7 +29,9 @@ defmodule Clientats.Platform do
 
       {:win32, _} ->
         # Windows: %APPDATA%/clientats
-        appdata = System.get_env("APPDATA") || Path.join([System.user_home!(), "AppData", "Roaming"])
+        appdata =
+          System.get_env("APPDATA") || Path.join([System.user_home!(), "AppData", "Roaming"])
+
         Path.join(appdata, "clientats")
     end
   end

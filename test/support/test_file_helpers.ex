@@ -34,7 +34,8 @@ defmodule ClientatsWeb.TestFileHelpers do
     random_data = :crypto.strong_rand_bytes(random_data_size)
 
     # Create temporary file
-    temp_path = Path.join(System.tmp_dir!(), "test_resume_#{System.unique_integer([:positive])}.pdf")
+    temp_path =
+      Path.join(System.tmp_dir!(), "test_resume_#{System.unique_integer([:positive])}.pdf")
 
     # Write PDF content
     content = pdf_header <> random_data <> pdf_footer
@@ -49,7 +50,9 @@ defmodule ClientatsWeb.TestFileHelpers do
   """
   def generate_test_file(extension, size_in_bytes) when size_in_bytes > 0 do
     random_data = :crypto.strong_rand_bytes(size_in_bytes)
-    temp_path = Path.join(System.tmp_dir!(), "test_file_#{System.unique_integer([:positive])}.#{extension}")
+
+    temp_path =
+      Path.join(System.tmp_dir!(), "test_file_#{System.unique_integer([:positive])}.#{extension}")
 
     File.write!(temp_path, random_data)
 

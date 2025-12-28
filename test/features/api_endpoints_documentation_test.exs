@@ -185,17 +185,21 @@ defmodule ClientatsWeb.Features.APIEndpointsDocumentationTest do
 
     test "supports different extraction modes", %{auth_conn: conn} do
       # Test generic mode
-      conn_generic = post(conn, "/api/v1/scrape_job", %{
-        "url" => "https://example.com/jobs/123",
-        "mode" => "generic"
-      })
+      conn_generic =
+        post(conn, "/api/v1/scrape_job", %{
+          "url" => "https://example.com/jobs/123",
+          "mode" => "generic"
+        })
+
       assert conn_generic.status in [200, 400, 500]
 
       # Test specific mode
-      conn_specific = post(conn, "/api/v1/scrape_job", %{
-        "url" => "https://www.linkedin.com/jobs/view/123/",
-        "mode" => "specific"
-      })
+      conn_specific =
+        post(conn, "/api/v1/scrape_job", %{
+          "url" => "https://www.linkedin.com/jobs/view/123/",
+          "mode" => "specific"
+        })
+
       assert conn_specific.status in [200, 400, 500]
     end
   end
@@ -605,10 +609,11 @@ defmodule ClientatsWeb.Features.APIEndpointsDocumentationTest do
     end
 
     test "returns 400 for unsupported provider", %{auth_conn: conn} do
-      conn = post(conn, "/api/v1/scrape_job", %{
-        "url" => "https://example.com/jobs/123",
-        "provider" => "invalid-provider-xyz"
-      })
+      conn =
+        post(conn, "/api/v1/scrape_job", %{
+          "url" => "https://example.com/jobs/123",
+          "provider" => "invalid-provider-xyz"
+        })
 
       # Should accept but may fail due to invalid provider
       assert conn.status in [200, 400, 500]
@@ -640,7 +645,8 @@ defmodule ClientatsWeb.Features.APIEndpointsDocumentationTest do
       errors = [
         post(conn, "/api/v1/scrape_job", %{}),
         post(conn, "/api/v1/scrape_job", %{"url" => "invalid"}),
-        get(build_conn(), "/api/v1/llm/providers")  # Unauthorized
+        # Unauthorized
+        get(build_conn(), "/api/v1/llm/providers")
       ]
 
       for error_conn <- errors do
@@ -655,9 +661,10 @@ defmodule ClientatsWeb.Features.APIEndpointsDocumentationTest do
 
     test "500 errors handled gracefully for server issues", %{auth_conn: conn} do
       # Test with URL that would cause server error (unreachable host)
-      conn = post(conn, "/api/v1/scrape_job", %{
-        "url" => "https://this-domain-should-not-exist-test-12345.com/jobs/123"
-      })
+      conn =
+        post(conn, "/api/v1/scrape_job", %{
+          "url" => "https://this-domain-should-not-exist-test-12345.com/jobs/123"
+        })
 
       # Should return error response, not crash
       assert conn.status in [400, 500]
@@ -675,9 +682,10 @@ defmodule ClientatsWeb.Features.APIEndpointsDocumentationTest do
     @tag :skip
     test "enforces rate limiting on rapid requests", %{auth_conn: conn} do
       # Send many rapid requests
-      results = for _ <- 1..100 do
-        post(conn, "/api/v1/scrape_job", %{"url" => "https://example.com/jobs/123"})
-      end
+      results =
+        for _ <- 1..100 do
+          post(conn, "/api/v1/scrape_job", %{"url" => "https://example.com/jobs/123"})
+        end
 
       # Check if any were rate limited (429 status)
       rate_limited = Enum.filter(results, fn conn -> conn.status == 429 end)
@@ -706,7 +714,8 @@ defmodule ClientatsWeb.Features.APIEndpointsDocumentationTest do
 
       if conn.status == 429 do
         # Wait for reset period (implementation dependent)
-        Process.sleep(60_000)  # Wait 1 minute
+        # Wait 1 minute
+        Process.sleep(60_000)
 
         # Try again
         conn = post(conn, "/api/v1/scrape_job", %{"url" => "https://example.com/jobs/123"})

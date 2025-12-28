@@ -18,7 +18,8 @@ defmodule ClientatsWeb.E2E.CoverLetterWorkflowsTest do
       |> assert_has(css("h2", text: "New Cover Letter Template"))
       |> fill_in(css("input[name='cover_letter_template[name]']"), with: "General Template")
       |> fill_in(css("textarea[name='cover_letter_template[content]']"),
-        with: "Dear Hiring Manager,\n\nI am writing to express my interest in the {position_title} role at {company_name}."
+        with:
+          "Dear Hiring Manager,\n\nI am writing to express my interest in the {position_title} role at {company_name}."
       )
       |> click(button("Create Template"))
       |> assert_has(css("h3", text: "General Template"))
@@ -49,7 +50,9 @@ defmodule ClientatsWeb.E2E.CoverLetterWorkflowsTest do
       session
       |> visit("/dashboard/cover-letters/new")
       |> fill_in(css("input[name='cover_letter_template[name]']"), with: "First Template")
-      |> fill_in(css("textarea[name='cover_letter_template[content]']"), with: "Dear Hiring Manager...")
+      |> fill_in(css("textarea[name='cover_letter_template[content]']"),
+        with: "Dear Hiring Manager..."
+      )
       |> click(button("Create Template"))
       |> assert_has(css("span.badge", text: "Default"))
     end
@@ -139,10 +142,12 @@ defmodule ClientatsWeb.E2E.CoverLetterWorkflowsTest do
 
     test "can view template details", %{session: session} do
       user = create_user_and_login(session)
-      template = create_cover_letter(user.id, %{
-        name: "Detail Template",
-        content: "This is the template content with {company_name} placeholder."
-      })
+
+      template =
+        create_cover_letter(user.id, %{
+          name: "Detail Template",
+          content: "This is the template content with {company_name} placeholder."
+        })
 
       session
       |> visit("/dashboard/cover-letters")
@@ -168,10 +173,12 @@ defmodule ClientatsWeb.E2E.CoverLetterWorkflowsTest do
 
     test "can edit template", %{session: session} do
       user = create_user_and_login(session)
-      template = create_cover_letter(user.id, %{
-        name: "Old Template",
-        content: "Old content"
-      })
+
+      template =
+        create_cover_letter(user.id, %{
+          name: "Old Template",
+          content: "Old content"
+        })
 
       session
       |> visit("/dashboard/cover-letters")
@@ -197,10 +204,12 @@ defmodule ClientatsWeb.E2E.CoverLetterWorkflowsTest do
 
     test "can duplicate template", %{session: session} do
       user = create_user_and_login(session)
-      template = create_cover_letter(user.id, %{
-        name: "Original Template",
-        content: "Original content"
-      })
+
+      template =
+        create_cover_letter(user.id, %{
+          name: "Original Template",
+          content: "Original content"
+        })
 
       session
       |> visit("/dashboard/cover-letters")
@@ -213,14 +222,19 @@ defmodule ClientatsWeb.E2E.CoverLetterWorkflowsTest do
   describe "generate cover letter from template" do
     test "can generate cover letter for a job application", %{session: session} do
       user = create_user_and_login(session)
-      template = create_cover_letter(user.id, %{
-        name: "Application Template",
-        content: "Dear Hiring Manager,\n\nI am excited about the {position_title} role at {company_name}."
-      })
-      application = create_job_application(user.id, %{
-        company_name: "Tech Corp",
-        position_title: "Software Engineer"
-      })
+
+      template =
+        create_cover_letter(user.id, %{
+          name: "Application Template",
+          content:
+            "Dear Hiring Manager,\n\nI am excited about the {position_title} role at {company_name}."
+        })
+
+      application =
+        create_job_application(user.id, %{
+          company_name: "Tech Corp",
+          position_title: "Software Engineer"
+        })
 
       session
       |> visit("/dashboard/applications/#{application.id}")
@@ -233,15 +247,18 @@ defmodule ClientatsWeb.E2E.CoverLetterWorkflowsTest do
 
     test "placeholders are replaced with actual values", %{session: session} do
       user = create_user_and_login(session)
+
       create_cover_letter(user.id, %{
         name: "Full Template",
         content: "Dear {company_name} team,\n\nI am {your_name} applying for {position_title}.",
         is_default: true
       })
-      application = create_job_application(user.id, %{
-        company_name: "Acme Inc",
-        position_title: "Developer"
-      })
+
+      application =
+        create_job_application(user.id, %{
+          company_name: "Acme Inc",
+          position_title: "Developer"
+        })
 
       session
       |> visit("/dashboard/applications/#{application.id}")
@@ -255,11 +272,13 @@ defmodule ClientatsWeb.E2E.CoverLetterWorkflowsTest do
 
     test "can preview before saving generated cover letter", %{session: session} do
       user = create_user_and_login(session)
+
       create_cover_letter(user.id, %{
         name: "Preview Template",
         content: "Preview content for {company_name}.",
         is_default: true
       })
+
       application = create_job_application(user.id, %{company_name: "Preview Corp"})
 
       session
@@ -273,11 +292,13 @@ defmodule ClientatsWeb.E2E.CoverLetterWorkflowsTest do
 
     test "can edit generated cover letter before saving", %{session: session} do
       user = create_user_and_login(session)
+
       create_cover_letter(user.id, %{
         name: "Edit Template",
         content: "Initial content.",
         is_default: true
       })
+
       application = create_job_application(user.id)
 
       session
@@ -292,11 +313,13 @@ defmodule ClientatsWeb.E2E.CoverLetterWorkflowsTest do
 
     test "generated cover letter is attached to application", %{session: session} do
       user = create_user_and_login(session)
+
       create_cover_letter(user.id, %{
         name: "Attach Template",
         content: "Cover letter content.",
         is_default: true
       })
+
       application = create_job_application(user.id)
 
       session
@@ -312,10 +335,12 @@ defmodule ClientatsWeb.E2E.CoverLetterWorkflowsTest do
   describe "AI-generated cover letters" do
     test "can generate cover letter with AI", %{session: session} do
       user = create_user_and_login(session)
-      application = create_job_application(user.id, %{
-        company_name: "AI Corp",
-        position_title: "AI Engineer"
-      })
+
+      application =
+        create_job_application(user.id, %{
+          company_name: "AI Corp",
+          position_title: "AI Engineer"
+        })
 
       session
       |> visit("/dashboard/applications/#{application.id}")
@@ -331,10 +356,12 @@ defmodule ClientatsWeb.E2E.CoverLetterWorkflowsTest do
 
     test "AI generation uses application details", %{session: session} do
       user = create_user_and_login(session)
-      application = create_job_application(user.id, %{
-        company_name: "Smart Corp",
-        position_title: "ML Engineer"
-      })
+
+      application =
+        create_job_application(user.id, %{
+          company_name: "Smart Corp",
+          position_title: "ML Engineer"
+        })
 
       session
       |> visit("/dashboard/applications/#{application.id}")
@@ -375,10 +402,13 @@ defmodule ClientatsWeb.E2E.CoverLetterWorkflowsTest do
   describe "download cover letters" do
     test "can download generated cover letter as PDF", %{session: session} do
       user = create_user_and_login(session)
-      application = create_job_application(user.id, %{
-        company_name: "Download Corp",
-        position_title: "Engineer"
-      })
+
+      application =
+        create_job_application(user.id, %{
+          company_name: "Download Corp",
+          position_title: "Engineer"
+        })
+
       create_cover_letter(user.id, %{content: "Letter content", is_default: true})
 
       session
@@ -388,15 +418,20 @@ defmodule ClientatsWeb.E2E.CoverLetterWorkflowsTest do
       |> click(button("Save Cover Letter"))
       |> assert_has(button("Download Cover Letter"))
       |> click(button("Download Cover Letter"))
-      |> assert_has(css("a[href='/dashboard/applications/#{application.id}/download-cover-letter']"))
+      |> assert_has(
+        css("a[href='/dashboard/applications/#{application.id}/download-cover-letter']")
+      )
     end
 
     test "downloaded file has correct naming format", %{session: session} do
       user = create_user_and_login(session)
-      application = create_job_application(user.id, %{
-        company_name: "File Corp",
-        position_title: "Developer"
-      })
+
+      application =
+        create_job_application(user.id, %{
+          company_name: "File Corp",
+          position_title: "Developer"
+        })
+
       create_cover_letter(user.id, %{content: "Content", is_default: true})
 
       session
@@ -447,7 +482,8 @@ defmodule ClientatsWeb.E2E.CoverLetterWorkflowsTest do
   end
 
   describe "complete workflow" do
-    test "full lifecycle: create template -> generate for application -> edit -> save -> download", %{session: session} do
+    test "full lifecycle: create template -> generate for application -> edit -> save -> download",
+         %{session: session} do
       user = create_user_and_login(session)
 
       # Create template
@@ -455,15 +491,17 @@ defmodule ClientatsWeb.E2E.CoverLetterWorkflowsTest do
       |> visit("/dashboard/cover-letters/new")
       |> fill_in(css("input[name='cover_letter_template[name]']"), with: "Professional Template")
       |> fill_in(css("textarea[name='cover_letter_template[content]']"),
-        with: "Dear Hiring Manager at {company_name},\n\nI am excited to apply for {position_title}."
+        with:
+          "Dear Hiring Manager at {company_name},\n\nI am excited to apply for {position_title}."
       )
       |> click(button("Create Template"))
 
       # Create application
-      application = create_job_application(user.id, %{
-        company_name: "Dream Corp",
-        position_title: "Senior Engineer"
-      })
+      application =
+        create_job_application(user.id, %{
+          company_name: "Dream Corp",
+          position_title: "Senior Engineer"
+        })
 
       # Generate cover letter
       session
@@ -476,7 +514,8 @@ defmodule ClientatsWeb.E2E.CoverLetterWorkflowsTest do
       session
       |> click(button("Edit"))
       |> fill_in(css("textarea[name='content']"),
-        with: "Dear Hiring Manager at Dream Corp,\n\nI am excited to apply for Senior Engineer.\n\nAdditional custom content."
+        with:
+          "Dear Hiring Manager at Dream Corp,\n\nI am excited to apply for Senior Engineer.\n\nAdditional custom content."
       )
 
       # Save

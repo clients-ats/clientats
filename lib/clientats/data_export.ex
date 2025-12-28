@@ -117,8 +117,7 @@ defmodule Clientats.DataExport do
       cover_letter_path: job_application.cover_letter_path,
       resume_path: job_application.resume_path,
       notes: job_application.notes,
-      application_events:
-        Enum.map(job_application.events, &serialize_application_event/1),
+      application_events: Enum.map(job_application.events, &serialize_application_event/1),
       inserted_at: to_iso8601(job_application.inserted_at),
       updated_at: to_iso8601(job_application.updated_at)
     }
@@ -150,7 +149,9 @@ defmodule Clientats.DataExport do
               {:ok, content} -> content
               _ -> nil
             end
-          _ -> nil
+
+          _ ->
+            nil
         end
       end
 

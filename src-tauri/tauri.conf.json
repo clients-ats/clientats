@@ -1,6 +1,6 @@
 {
-  "productName": "ClientATS",
-  "version": "1.0.0-alpha2",
+  "productName": "clientats",
+  "version": "1.0.0",
   "identifier": "com.clientats.app",
   "build": {
     "beforeDevCommand": "",

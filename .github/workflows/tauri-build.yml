@@ -13,6 +13,9 @@ env:
   RUST_BACKTRACE: 1
   CARGO_TERM_COLOR: always
 
+permissions:
+  contents: write
+
 jobs:
   build:
     strategy:
@@ -121,7 +124,7 @@ jobs:
 
       # Install Tauri CLI
       - name: Install Tauri CLI
-        run: cargo install tauri-cli --version "^2.0.0" --locked
+        run: cargo install tauri-cli --version "^2.0.0" --locked --force
 
       # Build Tauri app
       - name: Build Tauri app

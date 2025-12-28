@@ -492,9 +492,7 @@ defmodule ClientatsWeb.Features.AuditLoggingTest do
       user = create_user_with_db()
 
       # Create different types of logs
-      Audit.log_resource_action("job_interest", "create", Ecto.UUID.generate(),
-        user_id: user.id
-      )
+      Audit.log_resource_action("job_interest", "create", Ecto.UUID.generate(), user_id: user.id)
 
       Audit.log_resource_action("resume", "file_upload", Ecto.UUID.generate(), user_id: user.id)
       Audit.log_resource_action("resume", "file_upload", Ecto.UUID.generate(), user_id: user.id)
@@ -509,17 +507,11 @@ defmodule ClientatsWeb.Features.AuditLoggingTest do
       user = create_user_with_db()
 
       # Create different actions
-      Audit.log_resource_action("job_interest", "create", Ecto.UUID.generate(),
-        user_id: user.id
-      )
+      Audit.log_resource_action("job_interest", "create", Ecto.UUID.generate(), user_id: user.id)
 
-      Audit.log_resource_action("job_interest", "update", Ecto.UUID.generate(),
-        user_id: user.id
-      )
+      Audit.log_resource_action("job_interest", "update", Ecto.UUID.generate(), user_id: user.id)
 
-      Audit.log_resource_action("job_interest", "delete", Ecto.UUID.generate(),
-        user_id: user.id
-      )
+      Audit.log_resource_action("job_interest", "delete", Ecto.UUID.generate(), user_id: user.id)
 
       # Filter by action
       delete_logs = Audit.get_user_audit_logs(user.id, action: "delete")
@@ -588,13 +580,9 @@ defmodule ClientatsWeb.Features.AuditLoggingTest do
       user = create_user_with_db()
 
       # Create various logs
-      Audit.log_resource_action("job_interest", "create", Ecto.UUID.generate(),
-        user_id: user.id
-      )
+      Audit.log_resource_action("job_interest", "create", Ecto.UUID.generate(), user_id: user.id)
 
-      Audit.log_resource_action("job_interest", "update", Ecto.UUID.generate(),
-        user_id: user.id
-      )
+      Audit.log_resource_action("job_interest", "update", Ecto.UUID.generate(), user_id: user.id)
 
       Audit.log_resource_action("resume", "file_upload", Ecto.UUID.generate(), user_id: user.id)
 
@@ -623,9 +611,7 @@ defmodule ClientatsWeb.Features.AuditLoggingTest do
     test "exports audit logs as JSON" do
       user = create_user_with_db()
 
-      Audit.log_resource_action("job_interest", "create", Ecto.UUID.generate(),
-        user_id: user.id
-      )
+      Audit.log_resource_action("job_interest", "create", Ecto.UUID.generate(), user_id: user.id)
 
       {:ok, json_data} = Audit.export_audit_logs(user.id, :json)
       decoded = Jason.decode!(json_data)

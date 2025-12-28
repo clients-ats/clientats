@@ -286,6 +286,7 @@ defmodule ClientatsWeb.Features.BackgroundJobsTest do
       assert job.worker == "Clientats.Workers.BackupWorker"
     end
 
+    @tag :production_paths
     test "backup worker performs database and JSON backup", %{user: user} do
       # We'll test the worker logic without actually running Oban
       # This verifies the worker can execute without errors

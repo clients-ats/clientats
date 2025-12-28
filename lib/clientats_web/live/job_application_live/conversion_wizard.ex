@@ -69,14 +69,15 @@ defmodule ClientatsWeb.JobApplicationLive.ConversionWizard do
                 <%= if @current_step > step do %>
                   <.icon name="hero-check" class="w-6 h-6" />
                 <% else %>
-                  <span class="font-semibold"><%= step %></span>
+                  <span class="font-semibold">{step}</span>
                 <% end %>
               </div>
               <%= if step < 4 do %>
                 <div class={[
                   "flex-1 h-1 mx-2",
                   if(@current_step > step, do: "bg-green-500", else: "bg-gray-300")
-                ]}></div>
+                ]}>
+                </div>
               <% end %>
             </div>
           <% end %>
@@ -88,22 +89,22 @@ defmodule ClientatsWeb.JobApplicationLive.ConversionWizard do
           <span class="text-xs text-gray-600">Review</span>
         </div>
       </div>
-
-      <!-- Step Content -->
+      
+    <!-- Step Content -->
       <div class="bg-white shadow-md rounded-lg p-6">
         <%= case @current_step do %>
           <% 1 -> %>
-            <%= render_step_1(assigns) %>
+            {render_step_1(assigns)}
           <% 2 -> %>
-            <%= render_step_2(assigns) %>
+            {render_step_2(assigns)}
           <% 3 -> %>
-            <%= render_step_3(assigns) %>
+            {render_step_3(assigns)}
           <% 4 -> %>
-            <%= render_step_4(assigns) %>
+            {render_step_4(assigns)}
         <% end %>
       </div>
-
-      <!-- Navigation Buttons -->
+      
+    <!-- Navigation Buttons -->
       <div class="mt-6 flex justify-between">
         <button
           :if={@current_step > 1}
@@ -212,7 +213,9 @@ defmodule ClientatsWeb.JobApplicationLive.ConversionWizard do
                 <option value="">Select...</option>
                 <option value="remote" selected={@form_data["work_model"] == "remote"}>Remote</option>
                 <option value="hybrid" selected={@form_data["work_model"] == "hybrid"}>Hybrid</option>
-                <option value="on_site" selected={@form_data["work_model"] == "on_site"}>On Site</option>
+                <option value="on_site" selected={@form_data["work_model"] == "on_site"}>
+                  On Site
+                </option>
               </select>
             </div>
           </div>
@@ -308,15 +311,17 @@ defmodule ClientatsWeb.JobApplicationLive.ConversionWizard do
                 <div class="flex items-center justify-between">
                   <div>
                     <div class="flex items-center gap-2">
-                      <h3 class="font-medium text-gray-900"><%= resume.name %></h3>
+                      <h3 class="font-medium text-gray-900">{resume.name}</h3>
                       <%= if !resume.is_valid do %>
-                        <span class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">Invalid File</span>
+                        <span class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">
+                          Invalid File
+                        </span>
                       <% end %>
                     </div>
                     <p class="text-sm text-gray-600">
-                      <%= if resume.is_default, do: "Default Resume", else: "" %>
+                      {if resume.is_default, do: "Default Resume", else: ""}
                       <%= if resume.file_path do %>
-                        · <%= Path.basename(resume.file_path) %>
+                        · {Path.basename(resume.file_path)}
                       <% end %>
                     </p>
                   </div>
@@ -332,11 +337,12 @@ defmodule ClientatsWeb.JobApplicationLive.ConversionWizard do
                         <.icon name="hero-arrow-down-tray" class="w-5 h-5" />
                       </a>
                     <% end %>
-                    
+
                     <%= if @selected_resume && @selected_resume.id == resume.id do %>
                       <.icon name="hero-check-circle" class="w-6 h-6 text-blue-500" />
                     <% else %>
-                      <div class="w-6 h-6 rounded-full border-2 border-gray-300 group-hover:border-gray-400"></div>
+                      <div class="w-6 h-6 rounded-full border-2 border-gray-300 group-hover:border-gray-400">
+                      </div>
                     <% end %>
                   </div>
                 </div>
@@ -349,11 +355,11 @@ defmodule ClientatsWeb.JobApplicationLive.ConversionWizard do
           <div class="mt-6 bg-gray-50 rounded-lg p-4">
             <h3 class="font-medium text-gray-900 mb-2">Selected Resume</h3>
             <div class="text-sm text-gray-700">
-              <p class="font-medium"><%= @selected_resume.name %></p>
+              <p class="font-medium">{@selected_resume.name}</p>
               <%= if @selected_resume.description do %>
-                <p class="text-gray-600 mt-1"><%= @selected_resume.description %></p>
+                <p class="text-gray-600 mt-1">{@selected_resume.description}</p>
               <% end %>
-              <p class="text-gray-600 mt-1"><%= @selected_resume.original_filename %></p>
+              <p class="text-gray-600 mt-1">{@selected_resume.original_filename}</p>
             </div>
           </div>
         <% end %>
@@ -386,8 +392,7 @@ defmodule ClientatsWeb.JobApplicationLive.ConversionWizard do
             class="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:bg-gray-400"
           >
             <%= if @generating_cover_letter do %>
-              <.icon name="hero-arrow-path" class="animate-spin w-4 h-4 inline mr-2" />
-              Generating...
+              <.icon name="hero-arrow-path" class="animate-spin w-4 h-4 inline mr-2" /> Generating...
             <% else %>
               <.icon name="hero-sparkles" class="w-4 h-4 inline mr-2" />
               Generate with AI
@@ -420,7 +425,7 @@ defmodule ClientatsWeb.JobApplicationLive.ConversionWizard do
 
         <%= if @cover_letter_content do %>
           <div class="text-sm text-gray-600">
-            <%= String.length(@cover_letter_content) %> characters
+            {String.length(@cover_letter_content)} characters
           </div>
         <% end %>
       </div>
@@ -442,43 +447,43 @@ defmodule ClientatsWeb.JobApplicationLive.ConversionWizard do
           <dl class="grid grid-cols-2 gap-3 text-sm">
             <div>
               <dt class="font-medium text-gray-700">Company</dt>
-              <dd class="text-gray-900"><%= @form_data["company_name"] %></dd>
+              <dd class="text-gray-900">{@form_data["company_name"]}</dd>
             </div>
             <div>
               <dt class="font-medium text-gray-700">Position</dt>
-              <dd class="text-gray-900"><%= @form_data["position_title"] %></dd>
+              <dd class="text-gray-900">{@form_data["position_title"]}</dd>
             </div>
             <div>
               <dt class="font-medium text-gray-700">Location</dt>
-              <dd class="text-gray-900"><%= @form_data["location"] || "N/A" %></dd>
+              <dd class="text-gray-900">{@form_data["location"] || "N/A"}</dd>
             </div>
             <div>
               <dt class="font-medium text-gray-700">Work Model</dt>
-              <dd class="text-gray-900"><%= format_work_model(@form_data["work_model"]) %></dd>
+              <dd class="text-gray-900">{format_work_model(@form_data["work_model"])}</dd>
             </div>
             <div>
               <dt class="font-medium text-gray-700">Application Date</dt>
-              <dd class="text-gray-900"><%= @form_data["application_date"] %></dd>
+              <dd class="text-gray-900">{@form_data["application_date"]}</dd>
             </div>
             <%= if @form_data["salary_min"] || @form_data["salary_max"] do %>
               <div>
                 <dt class="font-medium text-gray-700">Salary Range</dt>
                 <dd class="text-gray-900">
-                  <%= format_salary_range(@form_data["salary_min"], @form_data["salary_max"]) %>
+                  {format_salary_range(@form_data["salary_min"], @form_data["salary_max"])}
                 </dd>
               </div>
             <% end %>
           </dl>
         </div>
-
-        <!-- Resume Summary -->
+        
+    <!-- Resume Summary -->
         <div class="bg-gray-50 rounded-lg p-4">
           <h3 class="font-semibold text-gray-900 mb-3">Resume</h3>
           <%= if @selected_resume do %>
-            <p class="text-sm text-gray-900"><%= @selected_resume.name %></p>
+            <p class="text-sm text-gray-900">{@selected_resume.name}</p>
             <p class="text-xs text-gray-600">
               <%= if @selected_resume.file_path do %>
-                <%= Path.basename(@selected_resume.file_path) %>
+                {Path.basename(@selected_resume.file_path)}
               <% else %>
                 Text-based resume
               <% end %>
@@ -487,16 +492,16 @@ defmodule ClientatsWeb.JobApplicationLive.ConversionWizard do
             <p class="text-sm text-gray-600">No resume selected</p>
           <% end %>
         </div>
-
-        <!-- Cover Letter Summary -->
+        
+    <!-- Cover Letter Summary -->
         <div class="bg-gray-50 rounded-lg p-4">
           <h3 class="font-semibold text-gray-900 mb-3">Cover Letter</h3>
           <%= if @cover_letter_content do %>
             <div class="text-sm text-gray-700 whitespace-pre-wrap max-h-40 overflow-y-auto border border-gray-300 rounded p-2 bg-white">
-              <%= @cover_letter_content %>
+              {@cover_letter_content}
             </div>
             <p class="text-xs text-gray-600 mt-2">
-              <%= String.length(@cover_letter_content) %> characters
+              {String.length(@cover_letter_content)} characters
             </p>
           <% else %>
             <p class="text-sm text-gray-600">No cover letter provided</p>
@@ -605,13 +610,17 @@ defmodule ClientatsWeb.JobApplicationLive.ConversionWizard do
       end
 
     # Provide feedback if extraction failed
-    socket = 
+    socket =
       if extraction_error do
-        msg = 
+        msg =
           case extraction_error do
-            :pdftotext_missing -> "Local PDF tools missing. Attempting direct file analysis with AI..."
-            _ -> "Could not read resume text (#{inspect(extraction_error)}). Attempting direct file analysis with AI..."
+            :pdftotext_missing ->
+              "Local PDF tools missing. Attempting direct file analysis with AI..."
+
+            _ ->
+              "Could not read resume text (#{inspect(extraction_error)}). Attempting direct file analysis with AI..."
           end
+
         put_flash(socket, :info, msg)
       else
         socket
@@ -619,7 +628,7 @@ defmodule ClientatsWeb.JobApplicationLive.ConversionWizard do
 
     socket = assign(socket, :generating_cover_letter, true)
 
-    resume_mime = 
+    resume_mime =
       if socket.assigns.selected_resume do
         MIME.from_path(socket.assigns.selected_resume.original_filename)
       else
@@ -774,7 +783,9 @@ defmodule ClientatsWeb.JobApplicationLive.ConversionWizard do
       if cover_letter_content do
         case generate_cover_letter_pdf(application, cover_letter_content, user) do
           {:ok, pdf_path} ->
-            {:ok, updated} = Jobs.update_job_application(application, %{cover_letter_pdf_path: pdf_path})
+            {:ok, updated} =
+              Jobs.update_job_application(application, %{cover_letter_pdf_path: pdf_path})
+
             updated
 
           {:error, _reason} ->
@@ -789,7 +800,9 @@ defmodule ClientatsWeb.JobApplicationLive.ConversionWizard do
       if selected_resume && selected_resume.file_path do
         case generate_resume_pdf(application, selected_resume.file_path) do
           {:ok, pdf_path} ->
-            {:ok, updated} = Jobs.update_job_application(application, %{resume_pdf_path: pdf_path})
+            {:ok, updated} =
+              Jobs.update_job_application(application, %{resume_pdf_path: pdf_path})
+
             updated
 
           {:error, _reason} ->
@@ -835,7 +848,9 @@ defmodule ClientatsWeb.JobApplicationLive.ConversionWizard do
     case Browser.generate_pdf(html) do
       {:ok, temp_path} ->
         # Move to permanent location
-        permanent_path = "/tmp/clientats_cover_letter_#{application.id}_#{System.unique_integer([:positive])}.pdf"
+        permanent_path =
+          "/tmp/clientats_cover_letter_#{application.id}_#{System.unique_integer([:positive])}.pdf"
+
         File.cp!(temp_path, permanent_path)
         File.rm!(temp_path)
         {:ok, permanent_path}
@@ -849,7 +864,9 @@ defmodule ClientatsWeb.JobApplicationLive.ConversionWizard do
     # If resume is already a PDF, copy it
     if String.ends_with?(resume_path, ".pdf") do
       if File.exists?(resume_path) do
-        permanent_path = "/tmp/clientats_resume_#{application.id}_#{System.unique_integer([:positive])}.pdf"
+        permanent_path =
+          "/tmp/clientats_resume_#{application.id}_#{System.unique_integer([:positive])}.pdf"
+
         File.cp!(resume_path, permanent_path)
         {:ok, permanent_path}
       else

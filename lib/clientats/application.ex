@@ -35,7 +35,7 @@ defmodule Clientats.Application do
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Clientats.Supervisor]
-    
+
     case Supervisor.start_link(children, opts) do
       {:ok, pid} ->
         # Log database location for clarity
@@ -55,12 +55,13 @@ defmodule Clientats.Application do
     # Run migrations for all configured repos
     # Ecto.Migrator.with_repo will start the repo, run migrations, then stop it
     for repo <- Application.fetch_env!(:clientats, :ecto_repos) do
-      {:ok, _, _} = Ecto.Migrator.with_repo(repo, fn repo ->
-        Ecto.Migrator.run(repo, :up, all: true)
-        
-        # Run custom migrations like resume file-to-db migration
-        Clientats.Migrations.ResumeMigration.run()
-      end)
+      {:ok, _, _} =
+        Ecto.Migrator.with_repo(repo, fn repo ->
+          Ecto.Migrator.run(repo, :up, all: true)
+
+          # Run custom migrations like resume file-to-db migration
+          Clientats.Migrations.ResumeMigration.run()
+        end)
     end
   end
 
