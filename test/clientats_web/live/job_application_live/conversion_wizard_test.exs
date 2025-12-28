@@ -235,6 +235,7 @@ defmodule ClientatsWeb.JobApplicationLive.ConversionWizardTest do
 
       # Enter cover letter content
       cover_letter_text = "Dear Hiring Manager,\n\nI am writing to express my interest..."
+
       lv
       |> element("form[phx-change='update_cover_letter']")
       |> render_change(%{"cover_letter_content" => cover_letter_text})

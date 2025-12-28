@@ -56,7 +56,9 @@ defmodule ClientatsWeb.JobApplicationLive.CoverLetterEditor do
                           <% else %>
                             <.icon name="hero-sparkles" class="w-4 h-4 mr-2" /> Generate with AI
                             <%= if @custom_prompt do %>
-                              <span class="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">Custom</span>
+                              <span class="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">
+                                Custom
+                              </span>
                             <% end %>
                           <% end %>
                         </button>
@@ -334,8 +336,8 @@ defmodule ClientatsWeb.JobApplicationLive.CoverLetterEditor do
           </div>
         </div>
       </div>
-
-      <!-- Custom Prompt Modal -->
+      
+    <!-- Custom Prompt Modal -->
       <.live_component
         :if={@show_custom_prompt_modal}
         module={ClientatsWeb.JobApplicationLive.CustomPromptModal}
@@ -628,7 +630,10 @@ defmodule ClientatsWeb.JobApplicationLive.CoverLetterEditor do
   end
 
   # Handle updates from CustomPromptModal
-  def handle_info({ClientatsWeb.JobApplicationLive.CustomPromptModal, {:custom_prompt_updated, prompt}}, socket) do
+  def handle_info(
+        {ClientatsWeb.JobApplicationLive.CustomPromptModal, {:custom_prompt_updated, prompt}},
+        socket
+      ) do
     {:noreply, assign(socket, custom_prompt: prompt, show_custom_prompt_modal: false)}
   end
 

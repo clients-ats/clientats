@@ -140,8 +140,8 @@ defmodule ClientatsWeb.JobApplicationLive.ConversionWizard do
           </button>
         </div>
       </div>
-
-      <!-- Custom Prompt Modal -->
+      
+    <!-- Custom Prompt Modal -->
       <.live_component
         :if={@show_custom_prompt_modal}
         module={ClientatsWeb.JobApplicationLive.CustomPromptModal}
@@ -394,10 +394,11 @@ defmodule ClientatsWeb.JobApplicationLive.ConversionWizard do
             <%= if @generating_cover_letter do %>
               <.icon name="hero-arrow-path" class="animate-spin w-4 h-4 inline mr-2" /> Generating...
             <% else %>
-              <.icon name="hero-sparkles" class="w-4 h-4 inline mr-2" />
-              Generate with AI
+              <.icon name="hero-sparkles" class="w-4 h-4 inline mr-2" /> Generate with AI
               <%= if @custom_prompt do %>
-                <span class="ml-2 px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded">Custom</span>
+                <span class="ml-2 px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded">
+                  Custom
+                </span>
               <% end %>
             <% end %>
           </button>
@@ -649,7 +650,10 @@ defmodule ClientatsWeb.JobApplicationLive.ConversionWizard do
         }
 
         # Pass user_id and custom_prompt to service
-        Service.generate_cover_letter(job_description, user_context, user_id: user.id, custom_prompt: custom_prompt)
+        Service.generate_cover_letter(job_description, user_context,
+          user_id: user.id,
+          custom_prompt: custom_prompt
+        )
       end)
 
     {:noreply, socket}
@@ -732,7 +736,10 @@ defmodule ClientatsWeb.JobApplicationLive.ConversionWizard do
 
   # Handle updates from CustomPromptModal
   @impl true
-  def handle_info({ClientatsWeb.JobApplicationLive.CustomPromptModal, {:custom_prompt_updated, prompt}}, socket) do
+  def handle_info(
+        {ClientatsWeb.JobApplicationLive.CustomPromptModal, {:custom_prompt_updated, prompt}},
+        socket
+      ) do
     {:noreply, assign(socket, custom_prompt: prompt, show_custom_prompt_modal: false)}
   end
 

@@ -47,14 +47,19 @@ defmodule ClientatsWeb.ResumeController do
                   {:ok, data} -> data
                   _ -> nil
                 end
-              _ -> nil
+
+              _ ->
+                nil
             end
           end
 
         if content do
           conn
           |> put_resp_content_type(mime_type(resume.original_filename))
-          |> put_resp_header("content-disposition", "attachment; filename=\"#{resume.original_filename}\"")
+          |> put_resp_header(
+            "content-disposition",
+            "attachment; filename=\"#{resume.original_filename}\""
+          )
           |> send_resp(200, content)
         else
           conn

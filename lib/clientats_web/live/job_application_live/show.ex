@@ -226,7 +226,11 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
     {:noreply, assign(socket, :editing_resume, false)}
   end
 
-  def handle_info({ClientatsWeb.JobApplicationLive.CoverLetterEditor, {:generate_cover_letter, job_desc, custom_prompt}}, socket) do
+  def handle_info(
+        {ClientatsWeb.JobApplicationLive.CoverLetterEditor,
+         {:generate_cover_letter, job_desc, custom_prompt}},
+        socket
+      ) do
     user = socket.assigns.current_user
 
     # Try to get default resume and extract text
@@ -255,7 +259,10 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
       socket
       |> assign(:generation_start_time, System.monotonic_time(:millisecond))
       |> start_async(:generate_cover_letter, fn ->
-        Service.generate_cover_letter(job_desc, user_context, user_id: user.id, custom_prompt: custom_prompt)
+        Service.generate_cover_letter(job_desc, user_context,
+          user_id: user.id,
+          custom_prompt: custom_prompt
+        )
       end)
 
     {:noreply, socket}

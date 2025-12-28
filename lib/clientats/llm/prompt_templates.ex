@@ -371,7 +371,12 @@ defmodule Clientats.LLM.PromptTemplates do
   ## Returns
     - String prompt ready for LLM (resume will be attached separately as multimodal content)
   """
-  def build_multimodal_cover_letter_prompt(job_description, user_context, custom_prompt \\ nil, _opts \\ []) do
+  def build_multimodal_cover_letter_prompt(
+        job_description,
+        user_context,
+        custom_prompt \\ nil,
+        _opts \\ []
+      ) do
     case custom_prompt do
       nil ->
         build_default_multimodal_cover_letter_prompt(job_description, user_context)
