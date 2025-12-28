@@ -212,10 +212,10 @@ defmodule ClientatsWeb.JobApplicationLive.ConversionWizardTest do
       lv |> element("button", "Next →") |> render_click()
       lv |> element("button", "Next →") |> render_click()
 
-      # Type in cover letter using phx-change event
+      # Type in cover letter using phx-change event on the form
       html =
         lv
-        |> element("textarea[name='cover_letter_content']")
+        |> element("form[phx-change='update_cover_letter']")
         |> render_change(%{"cover_letter_content" => "Test cover letter content"})
 
       # Should accept the content (no error shown)
@@ -236,7 +236,7 @@ defmodule ClientatsWeb.JobApplicationLive.ConversionWizardTest do
       # Enter cover letter content
       cover_letter_text = "Dear Hiring Manager,\n\nI am writing to express my interest..."
       lv
-      |> element("textarea[name='cover_letter_content']")
+      |> element("form[phx-change='update_cover_letter']")
       |> render_change(%{"cover_letter_content" => cover_letter_text})
 
       # Navigate to step 4 (review)
