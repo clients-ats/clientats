@@ -71,6 +71,31 @@ defmodule Clientats.Jobs do
     JobApplication.changeset(job_application, attrs)
   end
 
+  def update_job_application_resume(%JobApplication{} = job_application, resume_id, user_id) do
+    # Validate that resume can only be changed in "applied" status
+    with :ok <- validate_resume_changeable(job_application),
+         resume <- Repo.get(Clientats.Documents.Resume, resume_id),
+         :ok <- validate_resume_ownership(resume, user_id) do
+      update_job_application(job_application, %{resume_id: resume_id})
+    else
+      {:error, :invalid_status} ->
+        {:error, :invalid_status}
+
+      {:error, :not_authorized} ->
+        {:error, :not_authorized}
+
+      nil ->
+        {:error, :resume_not_found}
+    end
+  end
+
+  defp validate_resume_changeable(%JobApplication{status: "applied"}), do: :ok
+  defp validate_resume_changeable(_), do: {:error, :invalid_status}
+
+  defp validate_resume_ownership(nil, _user_id), do: {:error, :not_authorized}
+  defp validate_resume_ownership(%{user_id: user_id}, user_id), do: :ok
+  defp validate_resume_ownership(_, _), do: {:error, :not_authorized}
+
   # Application Events
 
   def list_application_events(job_application_id) do

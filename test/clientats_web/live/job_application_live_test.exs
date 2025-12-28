@@ -173,18 +173,19 @@ defmodule ClientatsWeb.JobApplicationLiveTest do
 
     test "displays resume link when present", %{conn: conn} do
       user = user_fixture()
-      app = job_application_fixture(user_id: user.id, resume_path: "/uploads/resume.pdf")
+      resume = resume_fixture(user_id: user.id, name: "My Test Resume")
+      app = job_application_fixture(user_id: user.id, resume_id: resume.id)
       conn = log_in_user(conn, user)
 
       {:ok, _lv, html} = live(conn, ~p"/dashboard/applications/#{app}")
 
-      assert html =~ "View Resume"
-      assert html =~ "/uploads/resume.pdf"
+      assert html =~ "My Test Resume"
+      assert html =~ ~p"/dashboard/resumes/#{resume}/download"
     end
 
     test "shows 'Not specified' when resume not present", %{conn: conn} do
       user = user_fixture()
-      app = job_application_fixture(user_id: user.id, resume_path: nil)
+      app = job_application_fixture(user_id: user.id, resume_id: nil)
       conn = log_in_user(conn, user)
 
       {:ok, _lv, html} = live(conn, ~p"/dashboard/applications/#{app}")
@@ -433,6 +434,20 @@ defmodule ClientatsWeb.JobApplicationLiveTest do
     attrs = Enum.into(attrs, default_attrs)
     {:ok, app} = Clientats.Jobs.create_job_application(attrs)
     app
+  end
+
+  defp resume_fixture(attrs) do
+    default_attrs = %{
+      name: "Test Resume",
+      file_path: "/tmp/test_resume.pdf",
+      original_filename: "test_resume.pdf",
+      file_size: 1024,
+      is_default: false
+    }
+
+    attrs = Enum.into(attrs, default_attrs)
+    {:ok, resume} = Clientats.Documents.create_resume(attrs)
+    resume
   end
 
   defp log_in_user(conn, user) do

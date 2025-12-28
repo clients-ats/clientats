@@ -13,6 +13,7 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
      socket
      |> assign(:form_open, false)
      |> assign(:editing_cover_letter, false)
+     |> assign(:editing_resume, false)
      |> assign(:editing_event_id, nil)
      |> assign(:changeset, nil)}
   end
@@ -160,6 +161,10 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
     {:noreply, assign(socket, :editing_cover_letter, true)}
   end
 
+  def handle_event("edit_resume", _params, socket) do
+    {:noreply, assign(socket, :editing_resume, true)}
+  end
+
   @impl true
   def handle_info(
         {ClientatsWeb.JobApplicationLive.CoverLetterEditor, {:saved, application}},
@@ -174,6 +179,51 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
 
   def handle_info({ClientatsWeb.JobApplicationLive.CoverLetterEditor, :cancel_edit}, socket) do
     {:noreply, assign(socket, :editing_cover_letter, false)}
+  end
+
+  def handle_info({:resume_selector, {:save, resume_id}}, socket) do
+    application = socket.assigns.application
+    user_id = socket.assigns.current_user.id
+
+    case Jobs.update_job_application_resume(application, resume_id, user_id) do
+      {:ok, updated_application} ->
+        # Reload the application with all associations
+        application = Jobs.get_job_application!(updated_application.id)
+
+        {:noreply,
+         socket
+         |> assign(:application, application)
+         |> assign(:editing_resume, false)
+         |> put_flash(:info, "Resume updated successfully")}
+
+      {:error, :invalid_status} ->
+        {:noreply,
+         socket
+         |> assign(:editing_resume, false)
+         |> put_flash(:error, "Resume can only be changed for applications in 'applied' status")}
+
+      {:error, :not_authorized} ->
+        {:noreply,
+         socket
+         |> assign(:editing_resume, false)
+         |> put_flash(:error, "You are not authorized to use this resume")}
+
+      {:error, :resume_not_found} ->
+        {:noreply,
+         socket
+         |> assign(:editing_resume, false)
+         |> put_flash(:error, "Resume not found")}
+
+      {:error, _changeset} ->
+        {:noreply,
+         socket
+         |> assign(:editing_resume, false)
+         |> put_flash(:error, "Failed to update resume")}
+    end
+  end
+
+  def handle_info({:resume_selector, :cancel}, socket) do
+    {:noreply, assign(socket, :editing_resume, false)}
   end
 
   def handle_info({ClientatsWeb.JobApplicationLive.CoverLetterEditor, {:generate_cover_letter, job_desc, custom_prompt}}, socket) do
@@ -368,10 +418,21 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
             <div>
               <h3 class="font-semibold text-gray-900 mb-2">Documents</h3>
               <dl class="space-y-2">
-                <%= if @application.resume do %>
-                  <div>
-                    <dt class="text-sm text-gray-500">Resume</dt>
-                    <dd class="text-sm">
+                <div>
+                  <dt class="text-sm text-gray-500 flex justify-between items-center">
+                    Resume
+                    <%= if @application.status == "applied" do %>
+                      <button
+                        id="edit-resume-btn"
+                        phx-click="edit_resume"
+                        class="btn btn-xs btn-outline"
+                      >
+                        <.icon name="hero-pencil" class="w-3 h-3 mr-1" /> Change
+                      </button>
+                    <% end %>
+                  </dt>
+                  <%= if @application.resume do %>
+                    <dd class="text-sm mt-1">
                       <a
                         href={~p"/dashboard/resumes/#{@application.resume}/download"}
                         target="_blank"
@@ -381,13 +442,10 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
                         <.icon name="hero-arrow-top-right-on-square" class="w-4 h-4 inline" />
                       </a>
                     </dd>
-                  </div>
-                <% else %>
-                  <div>
-                    <dt class="text-sm text-gray-500">Resume</dt>
-                    <dd class="text-sm text-gray-400">Not specified</dd>
-                  </div>
-                <% end %>
+                  <% else %>
+                    <dd class="text-sm text-gray-400 mt-1">Not specified</dd>
+                  <% end %>
+                </div>
                 <div>
                   <dt class="text-sm text-gray-500 flex justify-between items-center">
                     Cover Letter
@@ -627,6 +685,15 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
           module={ClientatsWeb.JobApplicationLive.CoverLetterEditor}
           id="cover-letter-editor"
           job_application={@application}
+          current_user={@current_user}
+        />
+      <% end %>
+
+      <%= if @editing_resume do %>
+        <.live_component
+          module={ClientatsWeb.JobApplicationLive.ResumeSelector}
+          id="resume-selector"
+          application={@application}
           current_user={@current_user}
         />
       <% end %>
