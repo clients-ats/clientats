@@ -47,7 +47,7 @@ defmodule Clientats.Jobs do
 
   def get_job_application!(id) do
     JobApplication
-    |> preload([:job_interest, :events])
+    |> preload([:job_interest, :events, :resume])
     |> Repo.get!(id)
   end
 

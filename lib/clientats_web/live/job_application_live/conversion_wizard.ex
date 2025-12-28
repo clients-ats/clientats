@@ -678,6 +678,7 @@ defmodule ClientatsWeb.JobApplicationLive.ConversionWizard do
       socket.assigns.form_data
       |> Map.put("user_id", user.id)
       |> Map.put("cover_letter_content", socket.assigns.cover_letter_content)
+      |> Map.put("resume_id", get_resume_id(socket.assigns.selected_resume))
       |> Map.put("resume_path", get_resume_path(socket.assigns.selected_resume))
 
     case Jobs.create_job_application(attrs) do
@@ -769,6 +770,9 @@ defmodule ClientatsWeb.JobApplicationLive.ConversionWizard do
       errors
     end
   end
+
+  defp get_resume_id(nil), do: nil
+  defp get_resume_id(resume), do: resume.id
 
   defp get_resume_path(nil), do: nil
   defp get_resume_path(resume), do: resume.file_path

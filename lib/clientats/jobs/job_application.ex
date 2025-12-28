@@ -25,6 +25,7 @@ defmodule Clientats.Jobs.JobApplication do
 
     belongs_to :user, Clientats.Accounts.User
     belongs_to :job_interest, Clientats.Jobs.JobInterest
+    belongs_to :resume, Clientats.Documents.Resume
     has_many :events, Clientats.Jobs.ApplicationEvent
 
     timestamps()
@@ -35,6 +36,7 @@ defmodule Clientats.Jobs.JobApplication do
     |> cast(attrs, [
       :user_id,
       :job_interest_id,
+      :resume_id,
       :company_name,
       :position_title,
       :job_description,

@@ -368,16 +368,16 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
             <div>
               <h3 class="font-semibold text-gray-900 mb-2">Documents</h3>
               <dl class="space-y-2">
-                <%= if @application.resume_path do %>
+                <%= if @application.resume do %>
                   <div>
                     <dt class="text-sm text-gray-500">Resume</dt>
                     <dd class="text-sm">
                       <a
-                        href={@application.resume_path}
+                        href={~p"/dashboard/resumes/#{@application.resume}/download"}
                         target="_blank"
                         class="text-blue-600 hover:underline"
                       >
-                        View Resume
+                        {@application.resume.name}
                         <.icon name="hero-arrow-top-right-on-square" class="w-4 h-4 inline" />
                       </a>
                     </dd>
