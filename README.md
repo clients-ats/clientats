@@ -206,7 +206,7 @@ Clientats supports two powerful LLM providers. Choose one or configure both for 
    In another terminal:
    ```bash
    # Pull a model (one-time download)
-   ollama pull mistral
+   ollama pull llama3.2
    ```
 
 3. **Configure in Clientats**
@@ -256,7 +256,7 @@ Cost: Free tier available, paid tiers for higher usage
 #### Ollama (Local)
 ```
 Base URL: http://localhost:11434
-Models: mistral, llama2, neural-chat, etc.
+Models: llama3.2, llama3.1, gemma2, etc.
 Default Model: Select after running "Discover Models"
 Cost: Completely free
 Privacy: 100% local, no data sent anywhere
@@ -507,10 +507,7 @@ kill -9 <PID>
 
 ### Cost Optimization
 - **Ollama** - Free, runs locally (requires GPU for fast inference)
-- **Mistral** - Affordable open-source models ($0.14-0.81/MTok)
-- **Anthropic** - Higher quality, higher cost ($3-15/MTok)
-- **Google Gemini** - Free tier available with rate limits
-- **OpenAI** - Premium pricing ($0.03-0.15/1K tokens)
+- **Google Gemini** - Free tier available with rate limits, paid tiers for higher usage
 
 ## 📈 Performance Tips
 
@@ -570,7 +567,7 @@ The application can be deployed to:
 
 ---
 
-**Last Updated:** December 17, 2024
-**Version:** 1.1.0
-**Status:** Production Ready
+**Last Updated:** December 27, 2025
+**Version:** 1.0.0-alpha2
+**Status:** Alpha
 **LLM Providers:** Gemini, Ollama
