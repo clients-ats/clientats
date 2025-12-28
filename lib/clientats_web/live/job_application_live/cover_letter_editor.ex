@@ -628,7 +628,6 @@ defmodule ClientatsWeb.JobApplicationLive.CoverLetterEditor do
   end
 
   # Handle updates from CustomPromptModal
-  @impl true
   def handle_info({ClientatsWeb.JobApplicationLive.CustomPromptModal, {:custom_prompt_updated, prompt}}, socket) do
     {:noreply, assign(socket, custom_prompt: prompt, show_custom_prompt_modal: false)}
   end

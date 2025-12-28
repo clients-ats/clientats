@@ -269,7 +269,7 @@ defmodule ClientatsWeb.JobApplicationLive.CustomPromptModal do
   end
 
   @impl true
-  def handle_event("copy_variable", %{"variable" => variable}, socket) do
+  def handle_event("copy_variable", %{"variable" => _variable}, socket) do
     # Variable copied - this would typically trigger a JS hook for clipboard
     # For now, just acknowledge
     {:noreply, socket}

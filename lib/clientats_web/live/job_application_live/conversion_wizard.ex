@@ -636,6 +636,8 @@ defmodule ClientatsWeb.JobApplicationLive.ConversionWizard do
       end
 
     # Start async task to generate cover letter
+    custom_prompt = socket.assigns.custom_prompt
+
     socket =
       start_async(socket, :generate_cover_letter, fn ->
         user_context = %{
@@ -647,7 +649,7 @@ defmodule ClientatsWeb.JobApplicationLive.ConversionWizard do
         }
 
         # Pass user_id and custom_prompt to service
-        Service.generate_cover_letter(job_description, user_context, user_id: user.id, custom_prompt: socket.assigns.custom_prompt)
+        Service.generate_cover_letter(job_description, user_context, user_id: user.id, custom_prompt: custom_prompt)
       end)
 
     {:noreply, socket}

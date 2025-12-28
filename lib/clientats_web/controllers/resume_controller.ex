@@ -1,6 +1,5 @@
 defmodule ClientatsWeb.ResumeController do
   use ClientatsWeb, :controller
-  alias Clientats.Documents
 
   plug :fetch_current_user
 
