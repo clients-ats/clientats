@@ -40,6 +40,9 @@
     "linux": {
       "deb": {
         "depends": []
+      },
+      "rpm": {
+        "depends": []
       }
     }
   },

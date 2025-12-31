@@ -26,7 +26,7 @@ For every push to `main`, `develop`, or any pull request, GitHub Actions automat
 4. Download the artifact for your platform:
    - **macOS**: `clientats-macos` (contains `.dmg` file)
    - **Windows**: `clientats-windows` (contains `.msi` installer)
-   - **Linux**: `clientats-linux` (contains `.AppImage` and `.deb` files)
+   - **Linux**: `clientats-linux` (contains `.AppImage`, `.deb`, and `.rpm` files)
 
 **Note**: Artifacts are kept for 30 days and are available for all pull requests and commits.
 
@@ -38,7 +38,7 @@ For tagged releases, pre-built binaries are automatically published to GitHub Re
 2. Download the appropriate file for your platform:
    - **macOS**: `.dmg` file
    - **Windows**: `.msi` installer
-   - **Linux**: `.AppImage` or `.deb` package
+   - **Linux**: `.AppImage`, `.deb`, or `.rpm` package
 
 ## Installation
 
@@ -63,6 +63,13 @@ chmod +x clientats_*.AppImage
 **Debian/Ubuntu** (.deb):
 ```bash
 sudo dpkg -i clientats_*.deb
+```
+
+**Fedora/RHEL/CentOS** (.rpm):
+```bash
+sudo rpm -i clientats_*.rpm
+# Or using dnf:
+sudo dnf install clientats_*.rpm
 ```
 
 ## Building Locally
@@ -93,7 +100,7 @@ sudo dpkg -i clientats_*.deb
 3. **Find your build**:
    - **macOS**: `src-tauri/target/release/bundle/dmg/`
    - **Windows**: `src-tauri/target/release/bundle/msi/`
-   - **Linux**: `src-tauri/target/release/bundle/appimage/` or `deb/`
+   - **Linux**: `src-tauri/target/release/bundle/appimage/`, `deb/`, or `rpm/`
 
 ### Development Mode
 
