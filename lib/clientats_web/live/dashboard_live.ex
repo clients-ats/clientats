@@ -61,9 +61,20 @@ defmodule ClientatsWeb.DashboardLive do
           <div class="bg-white rounded-lg shadow p-6">
             <div class="flex justify-between items-center mb-4">
               <h2 class="text-xl font-semibold text-gray-900">Job Interests</h2>
-              <.link navigate={~p"/dashboard/job-interests/new"} class="btn btn-primary btn-sm">
-                <.icon name="hero-plus" class="w-5 h-5" /> Add Interest
-              </.link>
+              <div class="flex items-center gap-3">
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    class="toggle toggle-sm"
+                    phx-click="toggle_not_interested"
+                    checked={@show_not_interested}
+                  />
+                  <span class="text-xs text-gray-600">Show Not Interested</span>
+                </label>
+                <.link navigate={~p"/dashboard/job-interests/new"} class="btn btn-primary btn-sm">
+                  <.icon name="hero-plus" class="w-5 h-5" /> Add Interest
+                </.link>
+              </div>
             </div>
 
             <%= if @job_interests == [] do %>
@@ -156,7 +167,8 @@ defmodule ClientatsWeb.DashboardLive do
 
   def mount(_params, _session, socket) do
     user_id = socket.assigns.current_user.id
-    job_interests = Jobs.list_job_interests(user_id)
+    all_interests = Jobs.list_job_interests(user_id)
+    filtered_interests = filter_interests(all_interests, false)
     all_applications = Jobs.list_job_applications(user_id)
     filtered_applications = filter_applications(all_applications, false)
 
@@ -167,17 +179,30 @@ defmodule ClientatsWeb.DashboardLive do
 
     {:ok,
      socket
-     |> assign(:job_interests, job_interests)
+     |> assign(:show_not_interested, false)
+     |> assign(:all_interests, all_interests)
+     |> assign(:job_interests, filtered_interests)
      |> assign(:show_closed, false)
      |> assign(:all_applications, all_applications)
      |> assign(:job_applications, filtered_applications)
      |> assign(:has_configured_providers, has_configured_providers)
-     |> stream(:job_interests, job_interests)
+     |> stream(:job_interests, filtered_interests)
      |> stream(:job_applications, filtered_applications)}
   end
 
   def handle_event("select_interest", %{"id" => id}, socket) do
     {:noreply, push_navigate(socket, to: ~p"/dashboard/job-interests/#{id}")}
+  end
+
+  def handle_event("toggle_not_interested", _params, socket) do
+    show_not_interested = !socket.assigns.show_not_interested
+    filtered_interests = filter_interests(socket.assigns.all_interests, show_not_interested)
+
+    {:noreply,
+     socket
+     |> assign(:show_not_interested, show_not_interested)
+     |> assign(:job_interests, filtered_interests)
+     |> stream(:job_interests, filtered_interests, reset: true)}
   end
 
   def handle_event("toggle_closed", _params, socket) do
@@ -226,6 +251,14 @@ defmodule ClientatsWeb.DashboardLive do
       applications
     else
       Enum.reject(applications, &(&1.status in ["rejected", "withdrawn", "offer_accepted"]))
+    end
+  end
+
+  defp filter_interests(interests, show_not_interested) do
+    if show_not_interested do
+      interests
+    else
+      Enum.reject(interests, &(&1.status == "not_a_fit"))
     end
   end
 end
