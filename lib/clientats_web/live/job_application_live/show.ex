@@ -157,6 +157,23 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
      |> put_flash(:info, "Activity deleted successfully")}
   end
 
+  def handle_event("update_status", %{"status" => status}, socket) do
+    case Jobs.update_job_application(socket.assigns.application, %{status: status}) do
+      {:ok, _updated_application} ->
+        application = Jobs.get_job_application!(socket.assigns.application.id)
+
+        {:noreply,
+         socket
+         |> assign(:application, application)
+         |> put_flash(:info, "Application status updated successfully")}
+
+      {:error, _changeset} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Failed to update status")}
+    end
+  end
+
   def handle_event("edit_cover_letter", _params, socket) do
     {:noreply, assign(socket, :editing_cover_letter, true)}
   end
@@ -385,9 +402,23 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
                   </dd>
                 </div>
                 <div>
-                  <dt class="text-sm text-gray-500">Status</dt>
+                  <dt class="text-sm text-gray-500 mb-1">Status</dt>
                   <dd class="text-sm">
-                    <span class="badge">{format_status(@application.status)}</span>
+                    <form phx-change="update_status" class="inline-block">
+                      <select
+                        name="status"
+                        class="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="applied" selected={@application.status == "applied"}>Applied</option>
+                        <option value="phone_screen" selected={@application.status == "phone_screen"}>Phone Screen</option>
+                        <option value="interview_scheduled" selected={@application.status == "interview_scheduled"}>Interview Scheduled</option>
+                        <option value="interviewed" selected={@application.status == "interviewed"}>Interviewed</option>
+                        <option value="offer_received" selected={@application.status == "offer_received"}>Offer Received</option>
+                        <option value="offer_accepted" selected={@application.status == "offer_accepted"}>Offer Accepted</option>
+                        <option value="rejected" selected={@application.status == "rejected"}>Rejected</option>
+                        <option value="withdrawn" selected={@application.status == "withdrawn"}>Withdrawn</option>
+                      </select>
+                    </form>
                   </dd>
                 </div>
                 <%= if @application.location do %>
@@ -756,14 +787,6 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
     |> Enum.chunk_every(3)
     |> Enum.join(",")
     |> String.reverse()
-  end
-
-  defp format_status(status) do
-    status
-    |> String.replace("_", " ")
-    |> String.split()
-    |> Enum.map(&String.capitalize/1)
-    |> Enum.join(" ")
   end
 
   defp format_event_type("applied"), do: "Applied"
