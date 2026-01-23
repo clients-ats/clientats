@@ -531,33 +531,54 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
               <h3 class="text-lg font-semibold text-gray-900 mb-4">
                 {if @editing_event_id, do: "Update Activity", else: "Add Activity"}
               </h3>
-              <form phx-submit="save_event">
+
+              <%= if @changeset && @changeset.action do %>
+                <div class="alert alert-error mb-4">
+                  <p>Please fix the errors below:</p>
+                </div>
+              <% end %>
+
+              <.form :let={_f} for={@changeset || %{}} phx-submit="save_event">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Event Type</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                      Event Type <span class="text-red-600">*</span>
+                    </label>
+                    <%
+                    current_value = if @changeset, do: Ecto.Changeset.get_field(@changeset, :event_type), else: nil
+                    %>
                     <select
                       name="event_type"
-                      class="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      class={"w-full px-3 py-2 border rounded-lg #{if @changeset && Keyword.has_key?(@changeset.errors, :event_type), do: "border-red-500", else: "border-gray-300"}"}
                     >
-                      <option value="">Select event type...</option>
-                      <option value="applied">Applied</option>
-                      <option value="contact">Contact</option>
-                      <option value="phone_screen">Phone Screen</option>
-                      <option value="technical_screen">Technical Screen</option>
-                      <option value="interview_onsite">Onsite Interview</option>
-                      <option value="offer">Offer</option>
-                      <option value="rejection">Rejection</option>
-                      <option value="withdrawn">Withdrawn</option>
-                      <option value="follow_up">Follow-up</option>
+                      <option value="" selected={is_nil(current_value) || current_value == ""}>Select event type...</option>
+                      <option value="applied" selected={current_value == "applied"}>Applied</option>
+                      <option value="contact" selected={current_value == "contact"}>Contact</option>
+                      <option value="phone_screen" selected={current_value == "phone_screen"}>Phone Screen</option>
+                      <option value="technical_screen" selected={current_value == "technical_screen"}>Technical Screen</option>
+                      <option value="interview_onsite" selected={current_value == "interview_onsite"}>Onsite Interview</option>
+                      <option value="offer" selected={current_value == "offer"}>Offer</option>
+                      <option value="rejection" selected={current_value == "rejection"}>Rejection</option>
+                      <option value="withdrawn" selected={current_value == "withdrawn"}>Withdrawn</option>
+                      <option value="follow_up" selected={current_value == "follow_up"}>Follow-up</option>
                     </select>
+                    <%= if @changeset && Keyword.has_key?(@changeset.errors, :event_type) do %>
+                      <p class="text-red-600 text-sm mt-1">Event type {elem(Keyword.get(@changeset.errors, :event_type), 0)}</p>
+                    <% end %>
                   </div>
                   <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Event Date</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                      Event Date <span class="text-red-600">*</span>
+                    </label>
                     <input
                       type="date"
                       name="event_date"
-                      class="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      value={@changeset && Ecto.Changeset.get_field(@changeset, :event_date)}
+                      class={"w-full px-3 py-2 border rounded-lg #{if @changeset && Keyword.has_key?(@changeset.errors, :event_date), do: "border-red-500", else: "border-gray-300"}"}
                     />
+                    <%= if @changeset && Keyword.has_key?(@changeset.errors, :event_date) do %>
+                      <p class="text-red-600 text-sm mt-1">Event date {elem(Keyword.get(@changeset.errors, :event_date), 0)}</p>
+                    <% end %>
                   </div>
                 </div>
 
@@ -567,6 +588,7 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
                     <input
                       type="text"
                       name="contact_person"
+                      value={@changeset && Ecto.Changeset.get_field(@changeset, :contact_person)}
                       class="w-full px-3 py-2 border border-gray-300 rounded-lg"
                     />
                   </div>
@@ -575,8 +597,12 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
                     <input
                       type="email"
                       name="contact_email"
-                      class="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      value={@changeset && Ecto.Changeset.get_field(@changeset, :contact_email)}
+                      class={"w-full px-3 py-2 border rounded-lg #{if @changeset && Keyword.has_key?(@changeset.errors, :contact_email), do: "border-red-500", else: "border-gray-300"}"}
                     />
+                    <%= if @changeset && Keyword.has_key?(@changeset.errors, :contact_email) do %>
+                      <p class="text-red-600 text-sm mt-1">Contact email {elem(Keyword.get(@changeset.errors, :contact_email), 0)}</p>
+                    <% end %>
                   </div>
                 </div>
 
@@ -586,6 +612,7 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
                     <input
                       type="tel"
                       name="contact_phone"
+                      value={@changeset && Ecto.Changeset.get_field(@changeset, :contact_phone)}
                       class="w-full px-3 py-2 border border-gray-300 rounded-lg"
                     />
                   </div>
@@ -594,6 +621,7 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
                     <input
                       type="date"
                       name="follow_up_date"
+                      value={@changeset && Ecto.Changeset.get_field(@changeset, :follow_up_date)}
                       class="w-full px-3 py-2 border border-gray-300 rounded-lg"
                     />
                   </div>
@@ -605,7 +633,7 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
                     name="notes"
                     class="w-full px-3 py-2 border border-gray-300 rounded-lg"
                     rows="3"
-                  ></textarea>
+                  >{@changeset && Ecto.Changeset.get_field(@changeset, :notes)}</textarea>
                 </div>
 
                 <div class="flex gap-2">
@@ -614,7 +642,7 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
                     Cancel
                   </button>
                 </div>
-              </form>
+              </.form>
             </div>
           <% end %>
           
