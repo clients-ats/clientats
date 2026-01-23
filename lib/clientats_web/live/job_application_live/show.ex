@@ -409,14 +409,39 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
                         name="status"
                         class="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       >
-                        <option value="applied" selected={@application.status == "applied"}>Applied</option>
-                        <option value="phone_screen" selected={@application.status == "phone_screen"}>Phone Screen</option>
-                        <option value="interview_scheduled" selected={@application.status == "interview_scheduled"}>Interview Scheduled</option>
-                        <option value="interviewed" selected={@application.status == "interviewed"}>Interviewed</option>
-                        <option value="offer_received" selected={@application.status == "offer_received"}>Offer Received</option>
-                        <option value="offer_accepted" selected={@application.status == "offer_accepted"}>Offer Accepted</option>
-                        <option value="rejected" selected={@application.status == "rejected"}>Rejected</option>
-                        <option value="withdrawn" selected={@application.status == "withdrawn"}>Withdrawn</option>
+                        <option value="applied" selected={@application.status == "applied"}>
+                          Applied
+                        </option>
+                        <option value="phone_screen" selected={@application.status == "phone_screen"}>
+                          Phone Screen
+                        </option>
+                        <option
+                          value="interview_scheduled"
+                          selected={@application.status == "interview_scheduled"}
+                        >
+                          Interview Scheduled
+                        </option>
+                        <option value="interviewed" selected={@application.status == "interviewed"}>
+                          Interviewed
+                        </option>
+                        <option
+                          value="offer_received"
+                          selected={@application.status == "offer_received"}
+                        >
+                          Offer Received
+                        </option>
+                        <option
+                          value="offer_accepted"
+                          selected={@application.status == "offer_accepted"}
+                        >
+                          Offer Accepted
+                        </option>
+                        <option value="rejected" selected={@application.status == "rejected"}>
+                          Rejected
+                        </option>
+                        <option value="withdrawn" selected={@application.status == "withdrawn"}>
+                          Withdrawn
+                        </option>
                       </select>
                     </form>
                   </dd>
@@ -575,26 +600,41 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
                     <label class="block text-sm font-medium text-gray-700 mb-2">
                       Event Type <span class="text-red-600">*</span>
                     </label>
-                    <%
-                    current_value = if @changeset, do: Ecto.Changeset.get_field(@changeset, :event_type), else: nil
-                    %>
+                    <% current_value =
+                      if @changeset, do: Ecto.Changeset.get_field(@changeset, :event_type), else: nil %>
                     <select
                       name="event_type"
                       class={"w-full px-3 py-2 border rounded-lg #{if @changeset && Keyword.has_key?(@changeset.errors, :event_type), do: "border-red-500", else: "border-gray-300"}"}
                     >
-                      <option value="" selected={is_nil(current_value) || current_value == ""}>Select event type...</option>
+                      <option value="" selected={is_nil(current_value) || current_value == ""}>
+                        Select event type...
+                      </option>
                       <option value="applied" selected={current_value == "applied"}>Applied</option>
                       <option value="contact" selected={current_value == "contact"}>Contact</option>
-                      <option value="phone_screen" selected={current_value == "phone_screen"}>Phone Screen</option>
-                      <option value="technical_screen" selected={current_value == "technical_screen"}>Technical Screen</option>
-                      <option value="interview_onsite" selected={current_value == "interview_onsite"}>Onsite Interview</option>
+                      <option value="phone_screen" selected={current_value == "phone_screen"}>
+                        Phone Screen
+                      </option>
+                      <option value="technical_screen" selected={current_value == "technical_screen"}>
+                        Technical Screen
+                      </option>
+                      <option value="interview_onsite" selected={current_value == "interview_onsite"}>
+                        Onsite Interview
+                      </option>
                       <option value="offer" selected={current_value == "offer"}>Offer</option>
-                      <option value="rejection" selected={current_value == "rejection"}>Rejection</option>
-                      <option value="withdrawn" selected={current_value == "withdrawn"}>Withdrawn</option>
-                      <option value="follow_up" selected={current_value == "follow_up"}>Follow-up</option>
+                      <option value="rejection" selected={current_value == "rejection"}>
+                        Rejection
+                      </option>
+                      <option value="withdrawn" selected={current_value == "withdrawn"}>
+                        Withdrawn
+                      </option>
+                      <option value="follow_up" selected={current_value == "follow_up"}>
+                        Follow-up
+                      </option>
                     </select>
                     <%= if @changeset && Keyword.has_key?(@changeset.errors, :event_type) do %>
-                      <p class="text-red-600 text-sm mt-1">Event type {elem(Keyword.get(@changeset.errors, :event_type), 0)}</p>
+                      <p class="text-red-600 text-sm mt-1">
+                        Event type {elem(Keyword.get(@changeset.errors, :event_type), 0)}
+                      </p>
                     <% end %>
                   </div>
                   <div>
@@ -608,7 +648,9 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
                       class={"w-full px-3 py-2 border rounded-lg #{if @changeset && Keyword.has_key?(@changeset.errors, :event_date), do: "border-red-500", else: "border-gray-300"}"}
                     />
                     <%= if @changeset && Keyword.has_key?(@changeset.errors, :event_date) do %>
-                      <p class="text-red-600 text-sm mt-1">Event date {elem(Keyword.get(@changeset.errors, :event_date), 0)}</p>
+                      <p class="text-red-600 text-sm mt-1">
+                        Event date {elem(Keyword.get(@changeset.errors, :event_date), 0)}
+                      </p>
                     <% end %>
                   </div>
                 </div>
@@ -632,7 +674,9 @@ defmodule ClientatsWeb.JobApplicationLive.Show do
                       class={"w-full px-3 py-2 border rounded-lg #{if @changeset && Keyword.has_key?(@changeset.errors, :contact_email), do: "border-red-500", else: "border-gray-300"}"}
                     />
                     <%= if @changeset && Keyword.has_key?(@changeset.errors, :contact_email) do %>
-                      <p class="text-red-600 text-sm mt-1">Contact email {elem(Keyword.get(@changeset.errors, :contact_email), 0)}</p>
+                      <p class="text-red-600 text-sm mt-1">
+                        Contact email {elem(Keyword.get(@changeset.errors, :contact_email), 0)}
+                      </p>
                     <% end %>
                   </div>
                 </div>
