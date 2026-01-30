@@ -26,6 +26,16 @@ export const CoverLetterAutoSave = {
     this.handleEvent("draft_saved_to_server", () => {
       this.clearDraft(storageKey);
     });
+
+    // Listen for generated content updates from the server
+    this.handleEvent("update-cover-letter-content", ({ content }) => {
+      if (content && this.el.value !== content) {
+        this.el.value = content;
+        // Trigger input event to update LiveView
+        const event = new Event('input', { bubbles: true });
+        this.el.dispatchEvent(event);
+      }
+    });
   },
 
   updated() {

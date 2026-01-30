@@ -351,6 +351,9 @@ defmodule ClientatsWeb.JobApplicationLive.CoverLetterEditor do
 
   @impl true
   def update(%{generated_content: content} = _assigns, socket) do
+    # Trim any leading/trailing whitespace from generated content
+    trimmed_content = String.trim(content)
+
     # Store current content as previous before updating
     current_content = socket.assigns.form[:cover_letter_content].value
 
@@ -362,7 +365,7 @@ defmodule ClientatsWeb.JobApplicationLive.CoverLetterEditor do
     # Update the form with the generated content
     changeset =
       socket.assigns.job_application
-      |> Jobs.change_job_application(%{cover_letter_content: content})
+      |> Jobs.change_job_application(%{cover_letter_content: trimmed_content})
 
     {:ok,
      socket
@@ -370,7 +373,8 @@ defmodule ClientatsWeb.JobApplicationLive.CoverLetterEditor do
      |> assign(:regenerating, false)
      |> assign(:has_generated_content, true)
      |> assign(:previous_content, previous_content)
-     |> assign(:form, to_form(changeset))}
+     |> assign(:form, to_form(changeset))
+     |> push_event("update-cover-letter-content", %{content: trimmed_content})}
   end
 
   @impl true
