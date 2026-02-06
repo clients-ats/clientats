@@ -367,6 +367,15 @@ defmodule Clientats.LLM.Service do
 
         handle_google_response(response)
       rescue
+        e in [Req.TransportError] ->
+          if e.reason == :timeout do
+            IO.puts("[ERROR] Google Gemini API call timed out")
+            {:error, {:timeout, "Google Gemini API call timed out"}}
+          else
+            IO.puts("[ERROR] Google Gemini API call failed: #{Exception.message(e)}")
+            {:error, {:llm_error, "Google Gemini API call failed: #{Exception.message(e)}"}}
+          end
+
         e ->
           IO.puts("[ERROR] Google Gemini API call failed: #{Exception.message(e)}")
           {:error, {:llm_error, "Google Gemini API call failed: #{Exception.message(e)}"}}
@@ -445,11 +454,22 @@ defmodule Clientats.LLM.Service do
               url,
               headers: [{"x-goog-api-key", api_key}],
               json: body,
-              receive_timeout: options[:timeout] || 30_000
+              receive_timeout: options[:timeout] || 60_000
             )
 
           handle_google_response(response)
         rescue
+          e in [Req.TransportError] ->
+            if e.reason == :timeout do
+              IO.puts("[ERROR] Google Gemini Vision API call timed out")
+              {:error, {:timeout, "Google Gemini Vision API call timed out"}}
+            else
+              IO.puts("[ERROR] Google Gemini Vision API call failed: #{Exception.message(e)}")
+
+              {:error,
+               {:llm_error, "Google Gemini Vision API call failed: #{Exception.message(e)}"}}
+            end
+
           e ->
             IO.puts("[ERROR] Google Gemini Vision API call failed: #{Exception.message(e)}")
 
@@ -690,11 +710,22 @@ defmodule Clientats.LLM.Service do
             url,
             headers: [{"x-goog-api-key", api_key}],
             json: body,
-            receive_timeout: options[:timeout] || 30_000
+            receive_timeout: options[:timeout] || 60_000
           )
 
         handle_google_response(response)
       rescue
+        e in [Req.TransportError] ->
+          if e.reason == :timeout do
+            IO.puts("[ERROR] Google Gemini Multimodal API call timed out")
+            {:error, {:timeout, "Google Gemini Multimodal API call timed out"}}
+          else
+            IO.puts("[ERROR] Google Gemini Multimodal API call failed: #{Exception.message(e)}")
+
+            {:error,
+             {:llm_error, "Google Gemini Multimodal API call failed: #{Exception.message(e)}"}}
+          end
+
         e ->
           IO.puts("[ERROR] Google Gemini Multimodal API call failed: #{Exception.message(e)}")
 
