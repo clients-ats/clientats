@@ -144,14 +144,17 @@ jobs:
 
       # Upload RPM files to release (tauri-action doesn't upload these automatically)
       - name: Upload RPM to release
-        if: github.ref_type == 'tag' && matrix.os == 'linux'
+        if: (github.ref_type == 'tag' || github.event_name == 'workflow_dispatch') && matrix.os == 'linux'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           RPM_FILE=$(find src-tauri/target/${{ matrix.build_target }}/release/bundle/rpm -name "*.rpm" -type f | head -n 1)
           if [ -n "$RPM_FILE" ]; then
             echo "Uploading RPM: $RPM_FILE"
-            gh release upload ${{ github.ref_name }} "$RPM_FILE" --clobber
+            # For workflow_dispatch (testing), use v1.0.0-alpha5 as target release
+            RELEASE_TAG="${{ github.ref_type == 'tag' && github.ref_name || 'v1.0.0-alpha5' }}"
+            echo "Target release: $RELEASE_TAG"
+            gh release upload "$RELEASE_TAG" "$RPM_FILE" --clobber
           else
             echo "No RPM file found"
           fi
