@@ -1,4 +1,4 @@
-ExUnit.start(exclude: [:feature, :browser, :production_paths])
+ExUnit.start(exclude: [:feature, :browser, :production_paths, :cdp, :benchmark, :gemini])
 Ecto.Adapters.SQL.Sandbox.mode(Clientats.Repo, :manual)
 
 # Load migration test helper
