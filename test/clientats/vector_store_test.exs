@@ -3,7 +3,7 @@ defmodule Clientats.VectorStoreTest do
 
   alias Clientats.VectorStore
 
-  @dim 384
+  @dim 768
 
   # Generate a random vector of given dimension
   defp random_vec(dim \\ @dim) do

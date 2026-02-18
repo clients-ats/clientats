@@ -3,13 +3,13 @@ defmodule Clientats.Repo.Migrations.AddVecJobEmbeddings do
 
   def up do
     # vec0 virtual table for job interest embeddings
-    # Using 384 dimensions (all-minilm) as baseline; can adjust later
-    # distance_metric=cosine is the default for semantic similarity
+    # 768 dimensions matches nomic-embed-text (Ollama) and gemini-embedding-001 default
+    # distance_metric=cosine for semantic similarity
     execute("""
     CREATE VIRTUAL TABLE vec_job_embeddings USING vec0(
       job_interest_id INTEGER PRIMARY KEY,
-      title_embedding float[384] distance_metric=cosine,
-      description_embedding float[384] distance_metric=cosine
+      title_embedding float[768] distance_metric=cosine,
+      description_embedding float[768] distance_metric=cosine
     )
     """)
   end
