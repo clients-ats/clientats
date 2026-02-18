@@ -13,7 +13,10 @@ config :clientats, Clientats.Repo,
   cache_size: -64000,
   temp_store: :memory,
   synchronous: :normal,
-  foreign_keys: :on
+  foreign_keys: :on,
+  load_extensions: [
+    Path.expand("../priv/sqlite_extensions/vec0", __DIR__)
+  ]
 
 # We don't run a server during test. If one is required,
 # you can enable the server option below.

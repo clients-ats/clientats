@@ -31,6 +31,19 @@ if config_env() == :prod do
   # - Windows: %APPDATA%/clientats/db/clientats.db
   database_path = Clientats.Platform.database_path(ensure_dir: true)
 
+  # Resolve sqlite-vec extension path for the current platform
+  vec_ext_path =
+    case :os.type() do
+      {:unix, :darwin} ->
+        Path.join(:code.priv_dir(:clientats), "sqlite_extensions/vec0")
+
+      {:unix, _} ->
+        Path.join(:code.priv_dir(:clientats), "sqlite_extensions/vec0")
+
+      {:win32, _} ->
+        Path.join(:code.priv_dir(:clientats), "sqlite_extensions/vec0")
+    end
+
   config :clientats, Clientats.Repo,
     database: database_path,
     pool_size: String.to_integer(System.get_env("POOL_SIZE") || "5"),
@@ -39,7 +52,8 @@ if config_env() == :prod do
     cache_size: -64000,
     temp_store: :memory,
     synchronous: :normal,
-    foreign_keys: :on
+    foreign_keys: :on,
+    load_extensions: [vec_ext_path]
 
   # The secret key base is used to sign/encrypt cookies and other secrets.
   # A default value is used in config/dev.exs and config/test.exs but you

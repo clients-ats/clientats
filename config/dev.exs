@@ -11,7 +11,10 @@ config :clientats, Clientats.Repo,
   temp_store: :memory,
   synchronous: :normal,
   foreign_keys: :on,
-  busy_timeout: 5000
+  busy_timeout: 5000,
+  load_extensions: [
+    Path.expand("../priv/sqlite_extensions/vec0", __DIR__)
+  ]
 
 # For development, we disable any cache and enable
 # debugging and code reloading.
