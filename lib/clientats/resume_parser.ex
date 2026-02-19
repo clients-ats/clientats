@@ -159,20 +159,21 @@ defmodule Clientats.ResumeParser do
       "skills_primary": ["Core technical skills with strong experience"],
       "skills_secondary": ["Secondary/supporting skills"],
       "years_experience": integer (total years of professional experience),
-      "industries": ["Industries worked in (e.g. fintech, healthcare, saas)"],
+      "industries": ["Industry sectors, NOT company names. Examples: enterprise_software, middleware, defense, fintech, healthcare, saas, devtools, ecommerce, gaming, cloud"],
       "education": [{"degree": "BS/MS/PhD/etc", "field": "Computer Science/etc"}],
       "preferred_work_model": "remote, hybrid, or onsite (infer from work history, null if unclear)",
       "salary_expectation_min": null (or integer if mentioned),
       "salary_expectation_max": null (or integer if mentioned),
       "career_trajectory": "Brief 1-2 sentence description of career path and growth",
-      "certifications": ["Professional certifications"]
+      "certifications": ["Only list actual named certifications (e.g. AWS Solutions Architect, CKA). Use empty array if none found."]
     }
 
     Rules:
-    - For skills, separate individual technologies (e.g. ["React", "TypeScript"] not ["React/TypeScript"])
+    - For skills, list each technology as a separate item (e.g. ["React", "TypeScript"] not ["React/TypeScript"] or ["Python - FastAPI"]). Each array element should be ONE technology name only
     - Infer target_titles from career trajectory (e.g. if current is "Senior Developer", targets might include "Staff Engineer", "Tech Lead")
     - years_experience: count total years from earliest to latest job
-    - Industries should be lowercase domain names (fintech, healthcare, gaming, etc.)
+    - industries: Use category names like enterprise_software, middleware, defense, healthcare - NOT company names or URLs
+    - certifications: Only include specifically named certifications. Return empty array [] if none are mentioned
     - Return ONLY valid JSON, no markdown fences or commentary
     """
   end
@@ -308,10 +309,28 @@ defmodule Clientats.ResumeParser do
 
   defp get_list(map, key) do
     case Map.get(map, key) do
-      list when is_list(list) -> Enum.map(list, &to_string/1) |> Enum.reject(&(&1 == ""))
-      _ -> []
+      list when is_list(list) ->
+        list
+        |> Enum.flat_map(&split_compound_entry/1)
+        |> Enum.map(&String.trim/1)
+        |> Enum.reject(&(&1 == ""))
+
+      _ ->
+        []
     end
   end
+
+  # Split compound skill entries like "Python - FastAPI" or "Gitops: Argo CD"
+  defp split_compound_entry(val) when is_binary(val) do
+    cond do
+      String.contains?(val, " - ") -> String.split(val, " - ")
+      String.contains?(val, ": ") -> String.split(val, ": ")
+      String.contains?(val, " / ") -> String.split(val, " / ")
+      true -> [val]
+    end
+  end
+
+  defp split_compound_entry(val), do: [to_string(val)]
 
   defp get_integer(map, key) do
     case Map.get(map, key) do
