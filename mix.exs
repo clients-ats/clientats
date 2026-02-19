@@ -71,7 +71,10 @@ defmodule Clientats.MixProject do
       {:bcrypt_elixir, "~> 3.0"},
       {:req_llm, "~> 1.0"},
       {:oban, "~> 2.17"},
-      {:wallaby, "~> 0.30", runtime: false, only: :test}
+      {:wallaby, "~> 0.30", runtime: false, only: :test},
+      {:exgboost, "~> 0.5"},
+      {:nx, "~> 0.9"},
+      {:httpoison, "~> 2.0", runtime: false}
     ]
   end
 
