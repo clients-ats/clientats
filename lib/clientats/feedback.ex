@@ -53,6 +53,69 @@ defmodule Clientats.Feedback do
     })
   end
 
+  @doc "Remove a bookmark from a job"
+  def unbookmark(user_id, job_interest_id) do
+    from(f in UserFeedback,
+      where:
+        f.user_id == ^user_id and
+          f.job_interest_id == ^job_interest_id and
+          f.feedback_type == "bookmark"
+    )
+    |> Repo.delete_all()
+  end
+
+  @doc "Check if a job is bookmarked"
+  def bookmarked?(user_id, job_interest_id) do
+    from(f in UserFeedback,
+      where:
+        f.user_id == ^user_id and
+          f.job_interest_id == ^job_interest_id and
+          f.feedback_type == "bookmark",
+      select: count()
+    )
+    |> Repo.one() > 0
+  end
+
+  @doc """
+  Load feedback states for multiple job interests at once.
+  Returns a map of %{job_interest_id => %{thumbs: nil | :up | :down, bookmarked: boolean}}.
+  """
+  def get_feedback_states(user_id, job_interest_ids) when is_list(job_interest_ids) do
+    feedbacks =
+      from(f in UserFeedback,
+        where:
+          f.user_id == ^user_id and
+            f.job_interest_id in ^job_interest_ids and
+            f.feedback_type in ["thumbs_up", "thumbs_down", "bookmark"],
+        select: {f.job_interest_id, f.feedback_type, f.inserted_at}
+      )
+      |> Repo.all()
+
+    # Build the states map
+    Enum.reduce(feedbacks, %{}, fn {job_id, type, inserted_at}, acc ->
+      state = Map.get(acc, job_id, %{thumbs: nil, thumbs_at: nil, bookmarked: false})
+
+      state =
+        case type do
+          "bookmark" ->
+            %{state | bookmarked: true}
+
+          thumbs_type when thumbs_type in ["thumbs_up", "thumbs_down"] ->
+            if state.thumbs_at == nil or NaiveDateTime.compare(inserted_at, state.thumbs_at) == :gt do
+              thumbs = if thumbs_type == "thumbs_up", do: :up, else: :down
+              %{state | thumbs: thumbs, thumbs_at: inserted_at}
+            else
+              state
+            end
+        end
+
+      Map.put(acc, job_id, state)
+    end)
+    |> Map.new(fn {job_id, state} ->
+      {job_id, Map.take(state, [:thumbs, :bookmarked])}
+    end)
+  end
+
   @doc "Record a click-through to job detail"
   def record_click(user_id, job_interest_id) do
     record_feedback(%{

@@ -16,15 +16,32 @@ defmodule Clientats.Jobs do
   def get_job_interest!(id), do: Repo.get!(JobInterest, id)
 
   def create_job_interest(attrs \\ %{}) do
-    %JobInterest{}
-    |> JobInterest.changeset(attrs)
-    |> Repo.insert()
+    result =
+      %JobInterest{}
+      |> JobInterest.changeset(attrs)
+      |> Repo.insert()
+
+    with {:ok, job} <- result do
+      enqueue_embedding(job.id)
+      {:ok, job}
+    end
   end
 
   def update_job_interest(%JobInterest{} = job_interest, attrs) do
-    job_interest
-    |> JobInterest.changeset(attrs)
-    |> Repo.update()
+    result =
+      job_interest
+      |> JobInterest.changeset(attrs)
+      |> Repo.update()
+
+    with {:ok, job} <- result do
+      changeset = JobInterest.changeset(job_interest, attrs)
+
+      if title_or_description_changed?(changeset) do
+        enqueue_embedding(job.id)
+      end
+
+      {:ok, job}
+    end
   end
 
   def delete_job_interest(%JobInterest{} = job_interest) do
@@ -125,5 +142,18 @@ defmodule Clientats.Jobs do
 
   def change_application_event(%ApplicationEvent{} = event, attrs \\ %{}) do
     ApplicationEvent.changeset(event, attrs)
+  end
+
+  # --- Embedding helpers ---
+
+  defp enqueue_embedding(job_interest_id) do
+    %{"job_interest_id" => job_interest_id}
+    |> Clientats.Workers.EmbedJobInterest.new()
+    |> Oban.insert()
+  end
+
+  defp title_or_description_changed?(changeset) do
+    Ecto.Changeset.changed?(changeset, :position_title) or
+      Ecto.Changeset.changed?(changeset, :job_description)
   end
 end
