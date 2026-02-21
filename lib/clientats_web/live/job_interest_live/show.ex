@@ -2,6 +2,9 @@ defmodule ClientatsWeb.JobInterestLive.Show do
   use ClientatsWeb, :live_view
 
   alias Clientats.Jobs
+  alias Clientats.Feedback
+
+  import ClientatsWeb.FeedbackComponents
 
   on_mount {ClientatsWeb.UserAuth, :ensure_authenticated}
 
@@ -12,12 +15,24 @@ defmodule ClientatsWeb.JobInterestLive.Show do
 
   @impl true
   def handle_params(%{"id" => id}, _, socket) do
+    user_id = socket.assigns.current_user.id
     job_interest = Jobs.get_job_interest!(id)
+
+    # Record click-through
+    Feedback.record_click(user_id, job_interest.id)
+
+    # Load feedback state
+    feedback_states = Feedback.get_feedback_states(user_id, [job_interest.id])
 
     {:noreply,
      socket
      |> assign(:page_title, job_interest.position_title)
-     |> assign(:job_interest, job_interest)}
+     |> assign(:job_interest, job_interest)
+     |> assign(:feedback_states, feedback_states)
+     |> assign(:show_why_modal, false)
+     |> assign(:show_block_modal, false)
+     |> assign(:block_company_name, "")
+     |> assign(:last_rated_job_id, nil)}
   end
 
   @impl true
@@ -28,6 +43,109 @@ defmodule ClientatsWeb.JobInterestLive.Show do
      socket
      |> put_flash(:info, "Job interest deleted successfully")
      |> push_navigate(to: ~p"/dashboard")}
+  end
+
+  # --- Dwell time tracking ---
+
+  def handle_event("record_dwell", %{"job_id" => job_id_str, "seconds" => seconds}, socket) do
+    user_id = socket.assigns.current_user.id
+    job_id = String.to_integer(job_id_str)
+    Feedback.record_dwell(user_id, job_id, seconds)
+    {:noreply, socket}
+  end
+
+  # --- Feedback event handlers ---
+
+  def handle_event("thumbs_up", %{"job-id" => job_id_str}, socket) do
+    user_id = socket.assigns.current_user.id
+    job_id = String.to_integer(job_id_str)
+    {:ok, _} = Feedback.thumbs_up(user_id, job_id)
+
+    socket =
+      socket
+      |> update_feedback_state(job_id, :thumbs, :up)
+      |> assign(:last_rated_job_id, job_id)
+      |> maybe_show_why_modal(user_id)
+
+    {:noreply, socket}
+  end
+
+  def handle_event("thumbs_down", %{"job-id" => job_id_str}, socket) do
+    user_id = socket.assigns.current_user.id
+    job_id = String.to_integer(job_id_str)
+    {:ok, _} = Feedback.thumbs_down(user_id, job_id)
+
+    socket =
+      socket
+      |> update_feedback_state(job_id, :thumbs, :down)
+      |> assign(:last_rated_job_id, job_id)
+      |> maybe_show_why_modal(user_id)
+
+    {:noreply, socket}
+  end
+
+  def handle_event("toggle_bookmark", %{"job-id" => job_id_str}, socket) do
+    user_id = socket.assigns.current_user.id
+    job_id = String.to_integer(job_id_str)
+    currently_bookmarked = feedback_bookmarked(socket.assigns.feedback_states, job_id)
+
+    if currently_bookmarked do
+      Feedback.unbookmark(user_id, job_id)
+      {:noreply, update_feedback_state(socket, job_id, :bookmarked, false)}
+    else
+      {:ok, _} = Feedback.bookmark(user_id, job_id)
+      {:noreply, update_feedback_state(socket, job_id, :bookmarked, true)}
+    end
+  end
+
+  def handle_event("block_company", %{"job-id" => _job_id_str}, socket) do
+    company_name = socket.assigns.job_interest.company_name
+
+    {:noreply,
+     socket
+     |> assign(:show_block_modal, true)
+     |> assign(:block_company_name, company_name)
+     |> assign(:last_rated_job_id, socket.assigns.job_interest.id)}
+  end
+
+  def handle_event("confirm_block_company", %{"reason" => reason}, socket) do
+    user_id = socket.assigns.current_user.id
+    company_name = socket.assigns.block_company_name
+    reason = if reason == "", do: nil, else: reason
+
+    {:ok, _} = Feedback.block_company(user_id, company_name, reason)
+
+    {:noreply,
+     socket
+     |> assign(:show_block_modal, false)
+     |> assign(:block_company_name, "")}
+  end
+
+  def handle_event("cancel_block", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:show_block_modal, false)
+     |> assign(:block_company_name, "")}
+  end
+
+  def handle_event("submit_why", %{"reason" => reason} = params, socket) do
+    user_id = socket.assigns.current_user.id
+    job_id = socket.assigns.last_rated_job_id
+
+    final_reason =
+      case {reason, Map.get(params, "reason_custom", "")} do
+        {"", custom} when custom != "" -> custom
+        {chip, _} when chip != "" -> chip
+        _ -> "unspecified"
+      end
+
+    if job_id, do: Feedback.record_why(user_id, job_id, final_reason)
+
+    {:noreply, assign(socket, :show_why_modal, false)}
+  end
+
+  def handle_event("dismiss_why", _params, socket) do
+    {:noreply, assign(socket, :show_why_modal, false)}
   end
 
   @impl true
@@ -60,11 +178,25 @@ defmodule ClientatsWeb.JobInterestLive.Show do
         </div>
       </div>
 
-      <div class="container mx-auto px-4 py-8">
+      <div
+        id="job-detail"
+        class="container mx-auto px-4 py-8"
+        phx-hook="DwellTracker"
+        data-job-id={@job_interest.id}
+      >
         <div class="bg-white rounded-lg shadow p-6">
           <div class="mb-6">
             <h1 class="text-3xl font-bold text-gray-900">{@job_interest.position_title}</h1>
             <h2 class="text-xl text-gray-600 mt-2">{@job_interest.company_name}</h2>
+          </div>
+
+          <%!-- Feedback Buttons --%>
+          <div class="mb-6 pb-4 border-b border-gray-200">
+            <.feedback_buttons
+              job_interest_id={@job_interest.id}
+              thumbs={feedback_thumbs(@feedback_states, @job_interest.id)}
+              bookmarked={feedback_bookmarked(@feedback_states, @job_interest.id)}
+            />
           </div>
 
           <div class="grid md:grid-cols-2 gap-6">
@@ -145,8 +277,42 @@ defmodule ClientatsWeb.JobInterestLive.Show do
           <% end %>
         </div>
       </div>
+
+      <.why_modal show={@show_why_modal} />
+      <.block_company_modal show={@show_block_modal} company_name={@block_company_name} />
     </div>
     """
+  end
+
+  # --- Private helpers ---
+
+  defp update_feedback_state(socket, job_id, key, value) do
+    states = socket.assigns.feedback_states
+    current = Map.get(states, job_id, %{thumbs: nil, bookmarked: false})
+    updated = Map.put(current, key, value)
+    assign(socket, :feedback_states, Map.put(states, job_id, updated))
+  end
+
+  defp maybe_show_why_modal(socket, user_id) do
+    if Feedback.should_prompt_why?(user_id) do
+      assign(socket, :show_why_modal, true)
+    else
+      socket
+    end
+  end
+
+  defp feedback_thumbs(states, job_id) do
+    case Map.get(states, job_id) do
+      %{thumbs: thumbs} -> thumbs
+      _ -> nil
+    end
+  end
+
+  defp feedback_bookmarked(states, job_id) do
+    case Map.get(states, job_id) do
+      %{bookmarked: bookmarked} -> bookmarked
+      _ -> false
+    end
   end
 
   defp format_work_model("on_site"), do: "On-site"

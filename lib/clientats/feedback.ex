@@ -147,6 +147,44 @@ defmodule Clientats.Feedback do
     })
   end
 
+  @doc "List all feedback for a user, with optional type filter, preloads job_interest"
+  def list_feedback_history(user_id, opts \\ []) do
+    type_filter = opts[:type]
+
+    query =
+      from(f in UserFeedback,
+        where: f.user_id == ^user_id,
+        order_by: [desc: f.inserted_at],
+        preload: [:job_interest],
+        limit: 200
+      )
+
+    query =
+      case type_filter do
+        :positive ->
+          from(f in query, where: f.feedback_type in ["thumbs_up", "bookmark"])
+
+        :negative ->
+          from(f in query, where: f.feedback_type in ["thumbs_down", "company_block"])
+
+        :implicit ->
+          from(f in query, where: f.feedback_type in ["click", "dwell"])
+
+        _ ->
+          query
+      end
+
+    Repo.all(query)
+  end
+
+  @doc "Delete a feedback record by ID"
+  def delete_feedback(feedback_id) do
+    case Repo.get(UserFeedback, feedback_id) do
+      nil -> {:error, :not_found}
+      fb -> Repo.delete(fb)
+    end
+  end
+
   @doc "Get a user's feedback for a specific job"
   def get_feedback(user_id, job_interest_id) do
     from(f in UserFeedback,

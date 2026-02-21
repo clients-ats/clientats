@@ -15,6 +15,12 @@ defmodule Clientats.Jobs do
 
   def get_job_interest!(id), do: Repo.get!(JobInterest, id)
 
+  def get_job_interests_by_ids(ids) when is_list(ids) do
+    JobInterest
+    |> where([j], j.id in ^ids)
+    |> Repo.all()
+  end
+
   def create_job_interest(attrs \\ %{}) do
     result =
       %JobInterest{}

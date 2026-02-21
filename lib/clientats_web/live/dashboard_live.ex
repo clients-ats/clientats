@@ -3,6 +3,9 @@ defmodule ClientatsWeb.DashboardLive do
 
   alias Clientats.Jobs
   alias Clientats.Feedback
+  alias Clientats.Feedback.UserPreference
+  alias Clientats.Ranker
+  alias Clientats.Ranker.FeatureExtractor
   alias Clientats.LLMConfig
   alias Phoenix.LiveView.JS
 
@@ -10,6 +13,7 @@ defmodule ClientatsWeb.DashboardLive do
 
   on_mount {ClientatsWeb.UserAuth, :ensure_authenticated}
 
+  @impl true
   def render(assigns) do
     ~H"""
     <div class="min-h-screen bg-gray-50">
@@ -50,16 +54,74 @@ defmodule ClientatsWeb.DashboardLive do
         <% end %>
 
         <div class="mb-8 flex gap-4">
+          <.link navigate={~p"/dashboard/discover"} class="btn btn-outline btn-primary">
+            <.icon name="hero-magnifying-glass" class="w-5 h-5" /> Discover Jobs
+          </.link>
           <.link navigate={~p"/dashboard/resumes"} class="btn btn-outline">
             <.icon name="hero-document-text" class="w-5 h-5" /> Manage Resumes
           </.link>
           <.link navigate={~p"/dashboard/cover-letters"} class="btn btn-outline">
             <.icon name="hero-document-duplicate" class="w-5 h-5" /> Cover Letter Templates
           </.link>
+          <.link navigate={~p"/dashboard/preferences"} class="btn btn-outline">
+            <.icon name="hero-adjustments-horizontal" class="w-5 h-5" /> Preferences
+          </.link>
           <.link navigate={~p"/dashboard/llm-config"} class="btn btn-outline">
             <.icon name="hero-cog-6-tooth" class="w-5 h-5" /> LLM Configuration
           </.link>
         </div>
+
+        <%!-- Recommended for You --%>
+        <%= if @recommendations_loading do %>
+          <div class="bg-white rounded-lg shadow p-6 mb-8">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">Recommended for You</h2>
+            <div class="flex items-center gap-2 text-gray-500">
+              <span class="loading loading-spinner loading-sm"></span>
+              <span class="text-sm">Computing recommendations...</span>
+            </div>
+          </div>
+        <% end %>
+
+        <%= if !@recommendations_loading && @recommendations != [] do %>
+          <div class="bg-white rounded-lg shadow p-6 mb-8">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">Recommended for You</h2>
+            <div class="grid md:grid-cols-5 gap-3">
+              <%= for {rec, idx} <- Enum.with_index(@recommendations) do %>
+                <div
+                  class="border rounded-lg p-3 hover:bg-blue-50 cursor-pointer transition-colors"
+                  phx-click="select_interest"
+                  phx-value-id={rec.id}
+                >
+                  <div class="flex items-center gap-2 mb-2">
+                    <span class="text-xs font-bold text-blue-600">#{idx + 1}</span>
+                    <span class={["badge badge-xs", rec_score_badge(rec.score)]}>
+                      {rec_score_label(rec.score)}
+                    </span>
+                  </div>
+                  <h3 class="text-sm font-semibold text-gray-900 line-clamp-2">{rec.title}</h3>
+                  <p class="text-xs text-gray-600 mt-1">{rec.company}</p>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+
+        <%= if !@recommendations_loading && @recommendations == [] && @has_preferences do %>
+          <div class="bg-blue-50 rounded-lg p-4 mb-8 text-sm text-blue-700">
+            Add more job interests to see personalized recommendations.
+          </div>
+        <% end %>
+
+        <%= if !@has_preferences do %>
+          <div class="bg-yellow-50 rounded-lg p-4 mb-8 flex items-center justify-between">
+            <span class="text-sm text-yellow-700">
+              Parse your resume to get personalized recommendations.
+            </span>
+            <.link navigate={~p"/dashboard/resumes"} class="btn btn-sm btn-warning btn-outline">
+              Manage Resumes
+            </.link>
+          </div>
+        <% end %>
 
         <div class="grid md:grid-cols-2 gap-8">
           <div class="bg-white rounded-lg shadow p-6">
@@ -179,6 +241,7 @@ defmodule ClientatsWeb.DashboardLive do
     """
   end
 
+  @impl true
   def mount(_params, _session, socket) do
     user_id = socket.assigns.current_user.id
     all_interests = Jobs.list_job_interests(user_id)
@@ -195,24 +258,47 @@ defmodule ClientatsWeb.DashboardLive do
     job_ids = Enum.map(all_interests, & &1.id)
     feedback_states = Feedback.get_feedback_states(user_id, job_ids)
 
-    {:ok,
-     socket
-     |> assign(:show_not_interested, false)
-     |> assign(:all_interests, all_interests)
-     |> assign(:job_interests, filtered_interests)
-     |> assign(:show_closed, false)
-     |> assign(:all_applications, all_applications)
-     |> assign(:job_applications, filtered_applications)
-     |> assign(:has_configured_providers, has_configured_providers)
-     |> assign(:feedback_states, feedback_states)
-     |> assign(:show_why_modal, false)
-     |> assign(:show_block_modal, false)
-     |> assign(:block_company_name, "")
-     |> assign(:last_rated_job_id, nil)
-     |> stream(:job_interests, filtered_interests)
-     |> stream(:job_applications, filtered_applications)}
+    # Check if user has preferences for recommendations
+    preferences = Feedback.get_all_preferences(user_id)
+    has_preferences = preferences != []
+
+    # Kick off async recommendations if enough data
+    should_recommend = has_preferences && length(all_interests) >= 3
+
+    socket =
+      socket
+      |> assign(:show_not_interested, false)
+      |> assign(:all_interests, all_interests)
+      |> assign(:job_interests, filtered_interests)
+      |> assign(:show_closed, false)
+      |> assign(:all_applications, all_applications)
+      |> assign(:job_applications, filtered_applications)
+      |> assign(:has_configured_providers, has_configured_providers)
+      |> assign(:feedback_states, feedback_states)
+      |> assign(:show_why_modal, false)
+      |> assign(:show_block_modal, false)
+      |> assign(:block_company_name, "")
+      |> assign(:last_rated_job_id, nil)
+      |> assign(:recommendations, [])
+      |> assign(:recommendations_loading, should_recommend)
+      |> assign(:has_preferences, has_preferences)
+      |> stream(:job_interests, filtered_interests)
+      |> stream(:job_applications, filtered_applications)
+
+    if should_recommend do
+      pid = self()
+      interests = all_interests
+
+      spawn(fn ->
+        recs = compute_recommendations(user_id, interests, preferences)
+        send(pid, {:recommendations, recs})
+      end)
+    end
+
+    {:ok, socket}
   end
 
+  @impl true
   def handle_event("select_interest", %{"id" => id}, socket) do
     {:noreply, push_navigate(socket, to: ~p"/dashboard/job-interests/#{id}")}
   end
@@ -336,6 +422,85 @@ defmodule ClientatsWeb.DashboardLive do
     {:noreply, assign(socket, :show_why_modal, false)}
   end
 
+  # --- Recommendations ---
+
+  @impl true
+  def handle_info({:recommendations, recs}, socket) do
+    {:noreply,
+     socket
+     |> assign(:recommendations, recs)
+     |> assign(:recommendations_loading, false)}
+  end
+
+  defp compute_recommendations(user_id, interests, preferences) do
+    user_prefs = UserPreference.to_feature_prefs(preferences)
+
+    # Try to load ranking model
+    {booster, _phase} =
+      case Feedback.get_ranking_model(user_id) do
+        {:ok, booster, %{phase: phase}} -> {booster, phase}
+        {:error, :no_model} -> {nil, "llm_proxy"}
+      end
+
+    # Get blocked companies
+    blocked =
+      Feedback.blocked_companies(user_id)
+      |> Enum.map(fn b -> String.downcase(b.company_name) end)
+
+    # Score each interest
+    interests
+    |> Enum.reject(fn i -> i.status == "not_a_fit" end)
+    |> Enum.reject(fn i ->
+      String.downcase(i.company_name || "") in blocked
+    end)
+    |> Enum.map(fn interest ->
+      # Build basic similarities (no query vector, so use defaults)
+      similarities = %{
+        title: 0.5,
+        description: 0.5,
+        composite: 0.5,
+        skills: 0.0,
+        requirements: 0.0
+      }
+
+      job_map = %{
+        title_clean: interest.position_title,
+        company_name: interest.company_name,
+        location: interest.location,
+        remote_policy: interest.work_model,
+        salary_min: interest.salary_min,
+        salary_max: interest.salary_max
+      }
+
+      features = FeatureExtractor.extract(job_map, similarities, user_prefs)
+
+      score =
+        case booster do
+          nil ->
+            # Fallback: use feature-based heuristic
+            skill_overlap = Enum.at(features, 15, 0.0)
+            seniority_match = Enum.at(features, 16, 0.0)
+            work_model_match = Enum.at(features, 8, 0.0)
+            industry_match = Enum.at(features, 17, 0.0)
+            (skill_overlap * 0.4 + seniority_match * 0.2 + work_model_match * 0.2 + industry_match * 0.2)
+
+          b ->
+            Ranker.predict(b, [features]) |> List.first()
+        end
+
+      %{
+        id: interest.id,
+        title: interest.position_title,
+        company: interest.company_name,
+        score: score
+      }
+    end)
+    |> Enum.sort_by(& &1.score, :desc)
+    |> Enum.take(5)
+  rescue
+    _ -> []
+  end
+
   # --- Feedback helpers ---
 
   defp update_feedback_state(socket, job_id, key, value) do
@@ -412,4 +577,11 @@ defmodule ClientatsWeb.DashboardLive do
       Enum.reject(interests, &(&1.status == "not_a_fit"))
     end
   end
+
+  defp rec_score_badge(score) when is_float(score) and score >= 0.7, do: "badge-success"
+  defp rec_score_badge(score) when is_float(score) and score >= 0.4, do: "badge-warning"
+  defp rec_score_badge(_), do: "badge-ghost"
+
+  defp rec_score_label(score) when is_float(score), do: "#{round(score * 100)}%"
+  defp rec_score_label(_), do: "N/A"
 end
