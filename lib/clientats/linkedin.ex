@@ -149,19 +149,25 @@ defmodule Clientats.LinkedIn do
       Logger.info("[LinkedIn] Running: node #{script_path} #{Enum.join(args, " ")}")
 
       try do
-        case System.cmd("node", [script_path | args],
-               stderr_to_stdout: false,
-               timeout: @default_timeout
-             ) do
-          {output, 0} ->
+        task =
+          Task.async(fn ->
+            System.cmd("node", [script_path | args], stderr_to_stdout: false)
+          end)
+
+        case Task.yield(task, @default_timeout) || Task.shutdown(task, :brutal_kill) do
+          {:ok, {output, 0}} ->
             case Jason.decode(output) do
               {:ok, data} -> {:ok, data}
               {:error, _} -> {:error, {:json_parse_error, String.slice(output, 0, 200)}}
             end
 
-          {output, exit_code} ->
+          {:ok, {output, exit_code}} ->
             Logger.warning("[LinkedIn] Script exited #{exit_code}: #{String.slice(output, 0, 500)}")
             {:error, {:script_error, exit_code, output}}
+
+          nil ->
+            Logger.warning("[LinkedIn] Script timed out after #{@default_timeout}ms")
+            {:error, :timeout}
         end
       rescue
         e -> {:error, {:exception, Exception.message(e)}}
