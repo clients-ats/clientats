@@ -340,7 +340,7 @@ defmodule ClientatsWeb.DiscoverLive do
               <%!-- Actions bar --%>
               <div class="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between">
                 <div class="flex items-center gap-2">
-                  <%!-- Feedback buttons (only for saved interests) --%>
+                  <%!-- Feedback buttons --%>
                   <div :if={result.saved_interest_id}>
                     <.feedback_buttons
                       job_interest_id={result.saved_interest_id}
@@ -348,14 +348,34 @@ defmodule ClientatsWeb.DiscoverLive do
                       bookmarked={feedback_bookmarked(@feedback_states, result.saved_interest_id)}
                     />
                   </div>
-                  <button
-                    :if={result.source == :linkedin && !result.saved_interest_id}
-                    phx-click="save_as_interest"
-                    phx-value-idx={idx}
-                    class="btn btn-xs btn-outline btn-primary"
-                  >
-                    Save as Interest
-                  </button>
+                  <%!-- Rate buttons for unsaved LinkedIn results (auto-saves on click) --%>
+                  <div :if={result.source == :linkedin && !result.saved_interest_id} class="flex items-center gap-1">
+                    <button
+                      phx-click="rate_and_save"
+                      phx-value-idx={idx}
+                      phx-value-rating="up"
+                      class="btn btn-xs btn-ghost"
+                      title="Like (auto-saves)"
+                    >
+                      <.icon name="hero-hand-thumb-up" class="w-4 h-4" />
+                    </button>
+                    <button
+                      phx-click="rate_and_save"
+                      phx-value-idx={idx}
+                      phx-value-rating="down"
+                      class="btn btn-xs btn-ghost"
+                      title="Dislike (auto-saves)"
+                    >
+                      <.icon name="hero-hand-thumb-down" class="w-4 h-4" />
+                    </button>
+                    <button
+                      phx-click="save_as_interest"
+                      phx-value-idx={idx}
+                      class="btn btn-xs btn-outline btn-primary ml-1"
+                    >
+                      Save
+                    </button>
+                  </div>
                   <span
                     :if={result.source == :linkedin && result.saved_interest_id}
                     class="text-xs text-green-600 flex items-center gap-1"
@@ -571,7 +591,8 @@ defmodule ClientatsWeb.DiscoverLive do
             Enum.each(jobs, fn job ->
               with {:ok, detail} <- LinkedIn.job_detail(job.linkedin_job_id),
                    description_text = detail[:description_text] || "",
-                   {:ok, extracted} <- JobExtractor.extract(description_text, user_id: user_id),
+                   {:ok, raw_extracted} <- JobExtractor.extract(description_text, user_id: user_id),
+                   {:ok, extracted} <- JobExtractor.validate(raw_extracted),
                    texts = JobExtractor.vector_texts(extracted),
                    {:ok, embeddings} <-
                      Embedding.embed_batch([texts.title, texts.description], user_id: user_id) do
@@ -641,6 +662,59 @@ defmodule ClientatsWeb.DiscoverLive do
            socket
            |> assign(:results, results)
            |> put_flash(:info, "Saved as job interest")}
+
+        {:error, _changeset} ->
+          {:noreply, put_flash(socket, :error, "Failed to save job interest")}
+      end
+    else
+      {:noreply, socket}
+    end
+  end
+
+  # --- Rate and auto-save (LinkedIn results) ---
+
+  def handle_event("rate_and_save", %{"idx" => idx_str, "rating" => rating}, socket) do
+    idx = String.to_integer(idx_str)
+    result = Enum.at(socket.assigns.results, idx)
+
+    if result && !result.saved_interest_id do
+      user_id = socket.assigns.current_user.id
+      extracted = result[:extracted] || %{}
+
+      params = %{
+        user_id: user_id,
+        position_title: result.title,
+        company_name: result.company,
+        location: result.location,
+        job_url: result[:url],
+        job_description: extracted[:description] || "",
+        status: "interested",
+        priority: "medium",
+        work_model: format_work_model(extracted[:remote_policy])
+      }
+
+      case Jobs.create_job_interest(params) do
+        {:ok, interest} ->
+          # Apply rating
+          case rating do
+            "up" -> Feedback.thumbs_up(user_id, interest.id)
+            "down" -> Feedback.thumbs_down(user_id, interest.id)
+          end
+
+          # Update results list
+          results =
+            List.update_at(socket.assigns.results, idx, fn r ->
+              Map.put(r, :saved_interest_id, interest.id)
+            end)
+
+          thumbs_state = if rating == "up", do: :up, else: :down
+
+          {:noreply,
+           socket
+           |> assign(:results, results)
+           |> update_feedback_state(interest.id, :thumbs, thumbs_state)
+           |> update(:feedback_count, &(&1 + 1))
+           |> assign(:show_why_for, interest.id)}
 
         {:error, _changeset} ->
           {:noreply, put_flash(socket, :error, "Failed to save job interest")}
