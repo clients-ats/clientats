@@ -681,6 +681,8 @@ defmodule ClientatsWeb.DiscoverLive do
       user_id = socket.assigns.current_user.id
       extracted = result[:extracted] || %{}
 
+      status = if rating == "up", do: "interested", else: "not_a_fit"
+
       params = %{
         user_id: user_id,
         position_title: result.title,
@@ -688,7 +690,7 @@ defmodule ClientatsWeb.DiscoverLive do
         location: result.location,
         job_url: result[:url],
         job_description: extracted[:description] || "",
-        status: "interested",
+        status: status,
         priority: "medium",
         work_model: format_work_model(extracted[:remote_policy])
       }
