@@ -253,7 +253,7 @@ async function scrapeSearchResults(searchUrl, maxJobs = 25) {
     log(`Search scrape error: ${err.message}`);
     return { success: false, error: err.message, jobs: [] };
   } finally {
-    browser.disconnect();
+    // CDP connection cleaned up on process exit
   }
 }
 
@@ -354,7 +354,7 @@ async function scrapeJobDetail(jobId) {
     log(`Detail scrape error: ${err.message}`);
     return { success: false, linkedin_job_id: jobId, error: err.message };
   } finally {
-    browser.disconnect();
+    // CDP connection cleaned up on process exit
   }
 }
 
@@ -470,7 +470,7 @@ async function scrapePublicJsonLd(jobId) {
     log(`Public page scrape error: ${err.message}`);
     return { success: false, linkedin_job_id: jobId, error: err.message };
   } finally {
-    browser.disconnect();
+    // CDP connection cleaned up on process exit
   }
 }
 
