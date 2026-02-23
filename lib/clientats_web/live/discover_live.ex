@@ -38,11 +38,13 @@ defmodule ClientatsWeb.DiscoverLive do
      |> assign(:search_mode, :saved)
      |> assign(:query, "")
      |> assign(:filter_remote, false)
+     |> assign(:filter_location, "United States")
      |> assign(:filter_experience, "any")
      |> assign(:filter_time_posted, :month)
      |> assign(:searching, false)
      |> assign(:results, [])
      |> assign(:expanded_why, MapSet.new())
+     |> assign(:expanded_detail, MapSet.new())
      |> assign(:phases, [])
      |> assign(:error, nil)
      |> assign(:feedback_states, %{})
@@ -55,7 +57,8 @@ defmodule ClientatsWeb.DiscoverLive do
      |> assign(:show_why_modal, false)
      |> assign(:show_block_modal, false)
      |> assign(:block_company_name, "")
-     |> assign(:last_rated_job_id, nil)}
+     |> assign(:last_rated_job_id, nil)
+     |> assign(:show_why_for, nil)}
   end
 
   @impl true
@@ -125,7 +128,7 @@ defmodule ClientatsWeb.DiscoverLive do
           </form>
 
           <%!-- Filters (LinkedIn mode) --%>
-          <div :if={@search_mode == :linkedin} class="flex flex-wrap gap-4 mt-3">
+          <div :if={@search_mode == :linkedin} class="flex flex-wrap items-end gap-4 mt-3">
             <label class="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -135,6 +138,19 @@ defmodule ClientatsWeb.DiscoverLive do
               />
               <span class="text-sm">Remote only</span>
             </label>
+
+            <div :if={!@filter_remote}>
+              <label class="text-xs text-gray-500">Location</label>
+              <input
+                type="text"
+                value={@filter_location}
+                phx-change="set_location"
+                phx-debounce="300"
+                name="location"
+                placeholder="e.g. New York, San Francisco..."
+                class="input input-sm input-bordered w-48"
+              />
+            </div>
 
             <select
               class="select select-sm select-bordered"
@@ -238,58 +254,153 @@ defmodule ClientatsWeb.DiscoverLive do
           <p class="text-sm text-gray-500 mb-2">{length(@results)} results</p>
           <%= for {result, idx} <- Enum.with_index(@results) do %>
             <div class="bg-white rounded-lg shadow p-4 hover:shadow-md transition">
-              <div class="flex justify-between items-start">
+              <%!-- Clickable header --%>
+              <div
+                class="flex justify-between items-start cursor-pointer"
+                phx-click={if result.source == :saved, do: "view_job", else: "toggle_detail"}
+                phx-value-id={result[:saved_interest_id] || result[:id]}
+                phx-value-idx={idx}
+              >
                 <div class="flex-1">
-                  <h3 class="font-semibold text-gray-900">{result.title}</h3>
+                  <h3 class="font-semibold text-gray-900 hover:text-blue-600">{result.title}</h3>
                   <p class="text-sm text-gray-600">{result.company}</p>
                   <p :if={result.location} class="text-sm text-gray-500">{result.location}</p>
-                  <div :if={result[:work_model]} class="mt-1">
-                    <span class="badge badge-xs badge-outline">{result.work_model}</span>
-                  </div>
-                  <div :if={result[:salary_range]} class="text-xs text-gray-500 mt-1">
-                    {result.salary_range}
+                  <div class="flex items-center gap-2 mt-1">
+                    <span :if={result[:work_model]} class="badge badge-xs badge-outline">
+                      {result.work_model}
+                    </span>
+                    <span :if={result[:salary_range]} class="text-xs text-gray-500">
+                      {result.salary_range}
+                    </span>
                   </div>
                 </div>
                 <div class="flex flex-col items-end gap-2">
                   <span class={["badge", score_badge(result.score)]}>
                     {format_score(result.score)}
                   </span>
+                  <span class="text-xs text-gray-400">
+                    <%= if result.source == :saved, do: "Click to view", else: if(MapSet.member?(@expanded_detail, idx), do: "Hide details", else: "Show details") %>
+                  </span>
+                </div>
+              </div>
+
+              <%!-- Inline detail panel (LinkedIn results) --%>
+              <div
+                :if={result.source == :linkedin && MapSet.member?(@expanded_detail, idx)}
+                class="mt-3 p-4 bg-gray-50 rounded-lg border border-gray-200"
+              >
+                <div :if={result[:extracted]} class="space-y-3">
+                  <%!-- Skills --%>
+                  <div :if={skills_list(result.extracted) != []}>
+                    <h4 class="text-xs font-semibold text-gray-700 mb-1">Skills</h4>
+                    <div class="flex flex-wrap gap-1">
+                      <%= for skill <- skills_list(result.extracted) do %>
+                        <span class="badge badge-xs badge-outline">{skill}</span>
+                      <% end %>
+                    </div>
+                  </div>
+                  <%!-- Details grid --%>
+                  <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div :if={result.extracted[:seniority_level]}>
+                      <span class="text-gray-500">Seniority:</span>
+                      <span class="ml-1 font-medium">{result.extracted[:seniority_level]}</span>
+                    </div>
+                    <div :if={result.extracted[:employment_type]}>
+                      <span class="text-gray-500">Type:</span>
+                      <span class="ml-1 font-medium">{result.extracted[:employment_type]}</span>
+                    </div>
+                    <div :if={result.extracted[:education_requirement]}>
+                      <span class="text-gray-500">Education:</span>
+                      <span class="ml-1 font-medium">{result.extracted[:education_requirement]}</span>
+                    </div>
+                    <div :if={result.extracted[:industry]}>
+                      <span class="text-gray-500">Industry:</span>
+                      <span class="ml-1 font-medium">{result.extracted[:industry]}</span>
+                    </div>
+                  </div>
+                  <%!-- Description excerpt --%>
+                  <div :if={result.extracted[:description]}>
+                    <h4 class="text-xs font-semibold text-gray-700 mb-1">Description</h4>
+                    <p class="text-xs text-gray-600 whitespace-pre-wrap line-clamp-6">
+                      {result.extracted[:description]}
+                    </p>
+                  </div>
+                  <%!-- External link --%>
+                  <a
+                    :if={result[:url]}
+                    href={result.url}
+                    target="_blank"
+                    class="text-xs text-blue-600 hover:underline inline-flex items-center gap-1"
+                  >
+                    View on LinkedIn <.icon name="hero-arrow-top-right-on-square" class="w-3 h-3" />
+                  </a>
+                </div>
+              </div>
+
+              <%!-- Actions bar --%>
+              <div class="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <%!-- Feedback buttons (only for saved interests) --%>
+                  <div :if={result.saved_interest_id}>
+                    <.feedback_buttons
+                      job_interest_id={result.saved_interest_id}
+                      thumbs={feedback_thumbs(@feedback_states, result.saved_interest_id)}
+                      bookmarked={feedback_bookmarked(@feedback_states, result.saved_interest_id)}
+                    />
+                  </div>
                   <button
                     :if={result.source == :linkedin && !result.saved_interest_id}
                     phx-click="save_as_interest"
                     phx-value-idx={idx}
-                    class="btn btn-sm btn-outline btn-primary"
+                    class="btn btn-xs btn-outline btn-primary"
                   >
                     Save as Interest
                   </button>
                   <span
-                    :if={result.saved_interest_id}
+                    :if={result.source == :linkedin && result.saved_interest_id}
                     class="text-xs text-green-600 flex items-center gap-1"
                   >
                     <.icon name="hero-check" class="w-3 h-3" /> Saved
                   </span>
                 </div>
+                <div class="flex items-center gap-2">
+                  <button
+                    :if={result[:features]}
+                    phx-click="toggle_why_match"
+                    phx-value-idx={idx}
+                    class="text-xs text-blue-600 hover:underline"
+                  >
+                    <%= if MapSet.member?(@expanded_why, idx), do: "Hide match", else: "Why this match?" %>
+                  </button>
+                </div>
               </div>
 
-              <%!-- Feedback buttons (only for saved interests) --%>
-              <div :if={result.saved_interest_id} class="mt-2 pt-2 border-t border-gray-100">
-                <.feedback_buttons
-                  job_interest_id={result.saved_interest_id}
-                  thumbs={feedback_thumbs(@feedback_states, result.saved_interest_id)}
-                  bookmarked={feedback_bookmarked(@feedback_states, result.saved_interest_id)}
-                />
-              </div>
-
-              <%!-- Why this match? --%>
-              <button
-                :if={result[:features]}
-                phx-click="toggle_why_match"
-                phx-value-idx={idx}
-                class="mt-2 text-xs text-blue-600 hover:underline"
+              <%!-- Inline reason chips (shown after rating) --%>
+              <div
+                :if={@show_why_for == result[:saved_interest_id] && @show_why_for != nil}
+                class="mt-2 p-3 bg-blue-50 rounded-lg"
               >
-                <%= if MapSet.member?(@expanded_why, idx), do: "Hide match details", else: "Why this match?" %>
-              </button>
+                <p class="text-xs text-gray-600 mb-2">What drove your rating?</p>
+                <div class="flex flex-wrap gap-1.5">
+                  <%= for reason <- ~w(salary skills company location seniority) do %>
+                    <button
+                      phx-click="quick_why"
+                      phx-value-reason={reason}
+                      class="px-2.5 py-1 text-xs rounded-full border border-blue-300 hover:bg-blue-100 transition-colors"
+                    >
+                      {String.capitalize(reason)}
+                    </button>
+                  <% end %>
+                  <button
+                    phx-click="dismiss_inline_why"
+                    class="px-2.5 py-1 text-xs rounded-full text-gray-400 hover:text-gray-600"
+                  >
+                    Skip
+                  </button>
+                </div>
+              </div>
 
+              <%!-- Why this match breakdown --%>
               <div
                 :if={result[:features] && MapSet.member?(@expanded_why, idx)}
                 class="mt-3 p-3 bg-gray-50 rounded-lg"
@@ -355,8 +466,29 @@ defmodule ClientatsWeb.DiscoverLive do
     {:noreply, assign(socket, :filter_experience, level)}
   end
 
+  def handle_event("set_location", %{"location" => location}, socket) do
+    {:noreply, assign(socket, :filter_location, location)}
+  end
+
   def handle_event("set_time_posted", %{"time" => time}, socket) do
     {:noreply, assign(socket, :filter_time_posted, String.to_existing_atom(time))}
+  end
+
+  def handle_event("view_job", %{"id" => id}, socket) do
+    {:noreply, push_navigate(socket, to: ~p"/dashboard/job-interests/#{id}")}
+  end
+
+  def handle_event("toggle_detail", %{"idx" => idx_str}, socket) do
+    idx = String.to_integer(idx_str)
+
+    expanded =
+      if MapSet.member?(socket.assigns.expanded_detail, idx) do
+        MapSet.delete(socket.assigns.expanded_detail, idx)
+      else
+        MapSet.put(socket.assigns.expanded_detail, idx)
+      end
+
+    {:noreply, assign(socket, :expanded_detail, expanded)}
   end
 
   # --- Search: Saved Jobs Mode ---
@@ -418,7 +550,8 @@ defmodule ClientatsWeb.DiscoverLive do
       opts =
         [
           max_jobs: 25,
-          time_posted: socket.assigns.filter_time_posted
+          time_posted: socket.assigns.filter_time_posted,
+          location: socket.assigns.filter_location
         ]
         |> maybe_add_remote(socket.assigns.filter_remote)
         |> maybe_add_experience(filter_experience)
@@ -544,7 +677,7 @@ defmodule ClientatsWeb.DiscoverLive do
       |> update_feedback_state(job_id, :thumbs, :up)
       |> update(:feedback_count, &(&1 + 1))
       |> assign(:last_rated_job_id, job_id)
-      |> maybe_show_why_modal(user_id)
+      |> assign(:show_why_for, job_id)
 
     {:noreply, socket}
   end
@@ -559,7 +692,7 @@ defmodule ClientatsWeb.DiscoverLive do
       |> update_feedback_state(job_id, :thumbs, :down)
       |> update(:feedback_count, &(&1 + 1))
       |> assign(:last_rated_job_id, job_id)
-      |> maybe_show_why_modal(user_id)
+      |> assign(:show_why_for, job_id)
 
     {:noreply, socket}
   end
@@ -636,6 +769,19 @@ defmodule ClientatsWeb.DiscoverLive do
 
   def handle_event("dismiss_why", _params, socket) do
     {:noreply, assign(socket, :show_why_modal, false)}
+  end
+
+  def handle_event("quick_why", %{"reason" => reason}, socket) do
+    user_id = socket.assigns.current_user.id
+    job_id = socket.assigns.show_why_for
+
+    if job_id, do: Feedback.record_why(user_id, job_id, reason)
+
+    {:noreply, assign(socket, :show_why_for, nil)}
+  end
+
+  def handle_event("dismiss_inline_why", _params, socket) do
+    {:noreply, assign(socket, :show_why_for, nil)}
   end
 
   # --- handle_info callbacks ---
@@ -758,6 +904,10 @@ defmodule ClientatsWeb.DiscoverLive do
           b -> Ranker.predict(b, [features]) |> List.first()
         end
 
+      # Merge description into extracted for the detail panel
+      extracted_with_desc =
+        Map.put(extracted, :description, processed.detail[:description_text])
+
       result = %{
         id: processed.raw[:linkedin_job_id] || System.unique_integer([:positive]),
         title: extracted[:title_clean] || processed.raw[:title],
@@ -767,7 +917,7 @@ defmodule ClientatsWeb.DiscoverLive do
         salary_range: format_salary(extracted[:salary_min], extracted[:salary_max]),
         score: score,
         features: features,
-        extracted: extracted,
+        extracted: extracted_with_desc,
         source: :linkedin,
         url: processed.raw[:url],
         saved_interest_id: nil
@@ -817,14 +967,6 @@ defmodule ClientatsWeb.DiscoverLive do
     current = Map.get(states, job_id, %{thumbs: nil, bookmarked: false})
     updated = Map.put(current, key, value)
     assign(socket, :feedback_states, Map.put(states, job_id, updated))
-  end
-
-  defp maybe_show_why_modal(socket, user_id) do
-    if Feedback.should_prompt_why?(user_id) do
-      assign(socket, :show_why_modal, true)
-    else
-      socket
-    end
   end
 
   defp feedback_thumbs(states, job_id) do
@@ -925,6 +1067,15 @@ defmodule ClientatsWeb.DiscoverLive do
   end
 
   defp format_number(n), do: "#{n}"
+
+  defp skills_list(extracted) when is_map(extracted) do
+    required = extracted[:required_skills] || []
+    preferred = extracted[:preferred_skills] || []
+    tech = extracted[:tech_stack] || []
+    (required ++ preferred ++ tech) |> Enum.uniq() |> Enum.take(15)
+  end
+
+  defp skills_list(_), do: []
 
   defp format_work_model(nil), do: "remote"
   defp format_work_model("full_remote"), do: "remote"
