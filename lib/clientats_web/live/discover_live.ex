@@ -637,21 +637,10 @@ defmodule ClientatsWeb.DiscoverLive do
     result = Enum.at(socket.assigns.results, idx)
 
     if result && !result.saved_interest_id do
+      user_id = socket.assigns.current_user.id
       extracted = result[:extracted] || %{}
 
-      params = %{
-        user_id: socket.assigns.current_user.id,
-        position_title: result.title,
-        company_name: result.company,
-        location: result.location,
-        job_url: result[:url],
-        job_description: extracted[:description] || "",
-        status: "interested",
-        priority: "medium",
-        work_model: format_work_model(extracted[:remote_policy])
-      }
-
-      case Jobs.create_job_interest(params) do
+      case find_or_create_interest(user_id, result, extracted, "interested") do
         {:ok, interest} ->
           results =
             List.update_at(socket.assigns.results, idx, fn r ->
@@ -680,22 +669,9 @@ defmodule ClientatsWeb.DiscoverLive do
     if result && !result.saved_interest_id do
       user_id = socket.assigns.current_user.id
       extracted = result[:extracted] || %{}
-
       status = if rating == "up", do: "interested", else: "not_a_fit"
 
-      params = %{
-        user_id: user_id,
-        position_title: result.title,
-        company_name: result.company,
-        location: result.location,
-        job_url: result[:url],
-        job_description: extracted[:description] || "",
-        status: status,
-        priority: "medium",
-        work_model: format_work_model(extracted[:remote_policy])
-      }
-
-      case Jobs.create_job_interest(params) do
+      case find_or_create_interest(user_id, result, extracted, status) do
         {:ok, interest} ->
           # Apply rating
           case rating do
@@ -1152,6 +1128,24 @@ defmodule ClientatsWeb.DiscoverLive do
   end
 
   defp skills_list(_), do: []
+
+  defp find_or_create_interest(user_id, result, extracted, status) do
+    case Jobs.find_by_fingerprint(user_id, result.company, result.title, result.location) do
+      %{} = existing -> {:ok, existing}
+      nil ->
+        Jobs.create_job_interest(%{
+          user_id: user_id,
+          position_title: result.title,
+          company_name: result.company,
+          location: result.location,
+          job_url: result[:url],
+          job_description: extracted[:description] || "",
+          status: status,
+          priority: "medium",
+          work_model: format_work_model(extracted[:remote_policy])
+        })
+    end
+  end
 
   defp format_work_model(nil), do: "remote"
   defp format_work_model("full_remote"), do: "remote"

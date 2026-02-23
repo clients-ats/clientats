@@ -21,6 +21,22 @@ defmodule Clientats.Jobs do
     |> Repo.all()
   end
 
+  @doc """
+  Find an existing job interest by dedup fingerprint (company + title + location).
+  Returns nil if no match found.
+  """
+  def find_by_fingerprint(user_id, company, title, location) do
+    fingerprint = Clientats.LinkedIn.dedup_fingerprint(company, title, location)
+
+    JobInterest
+    |> where(user_id: ^user_id)
+    |> Repo.all()
+    |> Enum.find(fn ji ->
+      Clientats.LinkedIn.dedup_fingerprint(ji.company_name, ji.position_title, ji.location) ==
+        fingerprint
+    end)
+  end
+
   def create_job_interest(attrs \\ %{}) do
     result =
       %JobInterest{}
