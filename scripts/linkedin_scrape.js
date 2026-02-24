@@ -275,59 +275,112 @@ async function scrapeJobDetail(jobId) {
     await sleep(randomDelay(3000, 5000));
 
     const detail = await page.evaluate(() => {
-      // Extract from the job detail view
-      const title = document.querySelector(
-        '.job-details-jobs-unified-top-card__job-title, ' +
-        '.jobs-unified-top-card__job-title, h1'
-      )?.textContent?.trim();
+      // Title: h1 is most reliable on the detail page
+      const title = document.querySelector('h1')?.textContent?.trim() || null;
 
-      const company = document.querySelector(
-        '.job-details-jobs-unified-top-card__company-name, ' +
-        '.jobs-unified-top-card__company-name, ' +
-        'a[href*="/company/"]'
-      )?.textContent?.trim();
+      // Company: first link to a /company/ page
+      const companyLink = document.querySelector('a[href*="/company/"]');
+      const company = companyLink?.textContent?.trim() || null;
 
-      const location = document.querySelector(
-        '.job-details-jobs-unified-top-card__bullet, ' +
-        '.jobs-unified-top-card__bullet, ' +
-        '[class*="workplace-type"]'
-      )?.textContent?.trim();
+      // Location: look for text pattern near top with city/state or "Remote"
+      let location = null;
+      const topSpans = document.querySelectorAll('span');
+      for (const span of topSpans) {
+        const text = span.textContent?.trim();
+        if (text && span.children.length === 0 && text.length < 80 &&
+            (text.match(/,\s*[A-Z]/) || text.includes('Remote') || text.includes('United States')) &&
+            !text.includes('applicant') && !text.includes('posted')) {
+          location = text;
+          break;
+        }
+      }
 
-      // Description - often in a rich text container
-      const descEl = document.querySelector(
-        '#job-details, .jobs-description__content, ' +
-        '.jobs-box__html-content, [class*="description"]'
-      );
-      const description_html = descEl?.innerHTML || null;
-      const description_text = descEl?.textContent?.trim() || null;
+      // Description: find the largest text block starting with "About the job" or containing
+      // job description content. LinkedIn now uses obfuscated class names, so we use heuristics.
+      let description_html = null;
+      let description_text = null;
+      const allDivs = document.querySelectorAll('div');
+      let bestDesc = null;
+      let bestLen = 0;
+      for (const div of allDivs) {
+        const text = div.textContent?.trim() || '';
+        // Look for a div that starts with job description content
+        // and is a reasonable size (not the entire page)
+        if (text.length > 200 && text.length < 15000 && div.children.length < 100) {
+          const startsWithJobContent = text.startsWith('About the job') ||
+            text.match(/^(Who we are|About|Overview|Description|The Role|The Opportunity|Position|Summary|What you)/i);
+          if (startsWithJobContent && text.length > bestLen) {
+            bestDesc = div;
+            bestLen = text.length;
+          }
+        }
+      }
+      // Fallback: find the single largest text block that looks like job content
+      if (!bestDesc) {
+        for (const div of allDivs) {
+          const text = div.textContent?.trim() || '';
+          if (text.length > 500 && text.length < 15000 && div.children.length < 100 &&
+              (text.includes('Requirements') || text.includes('Qualifications') ||
+               text.includes('Responsibilities') || text.includes('experience')) &&
+              text.length > bestLen) {
+            bestDesc = div;
+            bestLen = text.length;
+          }
+        }
+      }
+      if (bestDesc) {
+        // Only capture text content - innerHTML is too large and can break JSON serialization
+        description_text = bestDesc.textContent?.trim();
+      }
 
-      // Salary info
-      const salaryEl = document.querySelector(
-        '.job-details-jobs-unified-top-card__job-insight, ' +
-        '[class*="salary"], [class*="compensation"]'
-      );
-      const salary_text = salaryEl?.textContent?.trim() || null;
+      // Salary: look for dollar amount pattern (salary range, not premium ads)
+      let salary_text = null;
+      for (const span of topSpans) {
+        const text = span.textContent?.trim();
+        if (text && text.match(/\$[\d,]+/) && text.length < 100 &&
+            !text.includes('Premium') && !text.includes('Subscribe') &&
+            (text.includes('/yr') || text.includes('/hr') || text.includes('annually') ||
+             text.match(/\$[\d,]+\s*[-–]\s*\$[\d,]+/))) {
+          salary_text = text;
+          break;
+        }
+      }
 
-      // Work type
-      const workTypeEl = document.querySelector(
-        '.job-details-jobs-unified-top-card__workplace-type, ' +
-        '[class*="workplace-type"]'
-      );
-      const work_type = workTypeEl?.textContent?.trim() || null;
+      // Work type: look for Remote/Hybrid/On-site near the top
+      let work_type = null;
+      for (const span of topSpans) {
+        const text = span.textContent?.trim();
+        if (text && text.length < 30 &&
+            text.match(/^(Remote|Hybrid|On-site|Onsite)/i)) {
+          work_type = text;
+          break;
+        }
+      }
 
-      // Employment type
-      const empTypeEl = document.querySelector('[class*="employment-type"]');
-      const employment_type = empTypeEl?.textContent?.trim() || null;
+      // Employment type: Full-time, Part-time, Contract etc.
+      let employment_type = null;
+      for (const span of topSpans) {
+        const text = span.textContent?.trim();
+        if (text && text.length < 30 &&
+            text.match(/^(Full-time|Part-time|Contract|Temporary|Internship)/i)) {
+          employment_type = text;
+          break;
+        }
+      }
 
       // Posted time
-      const timeEl = document.querySelector(
-        '.jobs-unified-top-card__posted-date, time, [class*="posted"]'
-      );
+      const timeEl = document.querySelector('time');
       const posted_at = timeEl?.getAttribute('datetime') || timeEl?.textContent?.trim() || null;
 
-      // Application count
-      const appCountEl = document.querySelector('[class*="applicant-count"]');
-      const applicant_count = appCountEl?.textContent?.trim() || null;
+      // Applicant count
+      let applicant_count = null;
+      for (const span of topSpans) {
+        const text = span.textContent?.trim();
+        if (text && text.match(/\d+\s*(applicant|people)/i)) {
+          applicant_count = text;
+          break;
+        }
+      }
 
       return {
         title, company, location,

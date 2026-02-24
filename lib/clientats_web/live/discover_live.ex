@@ -1,6 +1,8 @@
 defmodule ClientatsWeb.DiscoverLive do
   use ClientatsWeb, :live_view
 
+  require Logger
+
   alias Clientats.{Jobs, Feedback, Embedding, VectorStore, LinkedIn, JobExtractor, LLMConfig}
   alias Clientats.Ranker
   alias Clientats.Ranker.FeatureExtractor
@@ -289,10 +291,10 @@ defmodule ClientatsWeb.DiscoverLive do
                 :if={result.source == :linkedin && MapSet.member?(@expanded_detail, idx)}
                 class="mt-3 p-4 bg-gray-50 rounded-lg border border-gray-200"
               >
-                <div :if={result[:extracted]} class="space-y-3">
-                  <%!-- Skills --%>
-                  <div :if={skills_list(result.extracted) != []}>
-                    <h4 class="text-xs font-semibold text-gray-700 mb-1">Skills</h4>
+                <div class="space-y-3">
+                  <%!-- Skills (from extraction) --%>
+                  <div :if={has_real_skills?(result[:extracted])}>
+                    <h4 class="text-xs font-semibold text-gray-700 mb-1">Skills & Technologies</h4>
                     <div class="flex flex-wrap gap-1">
                       <%= for skill <- skills_list(result.extracted) do %>
                         <span class="badge badge-xs badge-outline">{skill}</span>
@@ -301,29 +303,37 @@ defmodule ClientatsWeb.DiscoverLive do
                   </div>
                   <%!-- Details grid --%>
                   <div class="grid grid-cols-2 gap-2 text-xs">
-                    <div :if={result.extracted[:seniority_level]}>
+                    <div :if={real_value?(result[:extracted][:seniority_level])}>
                       <span class="text-gray-500">Seniority:</span>
                       <span class="ml-1 font-medium">{result.extracted[:seniority_level]}</span>
                     </div>
-                    <div :if={result.extracted[:employment_type]}>
+                    <div :if={real_value?(result[:extracted][:employment_type])}>
                       <span class="text-gray-500">Type:</span>
                       <span class="ml-1 font-medium">{result.extracted[:employment_type]}</span>
                     </div>
-                    <div :if={result.extracted[:education_requirement]}>
+                    <div :if={real_value?(result[:extracted][:education_requirement])}>
                       <span class="text-gray-500">Education:</span>
                       <span class="ml-1 font-medium">{result.extracted[:education_requirement]}</span>
                     </div>
-                    <div :if={result.extracted[:industry]}>
+                    <div :if={real_value?(result[:extracted][:industry])}>
                       <span class="text-gray-500">Industry:</span>
                       <span class="ml-1 font-medium">{result.extracted[:industry]}</span>
                     </div>
+                    <div :if={real_value?(result[:detail][:salary_text])}>
+                      <span class="text-gray-500">Salary:</span>
+                      <span class="ml-1 font-medium">{result.detail[:salary_text]}</span>
+                    </div>
+                    <div :if={real_value?(result[:detail][:work_type])}>
+                      <span class="text-gray-500">Work Type:</span>
+                      <span class="ml-1 font-medium">{result.detail[:work_type]}</span>
+                    </div>
                   </div>
-                  <%!-- Description excerpt --%>
-                  <div :if={result.extracted[:description]}>
-                    <h4 class="text-xs font-semibold text-gray-700 mb-1">Description</h4>
-                    <p class="text-xs text-gray-600 whitespace-pre-wrap line-clamp-6">
-                      {result.extracted[:description]}
-                    </p>
+                  <%!-- Description --%>
+                  <div :if={has_description?(result)}>
+                    <h4 class="text-xs font-semibold text-gray-700 mb-1">Job Description</h4>
+                    <div class="text-xs text-gray-600 whitespace-pre-wrap max-h-64 overflow-y-auto">
+                      {get_description(result)}
+                    </div>
                   </div>
                   <%!-- External link --%>
                   <a
@@ -589,26 +599,84 @@ defmodule ClientatsWeb.DiscoverLive do
             send(pid, {:linkedin_jobs_found, length(jobs)})
 
             Enum.each(jobs, fn job ->
-              with {:ok, detail} <- LinkedIn.job_detail(job.linkedin_job_id),
-                   description_text = detail[:description_text] || "",
-                   {:ok, raw_extracted} <- JobExtractor.extract(description_text, user_id: user_id),
-                   {:ok, extracted} <- JobExtractor.validate(raw_extracted),
-                   texts = JobExtractor.vector_texts(extracted),
-                   {:ok, embeddings} <-
-                     Embedding.embed_batch([texts.title, texts.description], user_id: user_id) do
-                send(pid, {
-                  :linkedin_job_ready,
-                  %{
+              try do
+                # Step 1: Get detail (logged-in view) - non-blocking
+                detail =
+                  case LinkedIn.job_detail(job.linkedin_job_id) do
+                    {:ok, d} -> d
+                    _ -> %{}
+                  end
+
+                description_text = detail[:description_text] || ""
+
+                # Step 2: If detail had no description, try public page
+                {description_text, detail} =
+                  if String.length(String.trim(description_text)) < 50 do
+                    case LinkedIn.public_job_data(job.linkedin_job_id) do
+                      {:ok, public} ->
+                        pub_desc = public[:description_text] || public[:description_html] || ""
+                        merged = Map.merge(detail, Map.take(public, [:description_text, :description_html, :salary_min, :salary_max, :employment_type]))
+                        {pub_desc, merged}
+                      _ ->
+                        {description_text, detail}
+                    end
+                  else
+                    {description_text, detail}
+                  end
+
+                # Step 3: Extract structured data only if we have meaningful text
+                extracted =
+                  if String.length(String.trim(description_text)) > 50 do
+                    case JobExtractor.extract(description_text, user_id: user_id) do
+                      {:ok, raw} ->
+                        case JobExtractor.validate(raw) do
+                          {:ok, validated} -> validated
+                          _ -> %{}
+                        end
+                      _ -> %{}
+                    end
+                  else
+                    %{}
+                  end
+
+                # Step 4: Always fill in from raw search/detail data
+                extracted =
+                  extracted
+                  |> Map.put_new(:title_clean, job[:title])
+                  |> Map.put_new(:company_name, job[:company])
+                  |> Map.put_new(:location, detail[:location] || job[:location])
+                  |> Map.put(:description, if(String.trim(description_text) != "", do: description_text, else: nil))
+
+                # Step 5: Always send result - embedding is optional
+                result_data = %{raw: job, detail: detail, extracted: extracted}
+
+                title_text = extracted[:title_clean] || job[:title] || ""
+                desc_text = if String.length(String.trim(description_text)) > 10, do: description_text, else: title_text
+
+                result_data =
+                  case Embedding.embed_batch([title_text, desc_text], user_id: user_id) do
+                    {:ok, [title_emb, desc_emb]} ->
+                      Map.merge(result_data, %{title_embedding: title_emb, desc_embedding: desc_emb})
+                    _ ->
+                      Map.merge(result_data, %{title_embedding: nil, desc_embedding: nil})
+                  end
+
+                send(pid, {:linkedin_job_ready, result_data})
+              rescue
+                e ->
+                  Logger.warning("[Discover] Pipeline error for #{job[:linkedin_job_id]}: #{Exception.message(e)}")
+                  # Still send the result with raw search data so it appears in the list
+                  send(pid, {:linkedin_job_ready, %{
                     raw: job,
-                    detail: detail,
-                    extracted: extracted,
-                    title_embedding: Enum.at(embeddings, 0),
-                    desc_embedding: Enum.at(embeddings, 1)
-                  }
-                })
-              else
-                error ->
-                  send(pid, {:linkedin_job_error, job[:linkedin_job_id], error})
+                    detail: %{},
+                    extracted: %{
+                      title_clean: job[:title],
+                      company_name: job[:company],
+                      location: job[:location]
+                    },
+                    title_embedding: nil,
+                    desc_embedding: nil
+                  }})
               end
             end)
 
@@ -933,7 +1001,10 @@ defmodule ClientatsWeb.DiscoverLive do
     blocked = socket.assigns.blocked_companies
 
     extracted = processed.extracted
-    company = extracted[:company_name] || processed.raw[:company]
+    # Always prefer raw LinkedIn data for display (extracted may be schema garbage)
+    company = processed.raw[:company] || extracted[:company_name]
+    title = processed.raw[:title] || extracted[:title_clean]
+    location = processed.detail[:location] || processed.raw[:location] || extracted[:location]
 
     # Skip blocked companies
     if String.downcase(company || "") in Enum.map(blocked, &String.downcase/1) do
@@ -956,20 +1027,18 @@ defmodule ClientatsWeb.DiscoverLive do
           b -> Ranker.predict(b, [features]) |> List.first()
         end
 
-      # Merge description into extracted for the detail panel
-      extracted_with_desc =
-        Map.put(extracted, :description, processed.detail[:description_text])
-
+      # The description is already in extracted from the pipeline
       result = %{
         id: processed.raw[:linkedin_job_id] || System.unique_integer([:positive]),
-        title: extracted[:title_clean] || processed.raw[:title],
+        title: title,
         company: company,
-        location: processed.detail[:location] || processed.raw[:location],
+        location: location,
         work_model: extracted[:remote_policy],
         salary_range: format_salary(extracted[:salary_min], extracted[:salary_max]),
         score: score,
         features: features,
-        extracted: extracted_with_desc,
+        extracted: extracted,
+        detail: processed.detail,
         source: :linkedin,
         url: processed.raw[:url],
         saved_interest_id: nil
@@ -1114,6 +1183,10 @@ defmodule ClientatsWeb.DiscoverLive do
   defp format_salary(nil, max), do: "Up to $#{format_number(max)}"
   defp format_salary(min, max), do: "$#{format_number(min)} - $#{format_number(max)}"
 
+  defp format_number(n) when is_integer(n) and n >= 1_000_000 do
+    "#{Float.round(n / 1_000_000, 1)}M"
+  end
+
   defp format_number(n) when is_integer(n) and n >= 1000 do
     "#{div(n, 1000)}k"
   end
@@ -1124,10 +1197,41 @@ defmodule ClientatsWeb.DiscoverLive do
     required = extracted[:required_skills] || []
     preferred = extracted[:preferred_skills] || []
     tech = extracted[:tech_stack] || []
-    (required ++ preferred ++ tech) |> Enum.uniq() |> Enum.take(15)
+
+    (required ++ preferred ++ tech)
+    |> Enum.reject(&schema_placeholder?/1)
+    |> Enum.uniq()
+    |> Enum.take(15)
   end
 
   defp skills_list(_), do: []
+
+  # Detect schema template placeholder values echoed back by LLM
+  defp schema_placeholder?(val) when is_binary(val) do
+    val in ["skill1", "skill2", "benefit1", "benefit2", "specific technology names"] ||
+      String.starts_with?(val, "One of:") ||
+      String.starts_with?(val, "Normalized ")
+  end
+
+  defp schema_placeholder?(_), do: false
+
+  defp has_real_skills?(nil), do: false
+  defp has_real_skills?(extracted), do: skills_list(extracted) != []
+
+  defp real_value?(nil), do: false
+  defp real_value?(val) when is_binary(val), do: not schema_placeholder?(val) and val != ""
+  defp real_value?(_), do: true
+
+  defp has_description?(result) do
+    desc = get_description(result)
+    is_binary(desc) and String.length(String.trim(desc)) > 20
+  end
+
+  defp get_description(result) do
+    result[:extracted][:description] ||
+      result[:detail][:description_text] ||
+      nil
+  end
 
   defp find_or_create_interest(user_id, result, extracted, status) do
     case Jobs.find_by_fingerprint(user_id, result.company, result.title, result.location) do
