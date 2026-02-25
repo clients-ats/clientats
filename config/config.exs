@@ -20,7 +20,8 @@ config :clientats, Oban,
     {Oban.Plugins.Pruner, interval: :timer.hours(12), limit: 5000},
     {Oban.Plugins.Cron,
      crontab: [
-       {"0 2 * * *", Clientats.Workers.BackupWorker}
+       {"0 2 * * *", Clientats.Workers.BackupWorker},
+       {"0 3 * * *", Clientats.Workers.DiscoverJobsWorker}
      ]}
   ],
   queues: [

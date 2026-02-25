@@ -10,6 +10,7 @@ defmodule Clientats.Feedback do
   import Ecto.Query
   alias Clientats.Repo
   alias Clientats.Feedback.{UserFeedback, UserPreference, CompanyBlock, RankingModel}
+  alias Clientats.DiscoveredJobs.DiscoveredJobFeedback
 
   # --- User Feedback ---
 
@@ -339,6 +340,149 @@ defmodule Clientats.Feedback do
   def get_all_preferences(user_id) do
     from(p in UserPreference, where: p.user_id == ^user_id)
     |> Repo.all()
+  end
+
+  # --- Discovered Job Feedback ---
+
+  @doc "Record a thumbs up on a discovered job"
+  def discovered_thumbs_up(user_id, discovered_job_id) do
+    %DiscoveredJobFeedback{}
+    |> DiscoveredJobFeedback.changeset(%{
+      user_id: user_id,
+      discovered_job_id: discovered_job_id,
+      feedback_type: "thumbs_up",
+      value: 1.0
+    })
+    |> Repo.insert(
+      on_conflict: {:replace, [:value]},
+      conflict_target: [:user_id, :discovered_job_id, :feedback_type]
+    )
+  end
+
+  @doc "Record a thumbs down on a discovered job"
+  def discovered_thumbs_down(user_id, discovered_job_id) do
+    %DiscoveredJobFeedback{}
+    |> DiscoveredJobFeedback.changeset(%{
+      user_id: user_id,
+      discovered_job_id: discovered_job_id,
+      feedback_type: "thumbs_down",
+      value: 0.0
+    })
+    |> Repo.insert(
+      on_conflict: {:replace, [:value]},
+      conflict_target: [:user_id, :discovered_job_id, :feedback_type]
+    )
+  end
+
+  @doc """
+  Batch load feedback states for discovered jobs.
+
+  Returns `%{discovered_job_id => %{thumbs: nil | :up | :down}}`.
+  """
+  def get_discovered_feedback_states(user_id, discovered_job_ids)
+      when is_list(discovered_job_ids) do
+    feedbacks =
+      from(f in DiscoveredJobFeedback,
+        where:
+          f.user_id == ^user_id and
+            f.discovered_job_id in ^discovered_job_ids and
+            f.feedback_type in ["thumbs_up", "thumbs_down"],
+        select: {f.discovered_job_id, f.feedback_type, f.inserted_at}
+      )
+      |> Repo.all()
+
+    Enum.reduce(feedbacks, %{}, fn {job_id, type, inserted_at}, acc ->
+      state = Map.get(acc, job_id, %{thumbs: nil, thumbs_at: nil})
+
+      state =
+        if state.thumbs_at == nil or NaiveDateTime.compare(inserted_at, state.thumbs_at) == :gt do
+          thumbs = if type == "thumbs_up", do: :up, else: :down
+          %{state | thumbs: thumbs, thumbs_at: inserted_at}
+        else
+          state
+        end
+
+      Map.put(acc, job_id, state)
+    end)
+    |> Map.new(fn {job_id, state} -> {job_id, Map.take(state, [:thumbs])} end)
+  end
+
+  @doc """
+  Copy feedback from discovered_job_feedback to user_feedback on promotion.
+
+  Converts discovered job thumbs signals to job interest feedback records.
+  """
+  def copy_feedback_to_interest(discovered_job_id, job_interest_id) do
+    feedbacks =
+      from(f in DiscoveredJobFeedback,
+        where: f.discovered_job_id == ^discovered_job_id
+      )
+      |> Repo.all()
+
+    Enum.each(feedbacks, fn fb ->
+      record_feedback(%{
+        user_id: fb.user_id,
+        job_interest_id: job_interest_id,
+        feedback_type: fb.feedback_type,
+        value: fb.value,
+        metadata: Map.put(fb.metadata || %{}, "promoted_from_discovered", discovered_job_id)
+      })
+    end)
+  end
+
+  # --- Saved Searches ---
+
+  @doc "Get all saved searches for a user"
+  def get_saved_searches(user_id) do
+    case get_preference(user_id, "saved_searches") do
+      nil -> []
+      pref -> pref.value["searches"] || []
+    end
+  end
+
+  @doc "Add a saved search for a user. search_params must include at least :keywords."
+  def add_saved_search(user_id, search_params) when is_map(search_params) do
+    search =
+      %{
+        "keywords" => search_params["keywords"] || search_params[:keywords],
+        "location" => search_params["location"] || search_params[:location] || "United States",
+        "remote" => search_params["remote"] || search_params[:remote] || false,
+        "experience" => search_params["experience"] || search_params[:experience],
+        "enabled" => true
+      }
+
+    if is_nil(search["keywords"]) or search["keywords"] == "" do
+      {:error, :keywords_required}
+    else
+      existing = get_saved_searches(user_id)
+      set_preference(user_id, "saved_searches", %{"searches" => existing ++ [search]})
+    end
+  end
+
+  @doc "Remove a saved search by index (0-based)"
+  def remove_saved_search(user_id, index) when is_integer(index) do
+    searches = get_saved_searches(user_id)
+
+    if index >= 0 and index < length(searches) do
+      updated = List.delete_at(searches, index)
+      set_preference(user_id, "saved_searches", %{"searches" => updated})
+    else
+      {:error, :index_out_of_range}
+    end
+  end
+
+  @doc "Toggle a saved search enabled/disabled by index (0-based)"
+  def toggle_saved_search(user_id, index) when is_integer(index) do
+    searches = get_saved_searches(user_id)
+
+    if index >= 0 and index < length(searches) do
+      search = Enum.at(searches, index)
+      updated_search = Map.put(search, "enabled", !search["enabled"])
+      updated = List.replace_at(searches, index, updated_search)
+      set_preference(user_id, "saved_searches", %{"searches" => updated})
+    else
+      {:error, :index_out_of_range}
+    end
   end
 
   # --- Company Blocks ---

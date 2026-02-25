@@ -4,7 +4,7 @@ defmodule ClientatsWeb.DiscoverLive do
   require Logger
 
   alias Clientats.{Jobs, Feedback, Embedding, VectorStore, LinkedIn, JobExtractor, LLMConfig}
-  alias Clientats.Ranker
+  alias Clientats.{DiscoveredJobs, Ranker}
   alias Clientats.Ranker.FeatureExtractor
   alias Clientats.Feedback.{UserPreference, RankingModel}
 
@@ -34,10 +34,14 @@ defmodule ClientatsWeb.DiscoverLive do
       LLMConfig.get_provider_status(user_id)
       |> Enum.any?(fn status -> status.status != "unconfigured" end)
 
+    # Check for new discoveries
+    new_count = DiscoveredJobs.get_new_count(user_id)
+    default_mode = if new_count > 0, do: :discoveries, else: :saved
+
     {:ok,
      socket
      |> assign(:page_title, "Discover Jobs")
-     |> assign(:search_mode, :saved)
+     |> assign(:search_mode, default_mode)
      |> assign(:query, "")
      |> assign(:filter_remote, false)
      |> assign(:filter_location, "United States")
@@ -50,17 +54,21 @@ defmodule ClientatsWeb.DiscoverLive do
      |> assign(:phases, [])
      |> assign(:error, nil)
      |> assign(:feedback_states, %{})
+     |> assign(:discovered_feedback_states, %{})
      |> assign(:feedback_count, feedback_count)
      |> assign(:training_phase, training_phase)
      |> assign(:booster, booster)
      |> assign(:user_prefs, user_prefs)
      |> assign(:blocked_companies, blocked)
      |> assign(:has_llm, has_llm)
+     |> assign(:new_discovery_count, new_count)
+     |> assign(:discoveries, [])
      |> assign(:show_why_modal, false)
      |> assign(:show_block_modal, false)
      |> assign(:block_company_name, "")
      |> assign(:last_rated_job_id, nil)
-     |> assign(:show_why_for, nil)}
+     |> assign(:show_why_for, nil)
+     |> maybe_load_discoveries(default_mode, user_id)}
   end
 
   @impl true
@@ -83,6 +91,23 @@ defmodule ClientatsWeb.DiscoverLive do
         <div class="bg-white rounded-lg shadow p-6 mb-6">
           <%!-- Mode Toggle --%>
           <div class="flex gap-2 mb-4">
+            <button
+              phx-click="set_mode"
+              phx-value-mode="discoveries"
+              class={[
+                "px-4 py-2 rounded-lg text-sm font-medium transition-colors relative",
+                @search_mode == :discoveries && "bg-blue-600 text-white",
+                @search_mode != :discoveries && "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              ]}
+            >
+              New Discoveries
+              <span
+                :if={@new_discovery_count > 0}
+                class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center"
+              >
+                {@new_discovery_count}
+              </span>
+            </button>
             <button
               phx-click="set_mode"
               phx-value-mode="saved"
@@ -109,8 +134,8 @@ defmodule ClientatsWeb.DiscoverLive do
             </button>
           </div>
 
-          <%!-- Search Input --%>
-          <form phx-submit="search" class="flex gap-2">
+          <%!-- Search Input (not shown in discoveries mode) --%>
+          <form :if={@search_mode != :discoveries} phx-submit="search" class="flex gap-2">
             <input
               type="text"
               name="query"
@@ -188,9 +213,25 @@ defmodule ClientatsWeb.DiscoverLive do
             <.link navigate={~p"/dashboard/llm-setup"} class="underline">Configure one</.link>.
           </p>
 
-          <p :if={@search_mode == :linkedin && @has_llm} class="text-xs text-gray-500 mt-2">
-            Requires Chrome running with --remote-debugging-port=9222
-          </p>
+          <div :if={@search_mode == :linkedin && @has_llm} class="flex items-center justify-between mt-2">
+            <p class="text-xs text-gray-500">
+              Requires Chrome running with --remote-debugging-port=9222
+            </p>
+            <button
+              :if={@query != ""}
+              phx-click="save_search"
+              class="btn btn-xs btn-outline btn-secondary"
+            >
+              <.icon name="hero-bookmark" class="w-3 h-3" /> Save this search
+            </button>
+          </div>
+
+          <%!-- Discoveries mode description --%>
+          <div :if={@search_mode == :discoveries} class="text-sm text-gray-600">
+            <p>
+              Jobs discovered by your nightly saved searches. Thumbs up to promote to your job interests, thumbs down to dismiss.
+            </p>
+          </div>
         </div>
 
         <%!-- Status Bar --%>
@@ -251,8 +292,100 @@ defmodule ClientatsWeb.DiscoverLive do
           <span>{@error}</span>
         </div>
 
+        <%!-- Discoveries Results --%>
+        <div :if={@search_mode == :discoveries && @discoveries != []} class="space-y-4">
+          <p class="text-sm text-gray-500 mb-2">{length(@discoveries)} new discoveries</p>
+          <%= for discovery <- @discoveries do %>
+            <div class="bg-white rounded-lg shadow p-4 hover:shadow-md transition">
+              <div class="flex justify-between items-start">
+                <div class="flex-1">
+                  <h3 class="font-semibold text-gray-900">{discovery.title}</h3>
+                  <p class="text-sm text-gray-600">{discovery.company}</p>
+                  <p :if={discovery.location} class="text-sm text-gray-500">{discovery.location}</p>
+                  <div class="flex items-center gap-2 mt-1">
+                    <span :if={discovery.work_model} class="badge badge-xs badge-outline">
+                      {discovery.work_model}
+                    </span>
+                    <span :if={discovery.salary} class="text-xs text-gray-500">
+                      {discovery.salary}
+                    </span>
+                  </div>
+                  <%!-- Skills from extracted_data --%>
+                  <div :if={discovery_skills(discovery) != []} class="flex flex-wrap gap-1 mt-2">
+                    <%= for skill <- discovery_skills(discovery) do %>
+                      <span class="badge badge-xs badge-outline">{skill}</span>
+                    <% end %>
+                  </div>
+                </div>
+                <div class="flex flex-col items-end gap-2">
+                  <span :if={discovery.score} class={["badge", score_badge(discovery.score)]}>
+                    {format_score(discovery.score)}
+                  </span>
+                </div>
+              </div>
+
+              <%!-- Description preview --%>
+              <div :if={discovery_description(discovery)} class="mt-2">
+                <p class="text-xs text-gray-600 line-clamp-3">{discovery_description(discovery)}</p>
+              </div>
+
+              <%!-- Actions --%>
+              <div class="mt-3 pt-2 border-t border-gray-100 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <button
+                    phx-click="promote_discovery"
+                    phx-value-id={discovery.id}
+                    class={[
+                      "btn btn-xs",
+                      discovery_thumbs(@discovered_feedback_states, discovery.id) == :up && "btn-success" || "btn-ghost"
+                    ]}
+                    title="Promote to job interests"
+                  >
+                    <.icon name="hero-hand-thumb-up" class="w-4 h-4" /> Keep
+                  </button>
+                  <button
+                    phx-click="dismiss_discovery"
+                    phx-value-id={discovery.id}
+                    class={[
+                      "btn btn-xs",
+                      discovery_thumbs(@discovered_feedback_states, discovery.id) == :down && "btn-error" || "btn-ghost"
+                    ]}
+                    title="Dismiss"
+                  >
+                    <.icon name="hero-hand-thumb-down" class="w-4 h-4" /> Dismiss
+                  </button>
+                </div>
+                <a
+                  :if={discovery.url}
+                  href={discovery.url}
+                  target="_blank"
+                  class="text-xs text-blue-600 hover:underline inline-flex items-center gap-1"
+                >
+                  View <.icon name="hero-arrow-top-right-on-square" class="w-3 h-3" />
+                </a>
+              </div>
+            </div>
+          <% end %>
+        </div>
+
+        <%!-- Discoveries empty state --%>
+        <div
+          :if={@search_mode == :discoveries && @discoveries == []}
+          class="text-center py-12"
+        >
+          <.icon name="hero-sparkles" class="w-12 h-12 text-gray-300 mx-auto mb-4" />
+          <p class="text-gray-500">No new discoveries yet.</p>
+          <p class="text-sm text-gray-400 mt-1">
+            Save searches from the LinkedIn Search tab or configure them in
+            <.link navigate={~p"/dashboard/preferences"} class="text-blue-600 hover:underline">
+              Preferences
+            </.link>
+            to receive nightly discoveries.
+          </p>
+        </div>
+
         <%!-- Results --%>
-        <div :if={@results != []} class="space-y-4">
+        <div :if={@search_mode != :discoveries && @results != []} class="space-y-4">
           <p class="text-sm text-gray-500 mb-2">{length(@results)} results</p>
           <%= for {result, idx} <- Enum.with_index(@results) do %>
             <div class="bg-white rounded-lg shadow p-4 hover:shadow-md transition">
@@ -453,14 +586,14 @@ defmodule ClientatsWeb.DiscoverLive do
 
         <%!-- Empty state --%>
         <div
-          :if={!@searching && @results == [] && @query != "" && @error == nil}
+          :if={@search_mode != :discoveries && !@searching && @results == [] && @query != "" && @error == nil}
           class="text-center py-12 text-gray-500"
         >
           No results found. Try different keywords.
         </div>
 
         <%!-- Initial state --%>
-        <div :if={@results == [] && @query == "" && !@searching} class="text-center py-12">
+        <div :if={@search_mode != :discoveries && @results == [] && @query == "" && !@searching} class="text-center py-12">
           <.icon name="hero-magnifying-glass" class="w-12 h-12 text-gray-300 mx-auto mb-4" />
           <p class="text-gray-500">Enter keywords to discover jobs matching your preferences.</p>
         </div>
@@ -485,7 +618,14 @@ defmodule ClientatsWeb.DiscoverLive do
 
   def handle_event("set_mode", %{"mode" => mode}, socket) do
     mode = String.to_existing_atom(mode)
-    {:noreply, assign(socket, search_mode: mode, results: [], error: nil, phases: [])}
+    user_id = socket.assigns.current_user.id
+
+    socket =
+      socket
+      |> assign(search_mode: mode, results: [], error: nil, phases: [])
+      |> maybe_load_discoveries(mode, user_id)
+
+    {:noreply, socket}
   end
 
   def handle_event("toggle_remote", _params, socket) do
@@ -904,6 +1044,73 @@ defmodule ClientatsWeb.DiscoverLive do
     {:noreply, assign(socket, :show_why_for, nil)}
   end
 
+  # --- Discovery event handlers ---
+
+  def handle_event("promote_discovery", %{"id" => id_str}, socket) do
+    user_id = socket.assigns.current_user.id
+    id = String.to_integer(id_str)
+
+    case DiscoveredJobs.get_discovered_job(id) do
+      nil ->
+        {:noreply, put_flash(socket, :error, "Discovery not found")}
+
+      discovered_job ->
+        Feedback.discovered_thumbs_up(user_id, id)
+
+        case DiscoveredJobs.promote_to_interest(discovered_job) do
+          {:ok, interest} ->
+            Feedback.copy_feedback_to_interest(id, interest.id)
+
+            {:noreply,
+             socket
+             |> update(:discoveries, fn ds -> Enum.reject(ds, &(&1.id == id)) end)
+             |> update(:new_discovery_count, &max(0, &1 - 1))
+             |> put_flash(:info, "Promoted to job interests")}
+
+          {:error, _} ->
+            {:noreply, put_flash(socket, :error, "Failed to promote")}
+        end
+    end
+  end
+
+  def handle_event("dismiss_discovery", %{"id" => id_str}, socket) do
+    user_id = socket.assigns.current_user.id
+    id = String.to_integer(id_str)
+
+    Feedback.discovered_thumbs_down(user_id, id)
+    DiscoveredJobs.dismiss(id)
+
+    {:noreply,
+     socket
+     |> update(:discoveries, fn ds -> Enum.reject(ds, &(&1.id == id)) end)
+     |> update(:new_discovery_count, &max(0, &1 - 1))}
+  end
+
+  def handle_event("save_search", _params, socket) do
+    user_id = socket.assigns.current_user.id
+    query = String.trim(socket.assigns.query)
+
+    if query == "" do
+      {:noreply, put_flash(socket, :error, "Enter keywords first")}
+    else
+      search_params = %{
+        "keywords" => query,
+        "location" => socket.assigns.filter_location,
+        "remote" => socket.assigns.filter_remote,
+        "experience" =>
+          if(socket.assigns.filter_experience == "any",
+            do: nil,
+            else: socket.assigns.filter_experience
+          )
+      }
+
+      case Feedback.add_saved_search(user_id, search_params) do
+        {:ok, _} -> {:noreply, put_flash(socket, :info, "Search saved for nightly discovery")}
+        {:error, _} -> {:noreply, put_flash(socket, :error, "Failed to save search")}
+      end
+    end
+  end
+
   # --- handle_info callbacks ---
 
   @impl true
@@ -1248,6 +1455,46 @@ defmodule ClientatsWeb.DiscoverLive do
           priority: "medium",
           work_model: format_work_model(extracted[:remote_policy])
         })
+    end
+  end
+
+  defp maybe_load_discoveries(socket, :discoveries, user_id) do
+    discoveries = DiscoveredJobs.list_for_user(user_id, status: :new)
+    ids = Enum.map(discoveries, & &1.id)
+    feedback_states = Feedback.get_discovered_feedback_states(user_id, ids)
+
+    socket
+    |> assign(:discoveries, discoveries)
+    |> assign(:discovered_feedback_states, feedback_states)
+  end
+
+  defp maybe_load_discoveries(socket, _mode, _user_id), do: socket
+
+  defp discovery_skills(discovery) do
+    extracted = discovery.extracted_data || %{}
+
+    required = extracted["required_skills"] || []
+    preferred = extracted["preferred_skills"] || []
+    tech = extracted["tech_stack"] || []
+
+    (required ++ preferred ++ tech)
+    |> Enum.reject(&schema_placeholder?/1)
+    |> Enum.uniq()
+    |> Enum.take(10)
+  end
+
+  defp discovery_description(discovery) do
+    desc =
+      (discovery.extracted_data || %{})["description"] ||
+        discovery.description
+
+    if is_binary(desc) and String.length(String.trim(desc)) > 20, do: desc
+  end
+
+  defp discovery_thumbs(states, id) do
+    case Map.get(states, id) do
+      %{thumbs: thumbs} -> thumbs
+      _ -> nil
     end
   end
 

@@ -14,6 +14,7 @@ defmodule ClientatsWeb.PreferencesLive do
     prefs_map = build_prefs_map(preferences)
     blocked = Feedback.blocked_companies(user_id)
     feedback_count = Feedback.feedback_count(user_id)
+    saved_searches = Feedback.get_saved_searches(user_id)
 
     {model_info, training_phase} = load_model_info(user_id, feedback_count)
 
@@ -26,6 +27,7 @@ defmodule ClientatsWeb.PreferencesLive do
      |> assign(:training_phase, training_phase)
      |> assign(:model_info, model_info)
      |> assign(:training, false)
+     |> assign(:saved_searches, saved_searches)
      |> assign(:new_skill, "")
      |> assign(:new_role, "")
      |> assign(:new_industry, "")
@@ -243,6 +245,94 @@ defmodule ClientatsWeb.PreferencesLive do
               </form>
             </div>
           </div>
+        </div>
+
+        <%!-- Saved Searches --%>
+        <div class="bg-white rounded-lg shadow p-6">
+          <h2 class="text-lg font-semibold text-gray-900 mb-1">Saved Searches</h2>
+          <p class="text-sm text-gray-500 mb-3">
+            Enabled searches run automatically each night to discover new job postings.
+          </p>
+
+          <div class="space-y-3 mb-4">
+            <%= for {search, idx} <- Enum.with_index(@saved_searches) do %>
+              <div class={[
+                "flex items-center justify-between rounded-lg px-4 py-3 border",
+                if(search["enabled"], do: "bg-green-50 border-green-200", else: "bg-gray-50 border-gray-200")
+              ]}>
+                <div class="flex-1">
+                  <div class="flex items-center gap-2">
+                    <span class="font-medium text-gray-900">{search["keywords"]}</span>
+                    <span :if={search["remote"]} class="badge badge-xs badge-info">Remote</span>
+                    <span :if={search["experience"]} class="badge badge-xs badge-ghost">
+                      {format_experience(search["experience"])}
+                    </span>
+                  </div>
+                  <span :if={search["location"]} class="text-xs text-gray-500">
+                    {search["location"]}
+                  </span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button
+                    phx-click="toggle_search"
+                    phx-value-index={idx}
+                    class={["btn btn-xs", if(search["enabled"], do: "btn-success", else: "btn-ghost")]}
+                  >
+                    {if search["enabled"], do: "Enabled", else: "Disabled"}
+                  </button>
+                  <button
+                    phx-click="remove_search"
+                    phx-value-index={idx}
+                    class="btn btn-xs btn-ghost text-red-500"
+                  >
+                    <.icon name="hero-trash" class="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            <% end %>
+            <p :if={@saved_searches == []} class="text-sm text-gray-400">
+              No saved searches yet. Add one below or save from the Discover page.
+            </p>
+          </div>
+
+          <form phx-submit="add_search" class="space-y-3 border-t pt-4">
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-xs text-gray-500">Keywords *</label>
+                <input
+                  type="text"
+                  name="keywords"
+                  placeholder="e.g. Java backend"
+                  class="input input-bordered input-sm w-full"
+                  required
+                />
+              </div>
+              <div>
+                <label class="text-xs text-gray-500">Location</label>
+                <input
+                  type="text"
+                  name="location"
+                  placeholder="United States"
+                  class="input input-bordered input-sm w-full"
+                />
+              </div>
+            </div>
+            <div class="flex items-center gap-4">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" name="remote" value="true" class="checkbox checkbox-sm" />
+                <span class="text-sm">Remote only</span>
+              </label>
+              <select name="experience" class="select select-bordered select-sm">
+                <option value="">Any experience</option>
+                <option value="entry_level">Entry Level</option>
+                <option value="associate">Associate</option>
+                <option value="mid_senior">Mid-Senior</option>
+                <option value="director">Director</option>
+                <option value="executive">Executive</option>
+              </select>
+              <button type="submit" class="btn btn-sm btn-primary ml-auto">Add Search</button>
+            </div>
+          </form>
         </div>
 
         <%!-- Blocked Companies --%>
@@ -509,6 +599,51 @@ defmodule ClientatsWeb.PreferencesLive do
      |> put_flash(:info, "Company unblocked")}
   end
 
+  def handle_event("add_search", params, socket) do
+    user_id = socket.assigns.current_user.id
+
+    search_params = %{
+      "keywords" => String.trim(params["keywords"] || ""),
+      "location" => String.trim(params["location"] || ""),
+      "remote" => params["remote"] == "true",
+      "experience" => params["experience"]
+    }
+
+    case Feedback.add_saved_search(user_id, search_params) do
+      {:ok, _} ->
+        searches = Feedback.get_saved_searches(user_id)
+
+        {:noreply,
+         socket
+         |> assign(:saved_searches, searches)
+         |> put_flash(:info, "Search saved")}
+
+      {:error, :keywords_required} ->
+        {:noreply, put_flash(socket, :error, "Keywords are required")}
+    end
+  end
+
+  def handle_event("remove_search", %{"index" => index}, socket) do
+    user_id = socket.assigns.current_user.id
+    idx = String.to_integer(index)
+    Feedback.remove_saved_search(user_id, idx)
+    searches = Feedback.get_saved_searches(user_id)
+
+    {:noreply,
+     socket
+     |> assign(:saved_searches, searches)
+     |> put_flash(:info, "Search removed")}
+  end
+
+  def handle_event("toggle_search", %{"index" => index}, socket) do
+    user_id = socket.assigns.current_user.id
+    idx = String.to_integer(index)
+    Feedback.toggle_saved_search(user_id, idx)
+    searches = Feedback.get_saved_searches(user_id)
+
+    {:noreply, assign(socket, :saved_searches, searches)}
+  end
+
   def handle_event("retrain_model", _params, socket) do
     user_id = socket.assigns.current_user.id
     pid = self()
@@ -601,6 +736,14 @@ defmodule ClientatsWeb.PreferencesLive do
   defp format_phase("simple_model"), do: "Simple Model"
   defp format_phase("full_model"), do: "Full Model"
   defp format_phase(other), do: other
+
+  defp format_experience("entry_level"), do: "Entry Level"
+  defp format_experience("associate"), do: "Associate"
+  defp format_experience("mid_senior"), do: "Mid-Senior"
+  defp format_experience("director"), do: "Director"
+  defp format_experience("executive"), do: "Executive"
+  defp format_experience(nil), do: nil
+  defp format_experience(other), do: other
 
   defp phase_badge("llm_proxy"), do: "badge-warning"
   defp phase_badge("simple_model"), do: "badge-info"

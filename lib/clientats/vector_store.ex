@@ -231,6 +231,94 @@ defmodule Clientats.VectorStore do
     {Enum.join(Enum.reverse(clauses), "\n"), params, idx}
   end
 
+  # --- Discovered Job Embeddings ---
+
+  @doc """
+  Insert or replace an embedding for a discovered job.
+  Vectors should be lists of floats.
+  """
+  def upsert_discovered_embedding(discovered_job_id, title_vec, description_vec)
+      when is_integer(discovered_job_id) do
+    title_json = Jason.encode!(title_vec)
+    desc_json = Jason.encode!(description_vec)
+
+    SQL.query!(
+      Repo,
+      "DELETE FROM vec_discovered_job_embeddings WHERE discovered_job_id = ?",
+      [discovered_job_id]
+    )
+
+    SQL.query!(
+      Repo,
+      """
+      INSERT INTO vec_discovered_job_embeddings(discovered_job_id, title_embedding, description_embedding)
+      VALUES (?, ?, ?)
+      """,
+      [discovered_job_id, title_json, desc_json]
+    )
+  end
+
+  @doc """
+  Multi-vector search on discovered job embeddings.
+
+  Same weighted algorithm as `search_multi_vector/4` but queries the
+  `vec_discovered_job_embeddings` table.
+
+  ## Options
+    * `:title_weight` - Weight for title distance (default: 0.4)
+    * `:desc_weight` - Weight for description distance (default: 0.6)
+  """
+  def search_discovered_multi_vector(title_query_vec, desc_query_vec, k \\ 20, opts \\ []) do
+    title_w = opts[:title_weight] || 0.4
+    desc_w = opts[:desc_weight] || 0.6
+    fetch_k = k * 3
+
+    title_json = Jason.encode!(title_query_vec)
+    desc_json = Jason.encode!(desc_query_vec)
+
+    title_results =
+      SQL.query!(
+        Repo,
+        "SELECT discovered_job_id, distance FROM vec_discovered_job_embeddings WHERE title_embedding MATCH ? AND k = ?",
+        [title_json, fetch_k]
+      )
+
+    desc_results =
+      SQL.query!(
+        Repo,
+        "SELECT discovered_job_id, distance FROM vec_discovered_job_embeddings WHERE description_embedding MATCH ? AND k = ?",
+        [desc_json, fetch_k]
+      )
+
+    title_map = Map.new(title_results.rows, fn [id, dist] -> {id, dist} end)
+    desc_map = Map.new(desc_results.rows, fn [id, dist] -> {id, dist} end)
+
+    all_ids = MapSet.union(MapSet.new(Map.keys(title_map)), MapSet.new(Map.keys(desc_map)))
+
+    max_dist = 2.0
+
+    all_ids
+    |> Enum.map(fn id ->
+      title_dist = Map.get(title_map, id, max_dist)
+      desc_dist = Map.get(desc_map, id, max_dist)
+      combined = title_w * title_dist + desc_w * desc_dist
+      {id, combined, title_dist, desc_dist}
+    end)
+    |> Enum.sort_by(fn {_, combined, _, _} -> combined end)
+    |> Enum.take(k)
+  end
+
+  @doc """
+  Delete embedding for a discovered job.
+  """
+  def delete_discovered_embedding(discovered_job_id) do
+    SQL.query!(
+      Repo,
+      "DELETE FROM vec_discovered_job_embeddings WHERE discovered_job_id = ?",
+      [discovered_job_id]
+    )
+  end
+
   @doc """
   Check that sqlite-vec is loaded and return version.
   """

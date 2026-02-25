@@ -2,7 +2,7 @@ defmodule Clientats.Feedback.UserPreference do
   use Ecto.Schema
   import Ecto.Changeset
 
-  @preference_types ~w(skills roles industries location salary work_model seniority)
+  @preference_types ~w(skills roles industries location salary work_model seniority saved_searches)
 
   schema "user_preferences" do
     field :preference_type, :string
