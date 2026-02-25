@@ -68,6 +68,7 @@ defmodule ClientatsWeb.DiscoverLive do
      |> assign(:block_company_name, "")
      |> assign(:last_rated_job_id, nil)
      |> assign(:show_why_for, nil)
+     |> assign(:search_saved, false)
      |> maybe_load_discoveries(default_mode, user_id)}
   end
 
@@ -218,12 +219,18 @@ defmodule ClientatsWeb.DiscoverLive do
               Requires Chrome running with --remote-debugging-port=9222
             </p>
             <button
-              :if={@query != ""}
+              :if={@query != "" && !@search_saved}
               phx-click="save_search"
               class="btn btn-xs btn-outline btn-secondary"
             >
               <.icon name="hero-bookmark" class="w-3 h-3" /> Save this search
             </button>
+            <span
+              :if={@search_saved}
+              class="text-xs text-green-600 flex items-center gap-1"
+            >
+              <.icon name="hero-check-circle" class="w-4 h-4" /> Search saved
+            </span>
           </div>
 
           <%!-- Discoveries mode description --%>
@@ -609,7 +616,7 @@ defmodule ClientatsWeb.DiscoverLive do
 
   @impl true
   def handle_event("update_query", %{"query" => query}, socket) do
-    {:noreply, assign(socket, :query, query)}
+    {:noreply, assign(socket, query: query, search_saved: false)}
   end
 
   def handle_event("update_query", _params, socket) do
@@ -1105,8 +1112,14 @@ defmodule ClientatsWeb.DiscoverLive do
       }
 
       case Feedback.add_saved_search(user_id, search_params) do
-        {:ok, _} -> {:noreply, put_flash(socket, :info, "Search saved for nightly discovery")}
-        {:error, _} -> {:noreply, put_flash(socket, :error, "Failed to save search")}
+        {:ok, _} ->
+          {:noreply,
+           socket
+           |> assign(:search_saved, true)
+           |> put_flash(:info, "Search saved for nightly discovery")}
+
+        {:error, _} ->
+          {:noreply, put_flash(socket, :error, "Failed to save search")}
       end
     end
   end
