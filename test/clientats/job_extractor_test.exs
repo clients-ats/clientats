@@ -193,13 +193,18 @@ defmodule Clientats.JobExtractorTest do
 
     test "handles boolean coercion" do
       for {input, expected} <- [
-        {true, true}, {false, false},
-        {"true", true}, {"false", false},
-        {nil, nil}, {"maybe", nil}
-      ] do
+            {true, true},
+            {false, false},
+            {"true", true},
+            {"false", false},
+            {nil, nil},
+            {"maybe", nil}
+          ] do
         extracted = %{"title_clean" => "Dev", "visa_sponsorship" => input}
         {:ok, validated} = JobExtractor.validate(extracted)
-        assert validated.visa_sponsorship == expected, "Expected #{inspect(expected)} for input #{inspect(input)}"
+
+        assert validated.visa_sponsorship == expected,
+               "Expected #{inspect(expected)} for input #{inspect(input)}"
       end
     end
   end
@@ -375,29 +380,50 @@ defmodule Clientats.JobExtractorTest do
     @tag :ollama
     test "extraction accuracy across all postings" do
       postings = [
-        {"Elixir Fintech", @elixir_fintech_posting, %{company: "TradeTech", seniority: "senior", type: "full_time"}},
-        {"Python ML", @python_ml_posting, %{company: "DataVision", seniority: "mid", type: "full_time"}},
-        {"DevOps Contract", @devops_posting, %{company: "CloudScale", seniority: "mid", type: "contract"}},
-        {"Junior Frontend", @junior_frontend_posting, %{company: "StartupXYZ", seniority: "junior", type: "full_time"}},
+        {"Elixir Fintech", @elixir_fintech_posting,
+         %{company: "TradeTech", seniority: "senior", type: "full_time"}},
+        {"Python ML", @python_ml_posting,
+         %{company: "DataVision", seniority: "mid", type: "full_time"}},
+        {"DevOps Contract", @devops_posting,
+         %{company: "CloudScale", seniority: "mid", type: "contract"}},
+        {"Junior Frontend", @junior_frontend_posting,
+         %{company: "StartupXYZ", seniority: "junior", type: "full_time"}}
       ]
 
       results =
         Enum.map(postings, fn {name, text, expected} ->
-          {time_us, {:ok, result}} = :timer.tc(fn -> JobExtractor.extract(text, provider: :ollama) end)
+          {time_us, {:ok, result}} =
+            :timer.tc(fn -> JobExtractor.extract(text, provider: :ollama) end)
+
           {:ok, validated} = JobExtractor.validate(result)
 
           _fields_total = 18
+
           fields_present =
-            [validated.title_clean, validated.seniority_level, validated.company_name,
-             validated.industry, validated.location, validated.employment_type,
-             validated.remote_policy, validated.education_requirement]
+            [
+              validated.title_clean,
+              validated.seniority_level,
+              validated.company_name,
+              validated.industry,
+              validated.location,
+              validated.employment_type,
+              validated.remote_policy,
+              validated.education_requirement
+            ]
             |> Enum.count(&(not is_nil(&1) and &1 != ""))
 
           list_fields_present =
-            [validated.required_skills, validated.preferred_skills, validated.tech_stack, validated.benefits]
+            [
+              validated.required_skills,
+              validated.preferred_skills,
+              validated.tech_stack,
+              validated.benefits
+            ]
             |> Enum.count(&(&1 != []))
 
-          company_match = validated.company_name && String.contains?(validated.company_name, expected.company)
+          company_match =
+            validated.company_name && String.contains?(validated.company_name, expected.company)
+
           seniority_match = validated.seniority_level == expected.seniority
           type_match = validated.employment_type == expected.type
 
@@ -415,31 +441,38 @@ defmodule Clientats.JobExtractorTest do
 
       IO.puts("\n=== Extraction Accuracy Summary ===")
       IO.puts(String.duplicate("-", 80))
-      IO.puts(String.pad_trailing("Posting", 20) <>
-              String.pad_trailing("Latency", 10) <>
-              String.pad_trailing("Scalar", 10) <>
-              String.pad_trailing("Lists", 10) <>
-              String.pad_trailing("Company", 10) <>
-              String.pad_trailing("Senior", 10) <>
-              String.pad_trailing("Type", 10))
+
+      IO.puts(
+        String.pad_trailing("Posting", 20) <>
+          String.pad_trailing("Latency", 10) <>
+          String.pad_trailing("Scalar", 10) <>
+          String.pad_trailing("Lists", 10) <>
+          String.pad_trailing("Company", 10) <>
+          String.pad_trailing("Senior", 10) <>
+          String.pad_trailing("Type", 10)
+      )
+
       IO.puts(String.duplicate("-", 80))
 
       for r <- results do
         IO.puts(
           String.pad_trailing(r.name, 20) <>
-          String.pad_trailing("#{r.latency_ms}ms", 10) <>
-          String.pad_trailing("#{r.scalar_fields}/8", 10) <>
-          String.pad_trailing("#{r.list_fields}/4", 10) <>
-          String.pad_trailing(if(r.company_match, do: "✓", else: "✗"), 10) <>
-          String.pad_trailing(if(r.seniority_match, do: "✓", else: "✗"), 10) <>
-          String.pad_trailing(if(r.type_match, do: "✓", else: "✗"), 10)
+            String.pad_trailing("#{r.latency_ms}ms", 10) <>
+            String.pad_trailing("#{r.scalar_fields}/8", 10) <>
+            String.pad_trailing("#{r.list_fields}/4", 10) <>
+            String.pad_trailing(if(r.company_match, do: "✓", else: "✗"), 10) <>
+            String.pad_trailing(if(r.seniority_match, do: "✓", else: "✗"), 10) <>
+            String.pad_trailing(if(r.type_match, do: "✓", else: "✗"), 10)
         )
       end
 
       avg_latency = div(Enum.sum(Enum.map(results, & &1.latency_ms)), length(results))
       avg_coverage = Enum.sum(Enum.map(results, & &1.total_coverage)) / length(results)
       IO.puts(String.duplicate("-", 80))
-      IO.puts("Avg latency: #{avg_latency}ms | Avg field coverage: #{Float.round(avg_coverage, 1)}/12")
+
+      IO.puts(
+        "Avg latency: #{avg_latency}ms | Avg field coverage: #{Float.round(avg_coverage, 1)}/12"
+      )
 
       # At least 80% of key fields should match across postings
       company_accuracy = Enum.count(results, & &1.company_match) / length(results)

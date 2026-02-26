@@ -42,14 +42,15 @@ defmodule Clientats.LinkedInTest do
     end
 
     test "combines multiple filters" do
-      url = LinkedIn.build_search_url("Elixir developer",
-        location: "United States",
-        remote: true,
-        time_posted: :month,
-        experience: [:mid_senior],
-        job_type: [:full_time],
-        sort_by: :date
-      )
+      url =
+        LinkedIn.build_search_url("Elixir developer",
+          location: "United States",
+          remote: true,
+          time_posted: :month,
+          experience: [:mid_senior],
+          job_type: [:full_time],
+          sort_by: :date
+        )
 
       assert url =~ "keywords=Elixir"
       assert url =~ "f_WT=2"

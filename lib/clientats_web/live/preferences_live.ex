@@ -258,7 +258,10 @@ defmodule ClientatsWeb.PreferencesLive do
             <%= for {search, idx} <- Enum.with_index(@saved_searches) do %>
               <div class={[
                 "flex items-center justify-between rounded-lg px-4 py-3 border",
-                if(search["enabled"], do: "bg-green-50 border-green-200", else: "bg-gray-50 border-gray-200")
+                if(search["enabled"],
+                  do: "bg-green-50 border-green-200",
+                  else: "bg-gray-50 border-gray-200"
+                )
               ]}>
                 <div class="flex-1">
                   <div class="flex items-center gap-2">
@@ -693,17 +696,31 @@ defmodule ClientatsWeb.PreferencesLive do
 
     Enum.reduce(preferences, base, fn pref, acc ->
       case pref.preference_type do
-        "skills" -> Map.put(acc, :skills, pref.value["list"] || [])
-        "roles" -> Map.put(acc, :roles, pref.value["list"] || [])
-        "industries" -> Map.put(acc, :industries, pref.value["list"] || [])
-        "seniority" -> Map.put(acc, :seniority, pref.value["level"] || "")
-        "work_model" -> Map.put(acc, :work_model, pref.value["preferred"] || "")
-        "location" -> Map.put(acc, :location, pref.value["preferred"] || "")
+        "skills" ->
+          Map.put(acc, :skills, pref.value["list"] || [])
+
+        "roles" ->
+          Map.put(acc, :roles, pref.value["list"] || [])
+
+        "industries" ->
+          Map.put(acc, :industries, pref.value["list"] || [])
+
+        "seniority" ->
+          Map.put(acc, :seniority, pref.value["level"] || "")
+
+        "work_model" ->
+          Map.put(acc, :work_model, pref.value["preferred"] || "")
+
+        "location" ->
+          Map.put(acc, :location, pref.value["preferred"] || "")
+
         "salary" ->
           acc
           |> Map.put(:salary_min, pref.value["min"])
           |> Map.put(:salary_max, pref.value["max"])
-        _ -> acc
+
+        _ ->
+          acc
       end
     end)
   end
@@ -724,12 +741,14 @@ defmodule ClientatsWeb.PreferencesLive do
 
   defp parse_int(nil), do: nil
   defp parse_int(""), do: nil
+
   defp parse_int(s) when is_binary(s) do
     case Integer.parse(s) do
       {n, _} -> n
       :error -> nil
     end
   end
+
   defp parse_int(n) when is_integer(n), do: n
 
   defp format_phase("llm_proxy"), do: "Collecting"

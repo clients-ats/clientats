@@ -5,30 +5,100 @@ defmodule Clientats.RerankerTest do
 
   # Sample candidates simulating vector search results
   @candidates [
-    %{id: 1, title: "Senior Elixir Developer", description: "Build scalable web applications with Elixir and Phoenix. Experience with LiveView and Ecto required.", distance: 0.10},
-    %{id: 2, title: "Python Data Scientist", description: "Analyze large datasets using Python, pandas, scikit-learn. Build ML models for fraud detection.", distance: 0.25},
-    %{id: 3, title: "Full Stack Elixir/React Engineer", description: "Work on a Phoenix LiveView application with React frontend. GraphQL API development.", distance: 0.12},
-    %{id: 4, title: "DevOps Engineer", description: "Manage Kubernetes clusters, CI/CD pipelines. Terraform, AWS, monitoring with Prometheus.", distance: 0.35},
-    %{id: 5, title: "Elixir/Phoenix Backend Developer", description: "Financial technology company needs Elixir developer. Build payment processing systems with Phoenix.", distance: 0.08},
-    %{id: 6, title: "Java Spring Boot Developer", description: "Enterprise application development with Java Spring Boot. Microservices architecture.", distance: 0.40},
-    %{id: 7, title: "Erlang/Elixir Systems Engineer", description: "Telecom infrastructure using BEAM VM. High availability systems, OTP patterns.", distance: 0.15},
-    %{id: 8, title: "Frontend React Developer", description: "Build modern user interfaces with React, TypeScript, and Next.js. Design system maintenance.", distance: 0.45},
-    %{id: 9, title: "Senior Elixir/Phoenix Developer", description: "Lead backend team building real-time trading platform. LiveView, PubSub, GenServer expertise.", distance: 0.05},
-    %{id: 10, title: "Machine Learning Engineer", description: "Deploy ML models in production. PyTorch, TensorFlow, model optimization, feature engineering.", distance: 0.50},
+    %{
+      id: 1,
+      title: "Senior Elixir Developer",
+      description:
+        "Build scalable web applications with Elixir and Phoenix. Experience with LiveView and Ecto required.",
+      distance: 0.10
+    },
+    %{
+      id: 2,
+      title: "Python Data Scientist",
+      description:
+        "Analyze large datasets using Python, pandas, scikit-learn. Build ML models for fraud detection.",
+      distance: 0.25
+    },
+    %{
+      id: 3,
+      title: "Full Stack Elixir/React Engineer",
+      description:
+        "Work on a Phoenix LiveView application with React frontend. GraphQL API development.",
+      distance: 0.12
+    },
+    %{
+      id: 4,
+      title: "DevOps Engineer",
+      description:
+        "Manage Kubernetes clusters, CI/CD pipelines. Terraform, AWS, monitoring with Prometheus.",
+      distance: 0.35
+    },
+    %{
+      id: 5,
+      title: "Elixir/Phoenix Backend Developer",
+      description:
+        "Financial technology company needs Elixir developer. Build payment processing systems with Phoenix.",
+      distance: 0.08
+    },
+    %{
+      id: 6,
+      title: "Java Spring Boot Developer",
+      description:
+        "Enterprise application development with Java Spring Boot. Microservices architecture.",
+      distance: 0.40
+    },
+    %{
+      id: 7,
+      title: "Erlang/Elixir Systems Engineer",
+      description:
+        "Telecom infrastructure using BEAM VM. High availability systems, OTP patterns.",
+      distance: 0.15
+    },
+    %{
+      id: 8,
+      title: "Frontend React Developer",
+      description:
+        "Build modern user interfaces with React, TypeScript, and Next.js. Design system maintenance.",
+      distance: 0.45
+    },
+    %{
+      id: 9,
+      title: "Senior Elixir/Phoenix Developer",
+      description:
+        "Lead backend team building real-time trading platform. LiveView, PubSub, GenServer expertise.",
+      distance: 0.05
+    },
+    %{
+      id: 10,
+      title: "Machine Learning Engineer",
+      description:
+        "Deploy ML models in production. PyTorch, TensorFlow, model optimization, feature engineering.",
+      distance: 0.50
+    }
   ]
 
   # Ground truth relevance for "Senior Elixir developer for fintech"
   @fintech_elixir_relevance %{
-    1 => 3,   # Strong match (Elixir, senior)
-    2 => 0,   # No match (Python, data science)
-    3 => 2,   # Moderate match (Elixir, but full stack/React focused)
-    4 => 0,   # No match (DevOps)
-    5 => 4,   # Best match (Elixir, fintech/payment)
-    6 => 0,   # No match (Java)
-    7 => 2,   # Moderate match (Elixir/BEAM, but telecom not fintech)
-    8 => 0,   # No match (Frontend React)
-    9 => 3,   # Strong match (Elixir, senior, trading=fintech)
-    10 => 0,  # No match (ML)
+    # Strong match (Elixir, senior)
+    1 => 3,
+    # No match (Python, data science)
+    2 => 0,
+    # Moderate match (Elixir, but full stack/React focused)
+    3 => 2,
+    # No match (DevOps)
+    4 => 0,
+    # Best match (Elixir, fintech/payment)
+    5 => 4,
+    # No match (Java)
+    6 => 0,
+    # Moderate match (Elixir/BEAM, but telecom not fintech)
+    7 => 2,
+    # No match (Frontend React)
+    8 => 0,
+    # Strong match (Elixir, senior, trading=fintech)
+    9 => 3,
+    # No match (ML)
+    10 => 0
   }
 
   describe "rerank/3 with :vector strategy" do
@@ -86,11 +156,16 @@ defmodule Clientats.RerankerTest do
     test "perfect ranking scores 1.0" do
       # Simulate perfect ranking: ids sorted by relevance descending
       perfect_ranking = [
-        %{id: 5, score: 1.0},  # rel=4
-        %{id: 1, score: 0.9},  # rel=3
-        %{id: 9, score: 0.8},  # rel=3
-        %{id: 3, score: 0.7},  # rel=2
-        %{id: 7, score: 0.6},  # rel=2
+        # rel=4
+        %{id: 5, score: 1.0},
+        # rel=3
+        %{id: 1, score: 0.9},
+        # rel=3
+        %{id: 9, score: 0.8},
+        # rel=2
+        %{id: 3, score: 0.7},
+        # rel=2
+        %{id: 7, score: 0.6}
       ]
 
       ndcg = Reranker.ndcg_at_k(perfect_ranking, @fintech_elixir_relevance, 5)
@@ -100,11 +175,16 @@ defmodule Clientats.RerankerTest do
     test "worst ranking scores lower than perfect" do
       # Reverse the ideal order
       worst_ranking = [
-        %{id: 10, score: 1.0}, # rel=0
-        %{id: 8, score: 0.9},  # rel=0
-        %{id: 6, score: 0.8},  # rel=0
-        %{id: 4, score: 0.7},  # rel=0
-        %{id: 2, score: 0.6},  # rel=0
+        # rel=0
+        %{id: 10, score: 1.0},
+        # rel=0
+        %{id: 8, score: 0.9},
+        # rel=0
+        %{id: 6, score: 0.8},
+        # rel=0
+        %{id: 4, score: 0.7},
+        # rel=0
+        %{id: 2, score: 0.6}
       ]
 
       ndcg = Reranker.ndcg_at_k(worst_ranking, @fintech_elixir_relevance, 5)
@@ -154,12 +234,13 @@ defmodule Clientats.RerankerTest do
   describe "rerank/3 with :ollama strategy" do
     @tag :ollama
     test "scores candidates with local LLM" do
-      {:ok, ranked} = Reranker.rerank(
-        "Senior Elixir developer for fintech",
-        @candidates,
-        strategy: :ollama,
-        top_k: 5
-      )
+      {:ok, ranked} =
+        Reranker.rerank(
+          "Senior Elixir developer for fintech",
+          @candidates,
+          strategy: :ollama,
+          top_k: 5
+        )
 
       assert length(ranked) == 5
 
@@ -173,7 +254,9 @@ defmodule Clientats.RerankerTest do
       elixir_ids = [1, 3, 5, 7, 9]
       top_3_ids = Enum.map(Enum.take(ranked, 3), & &1.id)
       elixir_in_top_3 = Enum.count(top_3_ids, &(&1 in elixir_ids))
-      assert elixir_in_top_3 >= 2, "Expected at least 2 Elixir jobs in top 3, got #{inspect(top_3_ids)}"
+
+      assert elixir_in_top_3 >= 2,
+             "Expected at least 2 Elixir jobs in top 3, got #{inspect(top_3_ids)}"
     end
 
     @tag :ollama
@@ -206,12 +289,13 @@ defmodule Clientats.RerankerTest do
   describe "rerank/3 with :gemini strategy" do
     @tag :gemini
     test "scores candidates with Gemini API" do
-      {:ok, ranked} = Reranker.rerank(
-        "Senior Elixir developer for fintech",
-        @candidates,
-        strategy: :gemini,
-        top_k: 5
-      )
+      {:ok, ranked} =
+        Reranker.rerank(
+          "Senior Elixir developer for fintech",
+          @candidates,
+          strategy: :gemini,
+          top_k: 5
+        )
 
       assert length(ranked) == 5
 
@@ -248,12 +332,13 @@ defmodule Clientats.RerankerTest do
           %{id: i, title: "Job #{i}", description: "Description #{i}", distance: i * 0.03}
         end
 
-      {:ok, ranked} = Reranker.rerank(
-        "Software engineer",
-        large_candidates,
-        strategy: :gemini,
-        batch_size: 10
-      )
+      {:ok, ranked} =
+        Reranker.rerank(
+          "Software engineer",
+          large_candidates,
+          strategy: :gemini,
+          batch_size: 10
+        )
 
       assert length(ranked) == 30
       # Ranks should be 1..30

@@ -264,7 +264,12 @@ defmodule Clientats.SearchPipelineTest do
       VectorStore.upsert_embedding(job.id, title_emb, desc_emb)
     end)
 
-    %{user: user, jobs: jobs, title_embeddings: title_embeddings, desc_embeddings: desc_embeddings}
+    %{
+      user: user,
+      jobs: jobs,
+      title_embeddings: title_embeddings,
+      desc_embeddings: desc_embeddings
+    }
   end
 
   describe "natural language search over 20+ jobs" do
@@ -277,14 +282,20 @@ defmodule Clientats.SearchPipelineTest do
       assert length(result.rows) == 10
 
       top_5_ids = result.rows |> Enum.take(5) |> Enum.map(fn [id, _] -> id end)
-      top_5_titles = Enum.map(top_5_ids, fn id ->
-        Enum.find(jobs, &(&1.id == id)).position_title
-      end)
+
+      top_5_titles =
+        Enum.map(top_5_ids, fn id ->
+          Enum.find(jobs, &(&1.id == id)).position_title
+        end)
 
       IO.puts("\n=== Query: 'Elixir developer with financial services' ===")
+
       for {[id, dist], idx} <- Enum.with_index(Enum.take(result.rows, 10)) do
         job = Enum.find(jobs, &(&1.id == id))
-        IO.puts("  #{idx + 1}. [#{Float.round(dist, 4)}] #{job.position_title} @ #{job.company_name}")
+
+        IO.puts(
+          "  #{idx + 1}. [#{Float.round(dist, 4)}] #{job.position_title} @ #{job.company_name}"
+        )
       end
 
       # Verify: Elixir jobs should dominate top 5
@@ -294,8 +305,11 @@ defmodule Clientats.SearchPipelineTest do
 
     @tag :ollama
     test "different queries surface different results", %{jobs: jobs} do
-      {:ok, ml_query} = Embedding.embed("machine learning computer vision deep learning", provider: :ollama)
-      {:ok, devops_query} = Embedding.embed("kubernetes infrastructure deployment pipelines", provider: :ollama)
+      {:ok, ml_query} =
+        Embedding.embed("machine learning computer vision deep learning", provider: :ollama)
+
+      {:ok, devops_query} =
+        Embedding.embed("kubernetes infrastructure deployment pipelines", provider: :ollama)
 
       ml_results = VectorStore.search_by_title(ml_query, 5)
       devops_results = VectorStore.search_by_title(devops_query, 5)
@@ -307,7 +321,10 @@ defmodule Clientats.SearchPipelineTest do
       devops_job = Enum.find(jobs, &(&1.id == devops_top))
 
       IO.puts("\n=== ML query top result: #{ml_job.position_title} @ #{ml_job.company_name}")
-      IO.puts("=== DevOps query top result: #{devops_job.position_title} @ #{devops_job.company_name}")
+
+      IO.puts(
+        "=== DevOps query top result: #{devops_job.position_title} @ #{devops_job.company_name}"
+      )
 
       assert String.contains?(ml_job.position_title, "Machine Learning") or
                String.contains?(ml_job.job_description || "", "deep learning")
@@ -323,6 +340,7 @@ defmodule Clientats.SearchPipelineTest do
     test "weighted title + description search improves results", %{jobs: jobs} do
       # Query that's more specific in description than title
       {:ok, title_query} = Embedding.embed("Elixir developer", provider: :ollama)
+
       {:ok, desc_query} =
         Embedding.embed(
           "payment processing financial transactions low-latency trading",
@@ -340,19 +358,28 @@ defmodule Clientats.SearchPipelineTest do
         )
 
       IO.puts("\n=== Title-only search: 'Elixir developer' ===")
+
       for {[id, dist], idx} <- Enum.with_index(Enum.take(title_results.rows, 5)) do
         job = Enum.find(jobs, &(&1.id == id))
-        IO.puts("  #{idx + 1}. [#{Float.round(dist, 4)}] #{job.position_title} @ #{job.company_name}")
+
+        IO.puts(
+          "  #{idx + 1}. [#{Float.round(dist, 4)}] #{job.position_title} @ #{job.company_name}"
+        )
       end
 
       IO.puts("\n=== Multi-vector (title=0.3 + desc=0.7): 'payment/financial/trading' ===")
+
       for {{id, combined, _td, _dd}, idx} <- Enum.with_index(Enum.take(multi_results, 5)) do
         job = Enum.find(jobs, &(&1.id == id))
-        IO.puts("  #{idx + 1}. [#{Float.round(combined, 4)}] #{job.position_title} @ #{job.company_name}")
+
+        IO.puts(
+          "  #{idx + 1}. [#{Float.round(combined, 4)}] #{job.position_title} @ #{job.company_name}"
+        )
       end
 
       # Multi-vector should prioritize financial Elixir jobs higher
       multi_top_3_ids = multi_results |> Enum.take(3) |> Enum.map(fn {id, _, _, _} -> id end)
+
       multi_top_3_companies =
         Enum.map(multi_top_3_ids, fn id -> Enum.find(jobs, &(&1.id == id)).company_name end)
 
@@ -377,11 +404,13 @@ defmodule Clientats.SearchPipelineTest do
       remote_only = VectorStore.search_filtered(query_vec, 10, %{work_model: "remote"})
 
       IO.puts("\n=== Unfiltered search: #{length(unfiltered.rows)} results ===")
+
       for [id, title, company, loc, wm, _, _, dist] <- Enum.take(unfiltered.rows, 5) do
         IO.puts("  [#{Float.round(dist, 4)}] #{title} @ #{company} (#{wm || "?"}, #{loc})")
       end
 
       IO.puts("\n=== Remote-only filter: #{length(remote_only.rows)} results ===")
+
       for [id, title, company, loc, wm, _, _, dist] <- Enum.take(remote_only.rows, 5) do
         IO.puts("  [#{Float.round(dist, 4)}] #{title} @ #{company} (#{wm || "?"}, #{loc})")
       end
@@ -462,6 +491,7 @@ defmodule Clientats.SearchPipelineTest do
       IO.puts("\n=== E2E Pipeline Latency ===")
       IO.puts("Total: #{Float.round(total_ms, 1)}ms")
       IO.puts("Results: #{length(results)} jobs")
+
       for r <- Enum.take(results, 5) do
         IO.puts("  [#{Float.round(r.distance, 4)}] #{r.title} @ #{r.company}")
       end
@@ -475,7 +505,9 @@ defmodule Clientats.SearchPipelineTest do
       {total_us, results} =
         :timer.tc(fn ->
           {:ok, title_vec} = Embedding.embed("Elixir developer", provider: :ollama)
-          {:ok, desc_vec} = Embedding.embed("distributed systems real-time processing", provider: :ollama)
+
+          {:ok, desc_vec} =
+            Embedding.embed("distributed systems real-time processing", provider: :ollama)
 
           VectorStore.search_multi_vector(title_vec, desc_vec, 10,
             title_weight: 0.4,
@@ -484,7 +516,10 @@ defmodule Clientats.SearchPipelineTest do
         end)
 
       IO.puts("\n=== Multi-Vector Pipeline Latency ===")
-      IO.puts("Total: #{Float.round(total_us / 1_000, 1)}ms (includes 2 embeds + 2 KNN queries + merge)")
+
+      IO.puts(
+        "Total: #{Float.round(total_us / 1_000, 1)}ms (includes 2 embeds + 2 KNN queries + merge)"
+      )
 
       assert total_us / 1_000 < 2_000
     end

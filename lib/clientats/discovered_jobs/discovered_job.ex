@@ -62,7 +62,11 @@ defmodule Clientats.DiscoveredJobs.DiscoveredJob do
         location = get_field(changeset, :location)
 
         if company && title do
-          put_change(changeset, :fingerprint, Clientats.LinkedIn.dedup_fingerprint(company, title, location))
+          put_change(
+            changeset,
+            :fingerprint,
+            Clientats.LinkedIn.dedup_fingerprint(company, title, location)
+          )
         else
           changeset
         end

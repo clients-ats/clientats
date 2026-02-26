@@ -36,7 +36,10 @@ defmodule Clientats.Workers.EmbedDiscoveredJob do
     end
   rescue
     Ecto.NoResultsError ->
-      Logger.warning("[EmbedDiscoveredJob] Discovered job #{discovered_job_id} not found, cancelling")
+      Logger.warning(
+        "[EmbedDiscoveredJob] Discovered job #{discovered_job_id} not found, cancelling"
+      )
+
       {:cancel, :not_found}
   end
 end

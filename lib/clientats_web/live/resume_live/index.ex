@@ -201,7 +201,9 @@ defmodule ClientatsWeb.ResumeLive.Index do
                   <span class="text-xs font-medium text-gray-500 uppercase">Target Roles</span>
                   <div class="flex flex-wrap gap-1 mt-1">
                     <%= for title <- @parse_result.parsed.target_titles do %>
-                      <span class="px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full">{title}</span>
+                      <span class="px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full">
+                        {title}
+                      </span>
                     <% end %>
                   </div>
                 </div>
@@ -211,7 +213,9 @@ defmodule ClientatsWeb.ResumeLive.Index do
                   <span class="text-xs font-medium text-gray-500 uppercase">Primary Skills</span>
                   <div class="flex flex-wrap gap-1 mt-1">
                     <%= for skill <- @parse_result.parsed.skills_primary do %>
-                      <span class="px-2 py-0.5 text-xs bg-indigo-100 text-indigo-700 rounded-full">{skill}</span>
+                      <span class="px-2 py-0.5 text-xs bg-indigo-100 text-indigo-700 rounded-full">
+                        {skill}
+                      </span>
                     <% end %>
                   </div>
                 </div>
@@ -221,7 +225,9 @@ defmodule ClientatsWeb.ResumeLive.Index do
                   <span class="text-xs font-medium text-gray-500 uppercase">Secondary Skills</span>
                   <div class="flex flex-wrap gap-1 mt-1">
                     <%= for skill <- @parse_result.parsed.skills_secondary do %>
-                      <span class="px-2 py-0.5 text-xs bg-gray-100 text-gray-700 rounded-full">{skill}</span>
+                      <span class="px-2 py-0.5 text-xs bg-gray-100 text-gray-700 rounded-full">
+                        {skill}
+                      </span>
                     <% end %>
                   </div>
                 </div>
@@ -229,7 +235,9 @@ defmodule ClientatsWeb.ResumeLive.Index do
               <%= if @parse_result.parsed.seniority_level do %>
                 <div>
                   <span class="text-xs font-medium text-gray-500 uppercase">Seniority</span>
-                  <p class="text-sm text-gray-900">{String.capitalize(@parse_result.parsed.seniority_level)}</p>
+                  <p class="text-sm text-gray-900">
+                    {String.capitalize(@parse_result.parsed.seniority_level)}
+                  </p>
                 </div>
               <% end %>
               <%= if @parse_result.parsed.industries != [] do %>
@@ -237,7 +245,9 @@ defmodule ClientatsWeb.ResumeLive.Index do
                   <span class="text-xs font-medium text-gray-500 uppercase">Industries</span>
                   <div class="flex flex-wrap gap-1 mt-1">
                     <%= for industry <- @parse_result.parsed.industries do %>
-                      <span class="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded-full">{format_industry(industry)}</span>
+                      <span class="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded-full">
+                        {format_industry(industry)}
+                      </span>
                     <% end %>
                   </div>
                 </div>
@@ -251,7 +261,9 @@ defmodule ClientatsWeb.ResumeLive.Index do
               <%= if @parse_result.parsed.preferred_work_model do %>
                 <div>
                   <span class="text-xs font-medium text-gray-500 uppercase">Work Model</span>
-                  <p class="text-sm text-gray-900">{String.capitalize(@parse_result.parsed.preferred_work_model)}</p>
+                  <p class="text-sm text-gray-900">
+                    {String.capitalize(@parse_result.parsed.preferred_work_model)}
+                  </p>
                 </div>
               <% end %>
               <%= if @parse_result.parsed.education != [] do %>
@@ -259,7 +271,10 @@ defmodule ClientatsWeb.ResumeLive.Index do
                   <span class="text-xs font-medium text-gray-500 uppercase">Education</span>
                   <%= for edu <- @parse_result.parsed.education do %>
                     <p class="text-sm text-gray-900">
-                      {edu.degree}<%= if edu.field do %> in {edu.field}<% end %>
+                      {edu.degree}
+                      <%= if edu.field do %>
+                        in {edu.field}
+                      <% end %>
                     </p>
                   <% end %>
                 </div>
@@ -279,7 +294,10 @@ defmodule ClientatsWeb.ResumeLive.Index do
           <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
             <div class="flex justify-between items-start">
               <div class="flex gap-2">
-                <.icon name="hero-exclamation-triangle" class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                <.icon
+                  name="hero-exclamation-triangle"
+                  class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5"
+                />
                 <p class="text-sm text-red-700">{@parse_error}</p>
               </div>
               <button phx-click="dismiss_parse_result" class="text-red-400 hover:text-red-600">

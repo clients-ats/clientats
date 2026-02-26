@@ -215,14 +215,15 @@ defmodule Clientats.VectorStore do
           {["AND j.location LIKE ?#{idx}" | clauses], params ++ ["%#{value}%"], idx + 1}
 
         {:salary_min, value}, {clauses, params, idx} when is_integer(value) ->
-          {["AND (j.salary_max IS NULL OR j.salary_max >= ?#{idx})" | clauses],
-           params ++ [value], idx + 1}
+          {["AND (j.salary_max IS NULL OR j.salary_max >= ?#{idx})" | clauses], params ++ [value],
+           idx + 1}
 
         {:exclude_companies, companies}, {clauses, params, idx} when is_list(companies) ->
-          placeholders = Enum.map_join(0..(length(companies) - 1), ", ", fn i -> "?#{idx + i}" end)
+          placeholders =
+            Enum.map_join(0..(length(companies) - 1), ", ", fn i -> "?#{idx + i}" end)
 
-          {["AND j.company_name NOT IN (#{placeholders})" | clauses],
-           params ++ companies, idx + length(companies)}
+          {["AND j.company_name NOT IN (#{placeholders})" | clauses], params ++ companies,
+           idx + length(companies)}
 
         _, acc ->
           acc

@@ -138,7 +138,8 @@ defmodule Clientats.FeedbackTest do
     end
 
     test "long dwell = positive" do
-      assert UserFeedback.training_label(%UserFeedback{feedback_type: "dwell", value: 45.0}) == 1.0
+      assert UserFeedback.training_label(%UserFeedback{feedback_type: "dwell", value: 45.0}) ==
+               1.0
     end
 
     test "short dwell = negative" do
@@ -146,7 +147,8 @@ defmodule Clientats.FeedbackTest do
     end
 
     test "medium dwell = skip" do
-      assert UserFeedback.training_label(%UserFeedback{feedback_type: "dwell", value: 15.0}) == nil
+      assert UserFeedback.training_label(%UserFeedback{feedback_type: "dwell", value: 15.0}) ==
+               nil
     end
   end
 

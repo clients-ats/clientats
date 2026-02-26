@@ -66,11 +66,15 @@ defmodule Clientats.EmbeddingTest do
 
       # Financial services Elixir job (index 7) should be in top 3
       top_3_indices = ranked |> Enum.take(3) |> Enum.map(fn {idx, _} -> idx end)
-      assert 7 in top_3_indices, "Financial services job should rank in top 3, got: #{inspect(top_3_indices)}"
+
+      assert 7 in top_3_indices,
+             "Financial services job should rank in top 3, got: #{inspect(top_3_indices)}"
 
       # ML engineer (index 8) should be in bottom 3
       bottom_3_indices = ranked |> Enum.take(-3) |> Enum.map(fn {idx, _} -> idx end)
-      assert 8 in bottom_3_indices, "ML engineer should rank in bottom 3, got: #{inspect(bottom_3_indices)}"
+
+      assert 8 in bottom_3_indices,
+             "ML engineer should rank in bottom 3, got: #{inspect(bottom_3_indices)}"
     end
   end
 
@@ -156,8 +160,11 @@ defmodule Clientats.EmbeddingTest do
 
       # Batch sizes
       for batch_size <- [5, 10, 50] do
-        texts = for i <- 1..batch_size, do: "Job description number #{i} for testing embedding latency"
-        {batch_us, {:ok, embeddings}} = :timer.tc(fn -> Embedding.embed_batch(texts, provider: :ollama) end)
+        texts =
+          for i <- 1..batch_size, do: "Job description number #{i} for testing embedding latency"
+
+        {batch_us, {:ok, embeddings}} =
+          :timer.tc(fn -> Embedding.embed_batch(texts, provider: :ollama) end)
 
         assert length(embeddings) == batch_size
 

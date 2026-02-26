@@ -59,12 +59,15 @@ defmodule Clientats.Reranker do
     * `:user_id` - User ID for API key lookup
     * `:top_k` - Return only top K results (default: all)
   """
-  @spec rerank(String.t(), [candidate()], keyword()) :: {:ok, [ranked_result()]} | {:error, term()}
+  @spec rerank(String.t(), [candidate()], keyword()) ::
+          {:ok, [ranked_result()]} | {:error, term()}
   def rerank(query, candidates, opts \\ []) do
     strategy = opts[:strategy] || default_strategy()
     top_k = opts[:top_k] || length(candidates)
 
-    Logger.info("[Reranker] Strategy: #{strategy}, candidates: #{length(candidates)}, top_k: #{top_k}")
+    Logger.info(
+      "[Reranker] Strategy: #{strategy}, candidates: #{length(candidates)}, top_k: #{top_k}"
+    )
 
     {time_us, result} =
       :timer.tc(fn ->
@@ -117,7 +120,7 @@ defmodule Clientats.Reranker do
       |> Enum.with_index(1)
       |> Enum.reduce(0.0, fn {result, pos}, acc ->
         rel = Map.get(relevance_map, result.id, 0)
-        acc + (rel / :math.log2(pos + 1))
+        acc + rel / :math.log2(pos + 1)
       end)
 
     # Ideal DCG: sort by relevance descending
@@ -130,7 +133,7 @@ defmodule Clientats.Reranker do
       ideal_order
       |> Enum.with_index(1)
       |> Enum.reduce(0.0, fn {{_id, rel}, pos}, acc ->
-        acc + (rel / :math.log2(pos + 1))
+        acc + rel / :math.log2(pos + 1)
       end)
 
     if idcg == 0.0, do: 0.0, else: dcg / idcg
@@ -149,9 +152,14 @@ defmodule Clientats.Reranker do
     results =
       Enum.flat_map(batches, fn batch ->
         case rerank_gemini_batch(query, batch, opts) do
-          {:ok, scored} -> scored
+          {:ok, scored} ->
+            scored
+
           {:error, reason} ->
-            Logger.warning("[Reranker] Gemini batch failed: #{inspect(reason)}, falling back to distances")
+            Logger.warning(
+              "[Reranker] Gemini batch failed: #{inspect(reason)}, falling back to distances"
+            )
+
             # Fall back to vector distances for this batch
             Enum.map(batch, fn {candidate, _idx} ->
               %{
@@ -205,9 +213,10 @@ defmodule Clientats.Reranker do
 
     case call_gemini(prompt, opts) do
       {:ok, scores} when is_list(scores) ->
-        score_map = Map.new(scores, fn item ->
-          {item["id"], item["score"] || 0.0}
-        end)
+        score_map =
+          Map.new(scores, fn item ->
+            {item["id"], item["score"] || 0.0}
+          end)
 
         results =
           Enum.map(indexed_candidates, fn {candidate, _idx} ->
@@ -306,6 +315,7 @@ defmodule Clientats.Reranker do
       case response.status do
         200 ->
           text = response.body["response"] || ""
+
           case Float.parse(String.trim(text)) do
             {score, _} when score >= 0.0 and score <= 1.0 -> {:ok, score}
             {score, _} -> {:ok, max(0.0, min(1.0, score))}

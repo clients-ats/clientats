@@ -334,20 +334,28 @@ defmodule Clientats.ResumeParser do
 
   defp get_integer(map, key) do
     case Map.get(map, key) do
-      n when is_integer(n) -> n
-      n when is_float(n) -> round(n)
+      n when is_integer(n) ->
+        n
+
+      n when is_float(n) ->
+        round(n)
+
       s when is_binary(s) ->
         case Integer.parse(s) do
           {n, _} -> n
           :error -> nil
         end
-      _ -> nil
+
+      _ ->
+        nil
     end
   end
 
   defp get_enum(map, key, valid) do
     case get_string(map, key) do
-      nil -> nil
+      nil ->
+        nil
+
       val ->
         normalized = String.downcase(val)
         if normalized in valid, do: normalized, else: nil
@@ -378,20 +386,33 @@ defmodule Clientats.ResumeParser do
     cond do
       String.contains?(title_lower, "principal") or String.contains?(title_lower, "staff") ->
         "staff"
+
       String.contains?(title_lower, "senior") or String.contains?(title_lower, "sr.") ->
         "senior"
+
       String.contains?(title_lower, "lead") or String.contains?(title_lower, "architect") ->
         "senior"
+
       String.contains?(title_lower, "junior") or String.contains?(title_lower, "jr.") ->
         "junior"
+
       String.contains?(title_lower, "intern") ->
         "intern"
+
       String.contains?(title_lower, "director") or String.contains?(title_lower, "vp") ->
         "director"
-      is_integer(years) and years >= 8 -> "senior"
-      is_integer(years) and years >= 3 -> "mid"
-      is_integer(years) and years >= 0 -> "junior"
-      true -> "mid"
+
+      is_integer(years) and years >= 8 ->
+        "senior"
+
+      is_integer(years) and years >= 3 ->
+        "mid"
+
+      is_integer(years) and years >= 0 ->
+        "junior"
+
+      true ->
+        "mid"
     end
   end
 
@@ -404,10 +425,11 @@ defmodule Clientats.ResumeParser do
   end
 
   defp build_roles_text(parsed) do
-    titles = [parsed.current_title | parsed.target_titles]
-    |> Enum.reject(&is_nil/1)
-    |> Enum.uniq()
-    |> Enum.join(", ")
+    titles =
+      [parsed.current_title | parsed.target_titles]
+      |> Enum.reject(&is_nil/1)
+      |> Enum.uniq()
+      |> Enum.join(", ")
 
     industries = Enum.join(parsed.industries, ", ")
 

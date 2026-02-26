@@ -49,8 +49,8 @@ defmodule Clientats.Repo.Migrations.CreateDiscoveredJobs do
     create index(:discovered_job_feedback, [:discovered_job_id])
 
     create unique_index(:discovered_job_feedback, [:user_id, :discovered_job_id, :feedback_type],
-      name: :discovered_job_feedback_unique_signal
-    )
+             name: :discovered_job_feedback_unique_signal
+           )
   end
 
   def down do

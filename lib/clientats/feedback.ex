@@ -102,7 +102,8 @@ defmodule Clientats.Feedback do
             %{state | bookmarked: true}
 
           thumbs_type when thumbs_type in ["thumbs_up", "thumbs_down"] ->
-            if state.thumbs_at == nil or NaiveDateTime.compare(inserted_at, state.thumbs_at) == :gt do
+            if state.thumbs_at == nil or
+                 NaiveDateTime.compare(inserted_at, state.thumbs_at) == :gt do
               thumbs = if thumbs_type == "thumbs_up", do: :up, else: :down
               %{state | thumbs: thumbs, thumbs_at: inserted_at}
             else

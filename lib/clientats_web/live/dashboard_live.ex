@@ -482,7 +482,9 @@ defmodule ClientatsWeb.DashboardLive do
             seniority_match = Enum.at(features, 16, 0.0)
             work_model_match = Enum.at(features, 8, 0.0)
             industry_match = Enum.at(features, 17, 0.0)
-            (skill_overlap * 0.4 + seniority_match * 0.2 + work_model_match * 0.2 + industry_match * 0.2)
+
+            skill_overlap * 0.4 + seniority_match * 0.2 + work_model_match * 0.2 +
+              industry_match * 0.2
 
           b ->
             Ranker.predict(b, [features]) |> List.first()

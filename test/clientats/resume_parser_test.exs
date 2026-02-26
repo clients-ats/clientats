@@ -18,7 +18,8 @@ defmodule Clientats.ResumeParserTest do
     "preferred_work_model" => "remote",
     "salary_expectation_min" => 160_000,
     "salary_expectation_max" => 200_000,
-    "career_trajectory" => "Progressed from backend developer to senior engineer specializing in distributed systems and real-time applications.",
+    "career_trajectory" =>
+      "Progressed from backend developer to senior engineer specializing in distributed systems and real-time applications.",
     "certifications" => ["AWS Solutions Architect"]
   }
 
@@ -33,7 +34,8 @@ defmodule Clientats.ResumeParserTest do
     "preferred_work_model" => "hybrid",
     "salary_expectation_min" => nil,
     "salary_expectation_max" => nil,
-    "career_trajectory" => "Recent graduate with internship experience in healthcare data analysis.",
+    "career_trajectory" =>
+      "Recent graduate with internship experience in healthcare data analysis.",
     "certifications" => []
   }
 
@@ -48,7 +50,8 @@ defmodule Clientats.ResumeParserTest do
     "preferred_work_model" => "remote",
     "salary_expectation_min" => 180_000,
     "salary_expectation_max" => 250_000,
-    "career_trajectory" => "Started as sysadmin, transitioned to DevOps, now leading platform teams.",
+    "career_trajectory" =>
+      "Started as sysadmin, transitioned to DevOps, now leading platform teams.",
     "certifications" => ["CKA", "AWS DevOps Professional"]
   }
 
@@ -345,7 +348,10 @@ defmodule Clientats.ResumeParserTest do
       assert {:ok, parsed} = ResumeParser.parse(text, provider: :ollama)
 
       assert parsed.current_title != nil
-      assert "Python" in parsed.skills_primary or "python" in Enum.map(parsed.skills_primary, &String.downcase/1)
+
+      assert "Python" in parsed.skills_primary or
+               "python" in Enum.map(parsed.skills_primary, &String.downcase/1)
+
       assert parsed.years_experience != nil
 
       Logger.info("""

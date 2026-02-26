@@ -49,20 +49,25 @@ defmodule Clientats.RankerTest do
         industry: "fintech"
       }
 
-      features = FeatureExtractor.extract(job, similarities, prefs,
-        reranker_score: 0.88,
-        company_familiarity: 0.3,
-        similar_title_rate: 0.6
-      )
+      features =
+        FeatureExtractor.extract(job, similarities, prefs,
+          reranker_score: 0.88,
+          company_familiarity: 0.3,
+          similar_title_rate: 0.6
+        )
 
       assert length(features) == 18
       assert Enum.all?(features, &is_float/1)
 
       # Check specific features
-      assert Enum.at(features, 0) == 0.85   # title_similarity
-      assert Enum.at(features, 5) == 0.88   # reranker_score
-      assert Enum.at(features, 9) == 1.0    # is_remote
-      assert Enum.at(features, 17) == 1.0   # industry_match
+      # title_similarity
+      assert Enum.at(features, 0) == 0.85
+      # reranker_score
+      assert Enum.at(features, 5) == 0.88
+      # is_remote
+      assert Enum.at(features, 9) == 1.0
+      # industry_match
+      assert Enum.at(features, 17) == 1.0
     end
 
     test "extract with minimal data returns defaults" do
@@ -161,16 +166,18 @@ defmodule Clientats.RankerTest do
       data = FeatureExtractor.generate_synthetic_data(100)
       {:ok, booster} = Ranker.train(data)
 
-      test_features = Enum.map(1..5, fn _ ->
-        {f, _} = hd(FeatureExtractor.generate_synthetic_data(1))
-        f
-      end)
+      test_features =
+        Enum.map(1..5, fn _ ->
+          {f, _} = hd(FeatureExtractor.generate_synthetic_data(1))
+          f
+        end)
 
       scores = Ranker.predict(booster, test_features)
       assert length(scores) == 5
+
       Enum.each(scores, fn s ->
         assert s >= 0.0 and s <= 1.0,
-          "Score #{s} outside expected range [0, 1]"
+               "Score #{s} outside expected range [0, 1]"
       end)
     end
 
@@ -297,26 +304,35 @@ defmodule Clientats.RankerTest do
       jobs = [
         %{
           id: "job_1",
-          salary_min: 150_000, salary_max: 180_000,
-          work_model: "remote", remote_policy: "full_remote",
-          location: "Remote", date_posted: Date.utc_today() |> Date.to_iso8601(),
+          salary_min: 150_000,
+          salary_max: 180_000,
+          work_model: "remote",
+          remote_policy: "full_remote",
+          location: "Remote",
+          date_posted: Date.utc_today() |> Date.to_iso8601(),
           description_text: String.duplicate("Elixir Phoenix developer ", 50),
           required_skills: ["Elixir", "Phoenix", "PostgreSQL"],
-          seniority_level: "senior", industry: "fintech"
+          seniority_level: "senior",
+          industry: "fintech"
         },
         %{
           id: "job_2",
-          salary_min: 80_000, salary_max: 100_000,
-          work_model: "onsite", remote_policy: "onsite",
-          location: "New York, NY", date_posted: "2025-12-01",
+          salary_min: 80_000,
+          salary_max: 100_000,
+          work_model: "onsite",
+          remote_policy: "onsite",
+          location: "New York, NY",
+          date_posted: "2025-12-01",
           description_text: "Java enterprise developer needed",
           required_skills: ["Java", "Spring", "Oracle"],
-          seniority_level: "mid", industry: "banking"
+          seniority_level: "mid",
+          industry: "banking"
         }
       ]
 
       user_prefs = %{
-        salary_min: 140_000, salary_max: 180_000,
+        salary_min: 140_000,
+        salary_max: 180_000,
         work_model: "remote",
         preferred_location: "Remote",
         skills: ["Elixir", "Phoenix", "PostgreSQL", "React"],
@@ -325,11 +341,12 @@ defmodule Clientats.RankerTest do
       }
 
       # Extract features for each job
-      candidates = Enum.map(jobs, fn job ->
-        sims = %{title: 0.8, description: 0.7, skills: 0.85, requirements: 0.6, composite: 0.75}
-        features = FeatureExtractor.extract(job, sims, user_prefs)
-        {job.id, features}
-      end)
+      candidates =
+        Enum.map(jobs, fn job ->
+          sims = %{title: 0.8, description: 0.7, skills: 0.85, requirements: 0.6, composite: 0.75}
+          features = FeatureExtractor.extract(job, sims, user_prefs)
+          {job.id, features}
+        end)
 
       # Train on synthetic data
       training_data = FeatureExtractor.generate_synthetic_data(100)

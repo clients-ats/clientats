@@ -134,7 +134,10 @@ defmodule Clientats.Embedding do
 
     body = Jason.encode!(%{model: model, input: text})
 
-    case Req.post("#{base_url}/api/embed", body: body, headers: [{"content-type", "application/json"}]) do
+    case Req.post("#{base_url}/api/embed",
+           body: body,
+           headers: [{"content-type", "application/json"}]
+         ) do
       {:ok, %{status: 200, body: %{"embeddings" => [embedding | _]}}} ->
         {:ok, embedding}
 
@@ -152,7 +155,10 @@ defmodule Clientats.Embedding do
 
     body = Jason.encode!(%{model: model, input: texts})
 
-    case Req.post("#{base_url}/api/embed", body: body, headers: [{"content-type", "application/json"}]) do
+    case Req.post("#{base_url}/api/embed",
+           body: body,
+           headers: [{"content-type", "application/json"}]
+         ) do
       {:ok, %{status: 200, body: %{"embeddings" => embeddings}}} ->
         {:ok, embeddings}
 

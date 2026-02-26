@@ -151,7 +151,7 @@ defmodule ClientatsWeb.DiscoverLive do
               class="btn btn-primary"
               disabled={@searching || @query == ""}
             >
-              <%= if @searching, do: "Searching...", else: "Search" %>
+              {if @searching, do: "Searching...", else: "Search"}
             </button>
           </form>
 
@@ -210,11 +210,16 @@ defmodule ClientatsWeb.DiscoverLive do
           </div>
 
           <p :if={@search_mode == :linkedin && !@has_llm} class="text-sm text-amber-600 mt-2">
-            LinkedIn search requires an LLM provider.
-            <.link navigate={~p"/dashboard/llm-setup"} class="underline">Configure one</.link>.
+            LinkedIn search requires an LLM provider. <.link
+              navigate={~p"/dashboard/llm-setup"}
+              class="underline"
+            >Configure one</.link>.
           </p>
 
-          <div :if={@search_mode == :linkedin && @has_llm} class="flex items-center justify-between mt-2">
+          <div
+            :if={@search_mode == :linkedin && @has_llm}
+            class="flex items-center justify-between mt-2"
+          >
             <p class="text-xs text-gray-500">
               Requires Chrome running with --remote-debugging-port=9222
             </p>
@@ -344,7 +349,8 @@ defmodule ClientatsWeb.DiscoverLive do
                     phx-value-id={discovery.id}
                     class={[
                       "btn btn-xs",
-                      discovery_thumbs(@discovered_feedback_states, discovery.id) == :up && "btn-success" || "btn-ghost"
+                      (discovery_thumbs(@discovered_feedback_states, discovery.id) == :up &&
+                         "btn-success") || "btn-ghost"
                     ]}
                     title="Promote to job interests"
                   >
@@ -355,7 +361,8 @@ defmodule ClientatsWeb.DiscoverLive do
                     phx-value-id={discovery.id}
                     class={[
                       "btn btn-xs",
-                      discovery_thumbs(@discovered_feedback_states, discovery.id) == :down && "btn-error" || "btn-ghost"
+                      (discovery_thumbs(@discovered_feedback_states, discovery.id) == :down &&
+                         "btn-error") || "btn-ghost"
                     ]}
                     title="Dismiss"
                   >
@@ -421,7 +428,13 @@ defmodule ClientatsWeb.DiscoverLive do
                     {format_score(result.score)}
                   </span>
                   <span class="text-xs text-gray-400">
-                    <%= if result.source == :saved, do: "Click to view", else: if(MapSet.member?(@expanded_detail, idx), do: "Hide details", else: "Show details") %>
+                    {if result.source == :saved,
+                      do: "Click to view",
+                      else:
+                        if(MapSet.member?(@expanded_detail, idx),
+                          do: "Hide details",
+                          else: "Show details"
+                        )}
                   </span>
                 </div>
               </div>
@@ -499,7 +512,10 @@ defmodule ClientatsWeb.DiscoverLive do
                     />
                   </div>
                   <%!-- Rate buttons for unsaved LinkedIn results (auto-saves on click) --%>
-                  <div :if={result.source == :linkedin && !result.saved_interest_id} class="flex items-center gap-1">
+                  <div
+                    :if={result.source == :linkedin && !result.saved_interest_id}
+                    class="flex items-center gap-1"
+                  >
                     <button
                       phx-click="rate_and_save"
                       phx-value-idx={idx}
@@ -540,7 +556,7 @@ defmodule ClientatsWeb.DiscoverLive do
                     phx-value-idx={idx}
                     class="text-xs text-blue-600 hover:underline"
                   >
-                    <%= if MapSet.member?(@expanded_why, idx), do: "Hide match", else: "Why this match?" %>
+                    {if MapSet.member?(@expanded_why, idx), do: "Hide match", else: "Why this match?"}
                   </button>
                 </div>
               </div>
@@ -593,14 +609,20 @@ defmodule ClientatsWeb.DiscoverLive do
 
         <%!-- Empty state --%>
         <div
-          :if={@search_mode != :discoveries && !@searching && @results == [] && @query != "" && @error == nil}
+          :if={
+            @search_mode != :discoveries && !@searching && @results == [] && @query != "" &&
+              @error == nil
+          }
           class="text-center py-12 text-gray-500"
         >
           No results found. Try different keywords.
         </div>
 
         <%!-- Initial state --%>
-        <div :if={@search_mode != :discoveries && @results == [] && @query == "" && !@searching} class="text-center py-12">
+        <div
+          :if={@search_mode != :discoveries && @results == [] && @query == "" && !@searching}
+          class="text-center py-12"
+        >
           <.icon name="hero-magnifying-glass" class="w-12 h-12 text-gray-300 mx-auto mb-4" />
           <p class="text-gray-500">Enter keywords to discover jobs matching your preferences.</p>
         </div>
@@ -762,8 +784,21 @@ defmodule ClientatsWeb.DiscoverLive do
                     case LinkedIn.public_job_data(job.linkedin_job_id) do
                       {:ok, public} ->
                         pub_desc = public[:description_text] || public[:description_html] || ""
-                        merged = Map.merge(detail, Map.take(public, [:description_text, :description_html, :salary_min, :salary_max, :employment_type]))
+
+                        merged =
+                          Map.merge(
+                            detail,
+                            Map.take(public, [
+                              :description_text,
+                              :description_html,
+                              :salary_min,
+                              :salary_max,
+                              :employment_type
+                            ])
+                          )
+
                         {pub_desc, merged}
+
                       _ ->
                         {description_text, detail}
                     end
@@ -780,7 +815,9 @@ defmodule ClientatsWeb.DiscoverLive do
                           {:ok, validated} -> validated
                           _ -> %{}
                         end
-                      _ -> %{}
+
+                      _ ->
+                        %{}
                     end
                   else
                     %{}
@@ -792,18 +829,29 @@ defmodule ClientatsWeb.DiscoverLive do
                   |> Map.put_new(:title_clean, job[:title])
                   |> Map.put_new(:company_name, job[:company])
                   |> Map.put_new(:location, detail[:location] || job[:location])
-                  |> Map.put(:description, if(String.trim(description_text) != "", do: description_text, else: nil))
+                  |> Map.put(
+                    :description,
+                    if(String.trim(description_text) != "", do: description_text, else: nil)
+                  )
 
                 # Step 5: Always send result - embedding is optional
                 result_data = %{raw: job, detail: detail, extracted: extracted}
 
                 title_text = extracted[:title_clean] || job[:title] || ""
-                desc_text = if String.length(String.trim(description_text)) > 10, do: description_text, else: title_text
+
+                desc_text =
+                  if String.length(String.trim(description_text)) > 10,
+                    do: description_text,
+                    else: title_text
 
                 result_data =
                   case Embedding.embed_batch([title_text, desc_text], user_id: user_id) do
                     {:ok, [title_emb, desc_emb]} ->
-                      Map.merge(result_data, %{title_embedding: title_emb, desc_embedding: desc_emb})
+                      Map.merge(result_data, %{
+                        title_embedding: title_emb,
+                        desc_embedding: desc_emb
+                      })
+
                     _ ->
                       Map.merge(result_data, %{title_embedding: nil, desc_embedding: nil})
                   end
@@ -811,19 +859,26 @@ defmodule ClientatsWeb.DiscoverLive do
                 send(pid, {:linkedin_job_ready, result_data})
               rescue
                 e ->
-                  Logger.warning("[Discover] Pipeline error for #{job[:linkedin_job_id]}: #{Exception.message(e)}")
+                  Logger.warning(
+                    "[Discover] Pipeline error for #{job[:linkedin_job_id]}: #{Exception.message(e)}"
+                  )
+
                   # Still send the result with raw search data so it appears in the list
-                  send(pid, {:linkedin_job_ready, %{
-                    raw: job,
-                    detail: %{},
-                    extracted: %{
-                      title_clean: job[:title],
-                      company_name: job[:company],
-                      location: job[:location]
-                    },
-                    title_embedding: nil,
-                    desc_embedding: nil
-                  }})
+                  send(
+                    pid,
+                    {:linkedin_job_ready,
+                     %{
+                       raw: job,
+                       detail: %{},
+                       extracted: %{
+                         title_clean: job[:title],
+                         company_name: job[:company],
+                         location: job[:location]
+                       },
+                       title_embedding: nil,
+                       desc_embedding: nil
+                     }}
+                  )
               end
             end)
 
@@ -1455,7 +1510,9 @@ defmodule ClientatsWeb.DiscoverLive do
 
   defp find_or_create_interest(user_id, result, extracted, status) do
     case Jobs.find_by_fingerprint(user_id, result.company, result.title, result.location) do
-      %{} = existing -> {:ok, existing}
+      %{} = existing ->
+        {:ok, existing}
+
       nil ->
         Jobs.create_job_interest(%{
           user_id: user_id,

@@ -61,7 +61,9 @@ defmodule ClientatsWeb.FeedbackHistoryLive do
               >
               </div>
             </div>
-            <p class="text-sm text-gray-600 mt-2">{phase_description(@training_phase, @feedback_count)}</p>
+            <p class="text-sm text-gray-600 mt-2">
+              {phase_description(@training_phase, @feedback_count)}
+            </p>
           </div>
 
           <%!-- Stats Grid --%>
@@ -74,13 +76,19 @@ defmodule ClientatsWeb.FeedbackHistoryLive do
               <div class="text-2xl font-bold text-gray-900">{@model_info.training_examples}</div>
               <div class="text-xs text-gray-500">Training Examples</div>
             </div>
-            <div :if={@model_info && @model_info.metrics["accuracy"]} class="text-center p-3 bg-gray-50 rounded-lg">
+            <div
+              :if={@model_info && @model_info.metrics["accuracy"]}
+              class="text-center p-3 bg-gray-50 rounded-lg"
+            >
               <div class="text-2xl font-bold text-green-600">
                 {Float.round(@model_info.metrics["accuracy"] * 100, 1)}%
               </div>
               <div class="text-xs text-gray-500">Accuracy</div>
             </div>
-            <div :if={@model_info && @model_info.metrics["auc"]} class="text-center p-3 bg-gray-50 rounded-lg">
+            <div
+              :if={@model_info && @model_info.metrics["auc"]}
+              class="text-center p-3 bg-gray-50 rounded-lg"
+            >
               <div class="text-2xl font-bold text-blue-600">
                 {Float.round(@model_info.metrics["auc"], 3)}
               </div>
@@ -131,7 +139,9 @@ defmodule ClientatsWeb.FeedbackHistoryLive do
             <div class="text-center py-8 text-gray-500">
               <.icon name="hero-chat-bubble-left-right" class="w-8 h-8 mx-auto mb-2 text-gray-300" />
               <p>No feedback recorded yet.</p>
-              <p class="text-sm mt-1">Rate jobs on the dashboard or discover page to start building your model.</p>
+              <p class="text-sm mt-1">
+                Rate jobs on the dashboard or discover page to start building your model.
+              </p>
             </div>
           <% else %>
             <div class="space-y-3">
@@ -158,7 +168,10 @@ defmodule ClientatsWeb.FeedbackHistoryLive do
                     <p :if={fb.feedback_type == "dwell"} class="text-xs text-gray-500">
                       {format_dwell(fb.value)}
                     </p>
-                    <p :if={fb.feedback_type == "why_prompt" && fb.metadata["reason"]} class="text-xs text-gray-500 italic">
+                    <p
+                      :if={fb.feedback_type == "why_prompt" && fb.metadata["reason"]}
+                      class="text-xs text-gray-500 italic"
+                    >
                       "{fb.metadata["reason"]}"
                     </p>
                   </div>
@@ -318,6 +331,7 @@ defmodule ClientatsWeb.FeedbackHistoryLive do
 
   defp phase_description("llm_proxy", count) do
     remaining = max(0, 30 - count)
+
     "LLM Proxy: Using AI to score jobs directly. #{remaining} more ratings needed for Simple Model."
   end
 

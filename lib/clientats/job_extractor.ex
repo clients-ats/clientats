@@ -28,7 +28,8 @@ defmodule Clientats.JobExtractor do
 
   @schema_fields %{
     title_clean: "Normalized job title without company name, level prefix, or decorators",
-    seniority_level: "One of: intern, junior, mid, senior, staff, principal, director, vp, c_level",
+    seniority_level:
+      "One of: intern, junior, mid, senior, staff, principal, director, vp, c_level",
     required_skills: "Array of required technical skills and technologies",
     preferred_skills: "Array of nice-to-have/preferred skills",
     years_experience_min: "Minimum years of experience required (integer or null)",
@@ -105,8 +106,12 @@ defmodule Clientats.JobExtractor do
     # Type coercion and validation
     validated = %{
       title_clean: to_string_or_nil(extracted, "title_clean"),
-      seniority_level: validate_enum(extracted, "seniority_level",
-        ~w(intern junior mid senior staff principal director vp c_level)),
+      seniority_level:
+        validate_enum(
+          extracted,
+          "seniority_level",
+          ~w(intern junior mid senior staff principal director vp c_level)
+        ),
       required_skills: to_list(extracted, "required_skills"),
       preferred_skills: to_list(extracted, "preferred_skills"),
       years_experience_min: to_integer_or_nil(extracted, "years_experience_min"),
@@ -122,8 +127,8 @@ defmodule Clientats.JobExtractor do
       location: to_string_or_nil(extracted, "location"),
       salary_min: to_integer_or_nil(extracted, "salary_min"),
       salary_max: to_integer_or_nil(extracted, "salary_max"),
-      employment_type: validate_enum(extracted, "employment_type",
-        ~w(full_time part_time contract internship))
+      employment_type:
+        validate_enum(extracted, "employment_type", ~w(full_time part_time contract internship))
     }
 
     if errors == [] do
@@ -376,15 +381,23 @@ defmodule Clientats.JobExtractor do
 
   defp to_integer_or_nil(map, key) do
     case Map.get(map, key) || Map.get(map, String.to_atom(key)) do
-      nil -> nil
-      val when is_integer(val) -> val
-      val when is_float(val) -> round(val)
+      nil ->
+        nil
+
+      val when is_integer(val) ->
+        val
+
+      val when is_float(val) ->
+        round(val)
+
       val when is_binary(val) ->
         case Integer.parse(val) do
           {int, _} -> int
           :error -> nil
         end
-      _ -> nil
+
+      _ ->
+        nil
     end
   rescue
     ArgumentError -> nil
@@ -399,7 +412,9 @@ defmodule Clientats.JobExtractor do
           rescue
             ArgumentError -> nil
           end
-        v -> v
+
+        v ->
+          v
       end
 
     case val do
@@ -422,16 +437,32 @@ defmodule Clientats.JobExtractor do
 
   defp normalize_education(map) do
     raw = to_string_or_nil(map, "education_requirement")
+
     case raw && String.downcase(raw) do
-      nil -> nil
-      s when s in ~w(none associate bachelor master phd) -> s
+      nil ->
+        nil
+
+      s when s in ~w(none associate bachelor master phd) ->
+        s
+
       s ->
         cond do
-          String.contains?(s, "phd") or String.contains?(s, "doctorate") -> "phd"
-          String.contains?(s, "master") or String.contains?(s, "ms ") or String.contains?(s, "ms/") or s == "ms" -> "master"
-          String.contains?(s, "bachelor") or String.contains?(s, "bs ") or String.contains?(s, "ba ") -> "bachelor"
-          String.contains?(s, "associate") -> "associate"
-          true -> nil
+          String.contains?(s, "phd") or String.contains?(s, "doctorate") ->
+            "phd"
+
+          String.contains?(s, "master") or String.contains?(s, "ms ") or
+            String.contains?(s, "ms/") or s == "ms" ->
+            "master"
+
+          String.contains?(s, "bachelor") or String.contains?(s, "bs ") or
+              String.contains?(s, "ba ") ->
+            "bachelor"
+
+          String.contains?(s, "associate") ->
+            "associate"
+
+          true ->
+            nil
         end
     end
   end

@@ -15,8 +15,10 @@ defmodule Clientats.Repo.Migrations.CreateUserFeedbackAndPreferences do
     create index(:user_feedback, [:user_id])
     create index(:user_feedback, [:user_id, :feedback_type])
     create index(:user_feedback, [:job_interest_id])
+
     create unique_index(:user_feedback, [:user_id, :job_interest_id, :feedback_type],
-      name: :user_feedback_unique_signal)
+             name: :user_feedback_unique_signal
+           )
 
     create table(:user_preferences) do
       add :user_id, references(:users, on_delete: :delete_all), null: false

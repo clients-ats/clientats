@@ -211,9 +211,7 @@ defmodule Clientats.Workers.DiscoverJobsWorker do
         )
 
       {:error, reason} ->
-        Logger.error(
-          "[DiscoverJobsWorker] Failed to save #{job[:title]}: #{inspect(reason)}"
-        )
+        Logger.error("[DiscoverJobsWorker] Failed to save #{job[:title]}: #{inspect(reason)}")
     end
   end
 

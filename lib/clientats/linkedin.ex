@@ -162,7 +162,10 @@ defmodule Clientats.LinkedIn do
             end
 
           {:ok, {output, exit_code}} ->
-            Logger.warning("[LinkedIn] Script exited #{exit_code}: #{String.slice(output, 0, 500)}")
+            Logger.warning(
+              "[LinkedIn] Script exited #{exit_code}: #{String.slice(output, 0, 500)}"
+            )
+
             {:error, {:script_error, exit_code, output}}
 
           nil ->
@@ -251,33 +254,41 @@ defmodule Clientats.LinkedIn do
   defp time_posted_value(:month), do: "r2592000"
   defp time_posted_value(_), do: nil
 
-  defp maybe_add_param(params, truthy, key, value) when truthy in [true, :day, :week, :month] and not is_nil(value) do
+  defp maybe_add_param(params, truthy, key, value)
+       when truthy in [true, :day, :week, :month] and not is_nil(value) do
     params ++ [{key, value}]
   end
+
   defp maybe_add_param(params, _, _, _), do: params
 
   defp maybe_add_experience(params, nil), do: params
+
   defp maybe_add_experience(params, levels) when is_list(levels) do
-    values = Enum.map_join(levels, ",", fn
-      :intern -> "1"
-      :entry -> "2"
-      :associate -> "3"
-      :mid_senior -> "4"
-      :director -> "5"
-      :executive -> "6"
-    end)
+    values =
+      Enum.map_join(levels, ",", fn
+        :intern -> "1"
+        :entry -> "2"
+        :associate -> "3"
+        :mid_senior -> "4"
+        :director -> "5"
+        :executive -> "6"
+      end)
+
     params ++ [{"f_E", values}]
   end
 
   defp maybe_add_job_type(params, nil), do: params
+
   defp maybe_add_job_type(params, types) when is_list(types) do
-    values = Enum.map_join(types, ",", fn
-      :full_time -> "F"
-      :part_time -> "P"
-      :contract -> "C"
-      :temporary -> "T"
-      :internship -> "I"
-    end)
+    values =
+      Enum.map_join(types, ",", fn
+        :full_time -> "F"
+        :part_time -> "P"
+        :contract -> "C"
+        :temporary -> "T"
+        :internship -> "I"
+      end)
+
     params ++ [{"f_JT", values}]
   end
 end

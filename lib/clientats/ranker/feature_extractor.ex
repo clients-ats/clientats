@@ -34,12 +34,24 @@ defmodule Clientats.Ranker.FeatureExtractor do
   @doc "Feature names in order"
   def feature_names do
     [
-      :title_similarity, :description_similarity, :skills_similarity,
-      :requirements_similarity, :composite_similarity, :reranker_score,
-      :salary_delta, :has_salary, :work_model_match, :is_remote,
-      :location_match, :job_freshness, :description_length,
-      :company_familiarity, :similar_title_rate, :skill_overlap,
-      :seniority_match, :industry_match
+      :title_similarity,
+      :description_similarity,
+      :skills_similarity,
+      :requirements_similarity,
+      :composite_similarity,
+      :reranker_score,
+      :salary_delta,
+      :has_salary,
+      :work_model_match,
+      :is_remote,
+      :location_match,
+      :job_freshness,
+      :description_length,
+      :company_familiarity,
+      :similar_title_rate,
+      :skill_overlap,
+      :seniority_match,
+      :industry_match
     ]
   end
 
@@ -78,7 +90,9 @@ defmodule Clientats.Ranker.FeatureExtractor do
 
       # 9: Is remote
       if(job[:remote_policy] in ["full_remote", "flexible"] or job[:work_model] == "remote",
-        do: 1.0, else: 0.0),
+        do: 1.0,
+        else: 0.0
+      ),
 
       # 10: Location match
       location_match(job[:location], user_prefs[:preferred_location]),
@@ -124,24 +138,42 @@ defmodule Clientats.Ranker.FeatureExtractor do
       bias = if label == 1.0, do: 0.3, else: -0.1
 
       features = [
-        clamp(:rand.normal(0.5 + bias, 0.2)),     # title_sim
-        clamp(:rand.normal(0.4 + bias, 0.25)),     # desc_sim
-        clamp(:rand.normal(0.45 + bias, 0.2)),     # skills_sim
-        clamp(:rand.normal(0.4 + bias, 0.25)),     # req_sim
-        clamp(:rand.normal(0.45 + bias, 0.2)),     # composite_sim
-        clamp(:rand.normal(0.5 + bias, 0.2)),      # reranker_score
-        clamp(:rand.normal(bias * 0.5, 0.3), -1.0, 1.0), # salary_delta
-        if(:rand.uniform() > 0.3, do: 1.0, else: 0.0), # has_salary
-        if(:rand.uniform() < 0.5 + bias, do: 1.0, else: 0.0), # work_model_match
-        if(:rand.uniform() < 0.6, do: 1.0, else: 0.0), # is_remote
-        clamp(:rand.normal(0.5 + bias * 0.5, 0.3)), # location_match
-        clamp(:rand.normal(0.6, 0.3)),              # freshness
-        clamp(:rand.normal(0.5, 0.2)),              # desc_length
-        clamp(:rand.normal(0.3 + bias * 0.3, 0.2)), # company_familiarity
-        clamp(:rand.normal(0.4 + bias * 0.3, 0.2)), # similar_title_rate
-        clamp(:rand.normal(0.4 + bias, 0.25)),      # skill_overlap
-        clamp(:rand.normal(0.5 + bias * 0.5, 0.3)), # seniority_match
-        if(:rand.uniform() < 0.4 + bias, do: 1.0, else: 0.0) # industry_match
+        # title_sim
+        clamp(:rand.normal(0.5 + bias, 0.2)),
+        # desc_sim
+        clamp(:rand.normal(0.4 + bias, 0.25)),
+        # skills_sim
+        clamp(:rand.normal(0.45 + bias, 0.2)),
+        # req_sim
+        clamp(:rand.normal(0.4 + bias, 0.25)),
+        # composite_sim
+        clamp(:rand.normal(0.45 + bias, 0.2)),
+        # reranker_score
+        clamp(:rand.normal(0.5 + bias, 0.2)),
+        # salary_delta
+        clamp(:rand.normal(bias * 0.5, 0.3), -1.0, 1.0),
+        # has_salary
+        if(:rand.uniform() > 0.3, do: 1.0, else: 0.0),
+        # work_model_match
+        if(:rand.uniform() < 0.5 + bias, do: 1.0, else: 0.0),
+        # is_remote
+        if(:rand.uniform() < 0.6, do: 1.0, else: 0.0),
+        # location_match
+        clamp(:rand.normal(0.5 + bias * 0.5, 0.3)),
+        # freshness
+        clamp(:rand.normal(0.6, 0.3)),
+        # desc_length
+        clamp(:rand.normal(0.5, 0.2)),
+        # company_familiarity
+        clamp(:rand.normal(0.3 + bias * 0.3, 0.2)),
+        # similar_title_rate
+        clamp(:rand.normal(0.4 + bias * 0.3, 0.2)),
+        # skill_overlap
+        clamp(:rand.normal(0.4 + bias, 0.25)),
+        # seniority_match
+        clamp(:rand.normal(0.5 + bias * 0.5, 0.3)),
+        # industry_match
+        if(:rand.uniform() < 0.4 + bias, do: 1.0, else: 0.0)
       ]
 
       {features, label}
@@ -179,6 +211,7 @@ defmodule Clientats.Ranker.FeatureExtractor do
 
   defp normalize_work_model(model) when is_binary(model) do
     model = String.downcase(model)
+
     cond do
       model in ["remote", "full_remote", "flexible"] -> "remote"
       model in ["hybrid", "hybrid_2d", "hybrid_3d"] -> "hybrid"
@@ -186,10 +219,12 @@ defmodule Clientats.Ranker.FeatureExtractor do
       true -> model
     end
   end
+
   defp normalize_work_model(_), do: nil
 
   defp location_match(nil, _), do: 0.5
   defp location_match(_, nil), do: 0.5
+
   defp location_match(job_loc, pref_loc) do
     job_lower = String.downcase(job_loc)
     pref_lower = String.downcase(pref_loc)
@@ -203,6 +238,7 @@ defmodule Clientats.Ranker.FeatureExtractor do
   end
 
   defp job_freshness(nil), do: 0.5
+
   defp job_freshness(date_string) when is_binary(date_string) do
     case Date.from_iso8601(date_string) do
       {:ok, date} ->
@@ -214,9 +250,11 @@ defmodule Clientats.Ranker.FeatureExtractor do
         0.5
     end
   end
+
   defp job_freshness(_), do: 0.5
 
   defp description_length(nil), do: 0.0
+
   defp description_length(text) when is_binary(text) do
     len = String.length(text)
     # Normalize: 0-500 chars = 0..0.5, 500-2000 = 0.5..1.0, 2000+ = 1.0
@@ -225,6 +263,7 @@ defmodule Clientats.Ranker.FeatureExtractor do
 
   defp skill_overlap([], _), do: 0.0
   defp skill_overlap(_, []), do: 0.0
+
   defp skill_overlap(job_skills, user_skills) do
     job_set = MapSet.new(Enum.map(job_skills, &String.downcase/1))
     user_set = MapSet.new(Enum.map(user_skills, &String.downcase/1))
@@ -236,12 +275,20 @@ defmodule Clientats.Ranker.FeatureExtractor do
   end
 
   @seniority_levels %{
-    "intern" => 0, "junior" => 1, "mid" => 2, "senior" => 3,
-    "staff" => 4, "principal" => 5, "director" => 6, "vp" => 7, "c_level" => 8
+    "intern" => 0,
+    "junior" => 1,
+    "mid" => 2,
+    "senior" => 3,
+    "staff" => 4,
+    "principal" => 5,
+    "director" => 6,
+    "vp" => 7,
+    "c_level" => 8
   }
 
   defp seniority_match(nil, _), do: 0.5
   defp seniority_match(_, nil), do: 0.5
+
   defp seniority_match(job_level, user_level) do
     job_idx = Map.get(@seniority_levels, job_level, 2)
     user_idx = Map.get(@seniority_levels, user_level, 2)
