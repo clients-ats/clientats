@@ -7,6 +7,7 @@ WORKDIR /app
 # Install build dependencies
 RUN apk add --no-cache \
     build-base \
+    cmake \
     git
 
 # Copy dependency files
