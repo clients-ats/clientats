@@ -39,10 +39,6 @@ jobs:
 
     runs-on: ${{ matrix.platform }}
 
-    # Windows build is allowed to fail: exgboost NIF has no Windows support
-    # (no precompiled binary, no Makefile.win, Unix Makefile uses GCC/ELF)
-    continue-on-error: ${{ matrix.os == 'windows' }}
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -195,5 +191,3 @@ jobs:
           echo "- **macOS**: Look for \`clientats-macos\` artifact (.dmg file)" >> $GITHUB_STEP_SUMMARY
           echo "- **Windows**: Look for \`clientats-windows\` artifact (.msi or .exe file)" >> $GITHUB_STEP_SUMMARY
           echo "- **Linux**: Look for \`clientats-linux\` artifact (.AppImage, .deb, or .rpm file)" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Note:** Windows build may fail due to exgboost NIF lacking Windows support." >> $GITHUB_STEP_SUMMARY

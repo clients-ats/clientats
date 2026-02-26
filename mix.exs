@@ -72,10 +72,16 @@ defmodule Clientats.MixProject do
       {:req_llm, "~> 1.0"},
       {:oban, "~> 2.17"},
       {:wallaby, "~> 0.30", runtime: false, only: :test},
-      {:exgboost, "~> 0.5"},
       {:nx, "~> 0.9"},
       {:httpoison, "~> 2.0", runtime: false}
-    ]
+    ] ++ platform_deps()
+  end
+
+  defp platform_deps do
+    case :os.type() do
+      {:win32, _} -> []
+      _ -> [{:exgboost, "~> 0.5"}]
+    end
   end
 
   # Aliases are shortcuts or tasks specific to the current project.

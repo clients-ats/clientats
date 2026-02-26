@@ -9,6 +9,9 @@ defmodule Clientats.Ranker do
   2. **Simple model** (30-100): Binary classifier with similarity features only
   3. **Full model** (100+): All 16-18 features including metadata
 
+  On platforms where EXGBoost is unavailable (e.g. Windows), the ranker
+  gracefully degrades and the app falls back to LLM-only scoring.
+
   ## Feature Vector (18 features)
   See `Ranker.FeatureExtractor` for the full feature set.
 
@@ -28,6 +31,13 @@ defmodule Clientats.Ranker do
   require Logger
 
   @doc """
+  Returns true if the XGBoost NIF is available on this platform.
+  """
+  def available? do
+    Code.ensure_loaded?(EXGBoost)
+  end
+
+  @doc """
   Train a binary classification model from labeled examples.
 
   `training_data` is a list of `{feature_vector, label}` tuples where:
@@ -40,6 +50,129 @@ defmodule Clientats.Ranker do
     * `:existing_model` - Existing booster for incremental training
   """
   def train(training_data, opts \\ []) when is_list(training_data) do
+    unless available?() do
+      Logger.warning("[Ranker] EXGBoost not available on this platform, skipping training")
+      {:error, :exgboost_unavailable}
+    else
+      do_train(training_data, opts)
+    end
+  end
+
+  @doc """
+  Predict relevance scores for feature vectors.
+
+  Returns a list of floats between 0.0 and 1.0 (probability of positive/liked).
+  """
+  def predict(booster, feature_vectors) when is_list(feature_vectors) do
+    x = Nx.tensor(feature_vectors, type: :f32)
+    predictions = EXGBoost.predict(booster, x)
+
+    predictions
+    |> Nx.to_flat_list()
+    |> Enum.map(&clamp_score/1)
+  end
+
+  @doc """
+  Score and rank candidates using the trained model.
+
+  `candidates` is a list of `{id, feature_vector}` tuples.
+  Returns candidates sorted by predicted score (descending).
+  """
+  def rank(booster, candidates) when is_list(candidates) do
+    {ids, features} = Enum.unzip(candidates)
+    scores = predict(booster, features)
+
+    Enum.zip([ids, scores])
+    |> Enum.sort_by(fn {_id, score} -> score end, :desc)
+    |> Enum.with_index(1)
+    |> Enum.map(fn {{id, score}, rank} ->
+      %{id: id, score: score, rank: rank}
+    end)
+  end
+
+  @doc """
+  Serialize model to binary for storage (e.g., in SQLite).
+  """
+  def dump_model(booster) do
+    EXGBoost.dump_weights(booster)
+  end
+
+  @doc """
+  Load model from binary data.
+  """
+  def load_model(binary) when is_binary(binary) do
+    unless available?() do
+      {:error, :exgboost_unavailable}
+    else
+      try do
+        {:ok, EXGBoost.load_weights(binary)}
+      rescue
+        e -> {:error, {:load_failed, Exception.message(e)}}
+      end
+    end
+  end
+
+  @doc """
+  Save model to a JSON file.
+  """
+  def save_model(booster, path) do
+    EXGBoost.write_weights(booster, path)
+  end
+
+  @doc """
+  Load model from a JSON file.
+  """
+  def load_model_file(path) do
+    unless available?() do
+      {:error, :exgboost_unavailable}
+    else
+      try do
+        {:ok, EXGBoost.read_weights(path)}
+      rescue
+        e -> {:error, {:load_failed, Exception.message(e)}}
+      end
+    end
+  end
+
+  @doc """
+  Evaluate model quality using AUC and accuracy on test data.
+  """
+  def evaluate(booster, test_data) when is_list(test_data) do
+    {features, labels} = Enum.unzip(test_data)
+    predictions = predict(booster, features)
+
+    # Accuracy (threshold 0.5)
+    correct =
+      Enum.zip(predictions, labels)
+      |> Enum.count(fn {pred, label} ->
+        (pred >= 0.5 and label == 1.0) or (pred < 0.5 and label == 0.0)
+      end)
+
+    accuracy = correct / length(labels)
+
+    # AUC (approximate via sorting)
+    auc = compute_auc(predictions, labels)
+
+    # Precision/recall at 0.5 threshold
+    tp = Enum.count(Enum.zip(predictions, labels), fn {p, l} -> p >= 0.5 and l == 1.0 end)
+    fp = Enum.count(Enum.zip(predictions, labels), fn {p, l} -> p >= 0.5 and l == 0.0 end)
+    fn_ = Enum.count(Enum.zip(predictions, labels), fn {p, l} -> p < 0.5 and l == 1.0 end)
+
+    precision = if tp + fp > 0, do: tp / (tp + fp), else: 0.0
+    recall = if tp + fn_ > 0, do: tp / (tp + fn_), else: 0.0
+
+    %{
+      accuracy: accuracy,
+      auc: auc,
+      precision: precision,
+      recall: recall,
+      n: length(labels)
+    }
+  end
+
+  # --- Private ---
+
+  defp do_train(training_data, opts) do
     n = length(training_data)
 
     if n < 10 do
@@ -91,112 +224,6 @@ defmodule Clientats.Ranker do
       end
     end
   end
-
-  @doc """
-  Predict relevance scores for feature vectors.
-
-  Returns a list of floats between 0.0 and 1.0 (probability of positive/liked).
-  """
-  def predict(booster, feature_vectors) when is_list(feature_vectors) do
-    x = Nx.tensor(feature_vectors, type: :f32)
-    predictions = EXGBoost.predict(booster, x)
-
-    predictions
-    |> Nx.to_flat_list()
-    |> Enum.map(&clamp_score/1)
-  end
-
-  @doc """
-  Score and rank candidates using the trained model.
-
-  `candidates` is a list of `{id, feature_vector}` tuples.
-  Returns candidates sorted by predicted score (descending).
-  """
-  def rank(booster, candidates) when is_list(candidates) do
-    {ids, features} = Enum.unzip(candidates)
-    scores = predict(booster, features)
-
-    Enum.zip([ids, scores])
-    |> Enum.sort_by(fn {_id, score} -> score end, :desc)
-    |> Enum.with_index(1)
-    |> Enum.map(fn {{id, score}, rank} ->
-      %{id: id, score: score, rank: rank}
-    end)
-  end
-
-  @doc """
-  Serialize model to binary for storage (e.g., in SQLite).
-  """
-  def dump_model(booster) do
-    EXGBoost.dump_weights(booster)
-  end
-
-  @doc """
-  Load model from binary data.
-  """
-  def load_model(binary) when is_binary(binary) do
-    try do
-      {:ok, EXGBoost.load_weights(binary)}
-    rescue
-      e -> {:error, {:load_failed, Exception.message(e)}}
-    end
-  end
-
-  @doc """
-  Save model to a JSON file.
-  """
-  def save_model(booster, path) do
-    EXGBoost.write_weights(booster, path)
-  end
-
-  @doc """
-  Load model from a JSON file.
-  """
-  def load_model_file(path) do
-    try do
-      {:ok, EXGBoost.read_weights(path)}
-    rescue
-      e -> {:error, {:load_failed, Exception.message(e)}}
-    end
-  end
-
-  @doc """
-  Evaluate model quality using AUC and accuracy on test data.
-  """
-  def evaluate(booster, test_data) when is_list(test_data) do
-    {features, labels} = Enum.unzip(test_data)
-    predictions = predict(booster, features)
-
-    # Accuracy (threshold 0.5)
-    correct =
-      Enum.zip(predictions, labels)
-      |> Enum.count(fn {pred, label} ->
-        (pred >= 0.5 and label == 1.0) or (pred < 0.5 and label == 0.0)
-      end)
-
-    accuracy = correct / length(labels)
-
-    # AUC (approximate via sorting)
-    auc = compute_auc(predictions, labels)
-
-    # Precision/recall at 0.5 threshold
-    tp = Enum.count(Enum.zip(predictions, labels), fn {p, l} -> p >= 0.5 and l == 1.0 end)
-    fp = Enum.count(Enum.zip(predictions, labels), fn {p, l} -> p >= 0.5 and l == 0.0 end)
-    fn_ = Enum.count(Enum.zip(predictions, labels), fn {p, l} -> p < 0.5 and l == 1.0 end)
-
-    precision = if tp + fp > 0, do: tp / (tp + fp), else: 0.0
-    recall = if tp + fn_ > 0, do: tp / (tp + fn_), else: 0.0
-
-    %{
-      accuracy: accuracy,
-      auc: auc,
-      precision: precision,
-      recall: recall,
-      n: length(labels)
-    }
-  end
-
-  # --- Private ---
 
   defp clamp_score(s) when s < 0.0, do: 0.0
   defp clamp_score(s) when s > 1.0, do: 1.0
